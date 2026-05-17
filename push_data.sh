@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DATA_WORKTREE="/tmp/eso-data"
+DATA_WORKTREE="$(cd "$SCRIPT_DIR/../eso-data" && pwd)"
 
 # fetch.py writes into DATA_WORKTREE/data/
 DATA_DIR="$DATA_WORKTREE/data" \
