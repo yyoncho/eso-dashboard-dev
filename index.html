@@ -532,6 +532,11 @@ function setChartMode(mode) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  CARDS / TABLES
 // ══════════════════════════════════════════════════════════════════════════════
+function battState(mw) {
+  if (mw === undefined || mw === null || isNaN(mw) || mw === 0) return 'idle';
+  return mw < 0 ? 'charging' : 'discharging';
+}
+
 function updateStatusCards(latest, pd) {
   if (!latest) return;
   const load = latest['load_mw'] || latest['Товар на РБ'] || 0;
@@ -543,9 +548,11 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-hydro').textContent = fmt0((latest['ВЕЦ']||0)+(latest['Малки ВЕЦ']||0));
   document.getElementById('s-wind').textContent  = fmt0(latest['ВяЕЦ']);
   document.getElementById('s-solar').textContent = fmt0(latest['ФЕЦ']);
-  const bMw = latest['ССЕЕ_mw'];
+  const bMw  = latest['ССЕЕ_mw'];
+  const bSt  = battState(bMw);
   document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
-  document.getElementById('s-batt-state').textContent = bMw===undefined?'MW':(latest['ССЕЕ_state']==='charging'?'MW — зареждане':'MW — разреждане');
+  document.getElementById('s-batt-state').textContent =
+    bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
 
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
@@ -580,6 +587,22 @@ function updateFlowsTable(latest, pd) {
       <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h':'—'}</td>`;
     tbody.appendChild(tr);
   }
+
+  // Net total row
+  const netMw  = latest['net_import_mw'] || 0;
+  const isNetImp = netMw > 0;
+  const netEurh  = isFinite(price) ? Math.abs(netMw) * price : NaN;
+  const netTr = document.createElement('tr');
+  netTr.style.cssText = 'border-top:2px solid #c5d8ee;font-weight:700;';
+  netTr.innerHTML = `
+    <td style="font-weight:700;color:#1a2233;">Нетна позиция</td>
+    <td class="${isNetImp?'import-val':'export-val'}">${fmt0(Math.abs(netMw))} MW ${isNetImp?'▲':'▼'}</td>
+    <td><div class="flow-bar-wrap">
+      <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#999;"></div>
+      <div class="flow-bar ${isNetImp?'import':'export'}" style="width:${Math.min(48,(Math.abs(netMw)/maxAbs)*48)}%;"></div>
+    </div></td>
+    <td style="text-align:right;font-size:0.75rem;color:${isNetImp?'#cc2200':'#1a8a1a'};">${isFinite(netEurh)?fmtEur(isNetImp?-netEurh:netEurh)+'/h':'—'}</td>`;
+  tbody.appendChild(netTr);
 }
 
 function updateGenTable(dayAvg) {
@@ -636,18 +659,21 @@ function updateDayBalance(binned, pd, dateStr) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  PIE CHART — daily avg + import segment
+//  PIE CHART — daily avg generation + current battery + current import
 // ══════════════════════════════════════════════════════════════════════════════
-function drawPie(dayAvg) {
+function drawPie(dayAvg, latest) {
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: dayAvg[s.key]||0 }))
     .filter(r => r.v > 0).sort((a,b) => b.v - a.v);
   const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
-  // battery discharge (positive ССЕЕ_mw = discharging)
-  const batt = dayAvg['ССЕЕ_mw']||0;
-  if (batt > 0) { vals.push(batt); labels.push('ССЕЕ разреждане'); colors.push('#e00000'); }
-  // net import — only when importing
-  const nImp = dayAvg['net_import_mw']||0;
-  if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#888888'); }
+
+  // battery: use CURRENT snapshot sign (positive = discharging = supply)
+  // fall back to daily avg if no latest
+  const battMw = latest ? (latest['ССЕЕ_mw']||0) : (dayAvg['ССЕЕ_mw']||0);
+  if (battMw > 0) { vals.push(battMw); labels.push('ССЕЕ разреждане'); colors.push('#e53935'); }
+
+  // net import: use CURRENT snapshot (positive = importing = extra supply source)
+  const nImp = latest ? (latest['net_import_mw']||0) : (dayAvg['net_import_mw']||0);
+  if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#9e9e9e'); }
 
   const total = vals.reduce((a,b)=>a+b,0);
   Plotly.react('chart-pie', [{
@@ -801,7 +827,7 @@ async function refresh() {
     updateGenTable(dayAvg);
     updateDayBalance(binned, pd, dateStr);
 
-    drawPie(dayAvg);
+    drawPie(dayAvg, latest);
     drawTimeline(binned, pd, dateStr);
     drawFlowsTimeline(binned);
 
