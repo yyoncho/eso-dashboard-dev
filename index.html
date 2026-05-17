@@ -175,6 +175,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 <div class="past-banner" id="past-banner">
   📅 Исторически данни — показват се архивни записи, не актуална информация
 </div>
+<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
+  <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
+  <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
+</div>
 
 <div class="content">
 
@@ -373,6 +378,8 @@ let allDates   = [];
 let currentDay = null;
 let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
+let _dayRecords = [];
+let _dayPriceData = null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -435,7 +442,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -584,7 +591,7 @@ function updateFlowsTable(latest, pd) {
         <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
         <div class="flow-bar ${isImp?'import':'export'}" style="width:${pct}%;"></div>
       </div></td>
-      <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h':'—'}</td>`;
+      <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h ~':'—'}</td>`;
     tbody.appendChild(tr);
   }
 
@@ -601,7 +608,7 @@ function updateFlowsTable(latest, pd) {
       <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#999;"></div>
       <div class="flow-bar ${isNetImp?'import':'export'}" style="width:${Math.min(48,(Math.abs(netMw)/maxAbs)*48)}%;"></div>
     </div></td>
-    <td style="text-align:right;font-size:0.75rem;color:${isNetImp?'#cc2200':'#1a8a1a'};">${isFinite(netEurh)?fmtEur(isNetImp?-netEurh:netEurh)+'/h':'—'}</td>`;
+    <td style="text-align:right;font-size:0.75rem;color:${isNetImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(netEurh)?fmtEur(isNetImp?-netEurh:netEurh)+'/h ~':'—'}</td>`;
   tbody.appendChild(netTr);
 }
 
@@ -812,6 +819,38 @@ function updateTimestamp(latest) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  SNAPSHOT SCRUBBER
+// ══════════════════════════════════════════════════════════════════════════════
+function updateScrubber(records) {
+  const el = document.getElementById('snap-scrubber');
+  const slider = document.getElementById('snap-slider');
+  const isToday = currentDay === null;
+  el.style.display = records.length > 1 ? 'flex' : 'none';
+  slider.max = records.length - 1;
+  slider.value = records.length - 1;
+  updateSnapLabel(records[records.length - 1]);
+}
+
+function updateSnapLabel(snap) {
+  if (!snap) return;
+  const ms = toUtcMs(snap);
+  const el = document.getElementById('snap-ts');
+  if (!isFinite(ms)) { el.textContent = '—'; return; }
+  const d = new Date(ms);
+  el.textContent = d.toLocaleTimeString('bg-BG', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit' }) + ' ч. (местно)';
+}
+
+function onSnapSlider(val) {
+  const snap = _dayRecords[+val];
+  if (!snap) return;
+  updateSnapLabel(snap);
+  updateStatusCards(snap, _dayPriceData);
+  updateFlowsTable(snap, _dayPriceData);
+  updateGenTable(snap);
+  drawPie(snap);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  MAIN REFRESH
 // ══════════════════════════════════════════════════════════════════════════════
 async function refresh() {
@@ -825,9 +864,12 @@ async function refresh() {
     const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
     const latest  = records.length ? records[records.length-1] : null;
     const binned  = bin15min(records);
-    const dayAvg  = computeDayAvg(binned);
     const pd      = await loadPrices(dateStr);
 
+    _dayRecords   = records;
+    _dayPriceData = pd;
+
+    updateScrubber(records);
     updateTimestamp(latest);
     updateStatusCards(latest, pd);
     updateFlowsTable(latest, pd);
