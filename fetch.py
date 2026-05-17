@@ -80,7 +80,34 @@ def build_record():
     row["gen_total_mw"]  = round(gen_sum, 1)
     row["net_import_mw"] = round(net_import, 1)
     row["load_mw"]       = round(load, 1)
-    row["residual_mw"]   = round(load - gen_sum - net_import, 1)
+
+    # Battery discharge via percentage cross-check:
+    # ESO computes each source's % against total_supply_including_hidden_discharge.
+    # implied_total = source_mw / (source_pct / 100) → average across all sources.
+    # batt_discharge_mw = max(0, implied_total - gen_sum)
+    implied_totals = []
+    for item in gen_data:
+        if item is None:
+            continue
+        label, value = item[0], item[1]
+        m = re.search(r'(\d+[.,]\d+)%', label)
+        if not m:
+            continue
+        pct = float(m.group(1).replace(',', '.'))
+        try:
+            val = float(str(value).replace(',', '.'))
+        except (ValueError, TypeError):
+            continue
+        if pct > 0 and val > 0 and "ССЕЕ" not in label:
+            implied_totals.append(val / (pct / 100))
+
+    if implied_totals:
+        api_implied_total = round(sum(implied_totals) / len(implied_totals), 1)
+        row["api_implied_total_mw"] = api_implied_total
+        row["batt_discharge_mw"]    = round(max(0.0, api_implied_total - gen_sum), 1)
+    else:
+        row["api_implied_total_mw"] = None
+        row["batt_discharge_mw"]    = None
 
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
