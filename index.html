@@ -380,6 +380,7 @@ let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
 let _dayRecords = [];
 let _dayPriceData = null;
+let _dayDateStr = null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -841,13 +842,16 @@ function updateSnapLabel(snap) {
 }
 
 function onSnapSlider(val) {
-  const snap = _dayRecords[+val];
+  const idx  = +val;
+  const snap = _dayRecords[idx];
   if (!snap) return;
   updateSnapLabel(snap);
   updateStatusCards(snap, _dayPriceData);
   updateFlowsTable(snap, _dayPriceData);
   updateGenTable(snap);
   drawPie(snap);
+  const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
+  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -868,6 +872,7 @@ async function refresh() {
 
     _dayRecords   = records;
     _dayPriceData = pd;
+    _dayDateStr   = dateStr;
 
     updateScrubber(records);
     updateTimestamp(latest);
