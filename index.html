@@ -332,7 +332,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <div class="panel">
     <div class="panel-header">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</div>
     <div style="padding:6px 8px 10px;">
-      <div id="chart-flows-ts" style="height:360px;"></div>
+      <div id="chart-flows-ts" style="height:480px;"></div>
     </div>
   </div>
 
@@ -746,10 +746,14 @@ function drawFlowsTimeline(binned) {
     name: f.label, line: { color: f.color, width: 1.5 },
     hovertemplate: `${f.label}: %{y:.0f} MW<extra></extra>`,
   }));
+  const netY = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
+  // filled area below/above zero for net position
   traces.push({
-    x: xs, y: pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0),
-    name: 'Нетен внос', line: { color: '#1a2233', width: 2.5, dash: 'dot' },
-    hovertemplate: 'Нетен внос: %{y:.0f} MW<extra></extra>',
+    x: xs, y: netY,
+    name: 'Нетна позиция', fill: 'tozeroy',
+    fillcolor: 'rgba(80,80,80,0.15)',
+    line: { color: '#1a2233', width: 2.5 },
+    hovertemplate: 'Нетна позиция: %{y:.0f} MW<extra></extra>',
   });
 
   Plotly.react('chart-flows-ts', traces, {
