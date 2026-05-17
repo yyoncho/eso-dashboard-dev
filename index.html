@@ -3,169 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ЕСО — Оперативна информация</title>
+<title>БГ Мрежов Монитор — неофициален</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
-/* ── reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #eef3f8;
-  color: #1a2233;
-  font-size: 14px;
-}
+body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; }
 
-/* ── header ─────────────────────────────────────────────────────────────── */
+/* ── header ── */
 header {
   background: linear-gradient(180deg, #004494 0%, #003070 100%);
   color: #fff;
   border-bottom: 3px solid #ffd700;
 }
-
 .header-inner {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  max-width: 1600px; margin: 0 auto; padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
 }
-
 .logo-area { display: flex; align-items: center; gap: 14px; }
-
 .logo-circle {
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  background: #fff;
+  width: 48px; height: 48px; border-radius: 50%; background: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 0.85rem; color: #003070;
-  flex-shrink: 0;
-  letter-spacing: -0.03em;
+  font-weight: 900; font-size: 0.85rem; color: #003070; flex-shrink: 0; letter-spacing: -0.03em;
 }
-
 .logo-text h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.03em; }
-.logo-text p  { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.logo-text p  { font-size: 0.68rem; opacity: 0.6; margin-top: 2px; letter-spacing: 0.01em; }
 
-.live-area { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-
-.live-badge {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 0.72rem; color: rgba(255,255,255,0.85);
-}
-
-.dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: #4cde6e;
-  box-shadow: 0 0 6px #4cde6e;
-  animation: blink 2s infinite;
-}
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.live-badge { display: flex; align-items: center; gap: 7px; font-size: 0.72rem; color: rgba(255,255,255,0.85); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #4cde6e; box-shadow: 0 0 6px #4cde6e; animation: blink 2s infinite; }
 .dot.stale { background: #ff5555; box-shadow: 0 0 6px #ff5555; animation: none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-/* day nav */
-.day-nav {
-  display: flex; align-items: center; gap: 6px;
-}
+.day-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .nav-btn {
-  padding: 4px 10px;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 4px;
-  color: #fff; font-size: 0.78rem; cursor: pointer;
-  transition: background 0.15s;
+  padding: 4px 10px; background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  color: #fff; font-size: 0.78rem; cursor: pointer; transition: background 0.15s;
 }
 .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
 .nav-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; font-weight: 700; }
 .nav-btn:disabled { opacity: 0.3; cursor: default; }
-#day-label { font-size: 0.82rem; color: rgba(255,255,255,0.9); font-weight: 600; min-width: 90px; }
+#day-label { font-size: 0.82rem; color: rgba(255,255,255,0.9); font-weight: 600; }
 
-/* ── content ─────────────────────────────────────────────────────────────── */
-.content { max-width: 1440px; margin: 0 auto; padding: 14px 20px 30px; }
-
-/* ── section title ── */
-.section-title {
-  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: #004494; margin-bottom: 8px;
-  padding-bottom: 4px; border-bottom: 2px solid #004494;
+input[type="date"]#date-picker {
+  padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12); color: #fff; font-size: 0.78rem; cursor: pointer;
+  color-scheme: dark;
 }
+input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
-/* ── big stat cards ── */
+/* ── past-day banner ── */
+.past-banner {
+  display: none; background: #fff3cd; border-bottom: 2px solid #e0a800;
+  padding: 6px 20px; font-size: 0.8rem; color: #664d03; font-weight: 600;
+  text-align: center; letter-spacing: 0.02em;
+}
+.past-banner.show { display: block; }
+
+/* ── content ── */
+.content { max-width: 1600px; margin: 0 auto; padding: 14px 20px 30px; }
+
+/* ── stat cards ── */
 .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 14px;
 }
-
 .stat-card {
-  background: #fff;
-  border: 1px solid #c5d8ee;
-  border-top: 4px solid #004494;
-  border-radius: 4px;
-  padding: 12px 14px 10px;
+  background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
+  border-radius: 4px; padding: 12px 14px 10px;
 }
-
 .stat-card.green  { border-top-color: #1a8a1a; }
 .stat-card.orange { border-top-color: #e07000; }
 .stat-card.purple { border-top-color: #7b3fa0; }
 .stat-card.red    { border-top-color: #cc2200; }
 .stat-card.teal   { border-top-color: #0088aa; }
-
 .stat-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
 .stat-val   { font-size: 1.6rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
 .stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
 .stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
 
 /* ── two-column layout ── */
-.main-cols {
-  display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
+.main-cols { display: grid; grid-template-columns: 460px 1fr; gap: 12px; margin-bottom: 12px; }
 
-/* ── panels (white cards) ── */
-.panel {
-  background: #fff;
-  border: 1px solid #c5d8ee;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
+/* ── panels ── */
+.panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
 .panel-header {
-  background: #004494;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 7px 12px;
+  background: #004494; color: #fff; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; padding: 7px 12px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-
 .panel-body { padding: 10px 12px; }
+
+/* ── toggle ── */
+.toggle-group { display: flex; gap: 4px; }
+.tog-btn {
+  padding: 2px 9px; font-size: 0.68rem; font-weight: 600; border-radius: 3px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.5); background: transparent; color: rgba(255,255,255,0.7);
+  text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.12s;
+}
+.tog-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; }
+.tog-btn:hover:not(.active) { background: rgba(255,255,255,0.2); color: #fff; }
 
 /* ── flows table ── */
 .flows-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .flows-table th {
-  text-align: left; font-weight: 700; font-size: 0.68rem;
-  color: #5a7090; text-transform: uppercase; padding: 4px 6px;
-  border-bottom: 1px solid #dde8f5;
+  text-align: left; font-weight: 700; font-size: 0.68rem; color: #5a7090;
+  text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid #dde8f5;
 }
 .flows-table td { padding: 5px 6px; border-bottom: 1px solid #edf2f8; }
 .flows-table tr:last-child td { border-bottom: none; }
-
 .flow-bar-wrap { position: relative; height: 14px; background: #edf2f8; border-radius: 3px; width: 100px; overflow: hidden; }
 .flow-bar { position: absolute; height: 100%; top: 0; border-radius: 3px; }
 .flow-bar.import { background: #cc2200; right: 50%; }
 .flow-bar.export { background: #1a8a1a; left: 50%; }
-
 .import-val { color: #cc2200; font-weight: 700; }
 .export-val { color: #1a8a1a; font-weight: 700; }
 
-/* ── balance box ── */
+/* ── balance ── */
 .balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .balance-item { background: #f0f6ff; border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 10px; }
 .balance-item.expense { background: #fff5f5; border-color: #f5c5c5; }
@@ -176,25 +130,19 @@ header {
 .balance-val.revenue { color: #1a8a1a; }
 .balance-val.neutral { color: #004494; }
 
-/* price box */
 .price-box {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  background: #f5f8ff; border: 1px solid #c5d8ee; border-radius: 4px;
-  padding: 8px 12px; margin-top: 8px; align-items: center;
+  display: flex; gap: 10px; flex-wrap: wrap; background: #f5f8ff;
+  border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 12px;
+  margin-top: 8px; align-items: center;
 }
 .price-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
 .price-val   { font-size: 1.1rem; font-weight: 700; color: #004494; }
 .price-unit  { font-size: 0.68rem; color: #7a8aaa; }
 
-/* chart containers */
-.chart-wrap { width: 100%; }
+/* ── gen table ── */
+#gen-table td, #gen-table th { font-size: 0.8rem; }
 
-/* full-width timeline */
-.timeline-panel { margin-bottom: 12px; }
-
-@media (max-width: 900px) {
-  .main-cols { grid-template-columns: 1fr; }
-}
+@media (max-width: 960px) { .main-cols { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -202,19 +150,20 @@ header {
 <header>
   <div class="header-inner">
     <div class="logo-area">
-      <div class="logo-circle">ЕСО</div>
+      <div class="logo-circle">БГ</div>
       <div class="logo-text">
-        <h1>Електроенергийен Системен Оператор</h1>
-        <p>Оперативна информация в реално време &mdash; IBEX/DA цени</p>
+        <h1>Мрежов монитор — България</h1>
+        <p>Неофициален ресурс &bull; данни от ЕСО ЕАД и IBEX &bull; не представлява ЕСО ЕАД</p>
       </div>
     </div>
-    <div class="live-area">
+    <div class="header-right">
       <div class="live-badge">
         <div class="dot" id="dot"></div>
         <span id="ts-label">Зареждане…</span>
       </div>
       <div class="day-nav">
         <button class="nav-btn" id="prev-btn" onclick="shiftDay(-1)">&#8592;</button>
+        <input type="date" id="date-picker" onchange="pickDate(this.value)">
         <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
         <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
         <span id="day-label"></span>
@@ -222,6 +171,10 @@ header {
     </div>
   </div>
 </header>
+
+<div class="past-banner" id="past-banner">
+  📅 Исторически данни — показват се архивни записи, не актуална информация
+</div>
 
 <div class="content">
 
@@ -270,21 +223,26 @@ header {
     </div>
   </div>
 
-  <!-- two columns -->
+  <!-- two-column -->
   <div class="main-cols">
 
     <!-- LEFT: pie + flows -->
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div class="panel">
-        <div class="panel-header">Структура на производство</div>
-        <div class="panel-body" style="padding:4px;">
-          <div id="chart-pie" style="height:280px;"></div>
+        <div class="panel-header">
+          <span>Структура на производство — ден. средна</span>
+        </div>
+        <div style="padding:4px;">
+          <div id="chart-pie" style="height:380px;"></div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-header">Трансгранични потоци</div>
+        <div class="panel-header">
+          Трансгранични потоци
+          <span id="flows-price-note" style="font-weight:400;font-size:0.68rem;opacity:0.8;"></span>
+        </div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table">
             <thead>
@@ -292,7 +250,7 @@ header {
                 <th>Страна</th>
                 <th>Баланс</th>
                 <th style="width:100px;">Поток</th>
-                <th style="text-align:right;">EUR/h <span id="flows-price-note" style="font-weight:400;font-size:0.65rem;color:#8aaacc;"></span></th>
+                <th style="text-align:right;">EUR/h</th>
               </tr>
             </thead>
             <tbody id="flows-tbody"></tbody>
@@ -300,9 +258,9 @@ header {
         </div>
       </div>
 
-    </div><!-- /left col -->
+    </div><!-- /left -->
 
-    <!-- RIGHT: day balance + price + generation table -->
+    <!-- RIGHT: balance + gen table -->
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div class="panel">
@@ -326,39 +284,24 @@ header {
             </div>
           </div>
           <div class="price-box">
-            <div>
-              <div class="price-label">IBEX DA цена (текуща)</div>
-              <div>
-                <span class="price-val" id="p-current">—</span>
-                <span class="price-unit">EUR/MWh</span>
-              </div>
-            </div>
-            <div>
-              <div class="price-label">Средна за деня</div>
-              <div>
-                <span class="price-val" id="p-avg">—</span>
-                <span class="price-unit">EUR/MWh</span>
-              </div>
-            </div>
-            <div>
-              <div class="price-label">Мин / Макс</div>
-              <div>
-                <span class="price-val" id="p-minmax">—</span>
-                <span class="price-unit">EUR/MWh</span>
-              </div>
-            </div>
+            <div><div class="price-label">IBEX DA (текуща)</div>
+              <span class="price-val" id="p-current">—</span> <span class="price-unit">EUR/MWh</span></div>
+            <div><div class="price-label">Средна за деня</div>
+              <span class="price-val" id="p-avg">—</span> <span class="price-unit">EUR/MWh</span></div>
+            <div><div class="price-label">Мин / Макс</div>
+              <span class="price-val" id="p-minmax">—</span> <span class="price-unit">EUR/MWh</span></div>
           </div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-header">Производство по източници</div>
+        <div class="panel-header">Производство по източници — ден. средна</div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table" id="gen-table">
             <thead>
               <tr>
                 <th>Източник</th>
-                <th style="text-align:right;">MW</th>
+                <th style="text-align:right;">MW ср.</th>
                 <th style="text-align:right;">%</th>
                 <th style="width:100px;">Дял</th>
               </tr>
@@ -368,22 +311,28 @@ header {
         </div>
       </div>
 
-    </div><!-- /right col -->
+    </div><!-- /right -->
   </div><!-- /main-cols -->
 
-  <!-- full-width timeline -->
-  <div class="panel timeline-panel">
-    <div class="panel-header">Дневен профил — 15 мин. средни</div>
-    <div class="panel-body" style="padding:6px 8px 10px;">
+  <!-- timeline chart -->
+  <div class="panel" style="margin-bottom:12px;">
+    <div class="panel-header">
+      <span>Дневен профил</span>
+      <div class="toggle-group">
+        <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
+        <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
+      </div>
+    </div>
+    <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
   </div>
 
   <!-- flows timeline -->
   <div class="panel">
-    <div class="panel-header">Трансгранични потоци — 15 мин. средни (+ внос / &minus; износ)</div>
-    <div class="panel-body" style="padding:6px 8px 10px;">
-      <div id="chart-flows-ts" style="height:240px;"></div>
+    <div class="panel-header">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</div>
+    <div style="padding:6px 8px 10px;">
+      <div id="chart-flows-ts" style="height:360px;"></div>
     </div>
   </div>
 
@@ -391,81 +340,66 @@ header {
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  CONFIG
+//  CONFIG — colors match ESO.bg Highcharts palette
 // ══════════════════════════════════════════════════════════════════════════════
-const BASE        = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
-const REFRESH_MS  = 5 * 60 * 1000;
-const STALE_MS    = 9 * 60 * 1000;
+const BASE       = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+const REFRESH_MS = 5 * 60 * 1000;
+const STALE_MS   = 9 * 60 * 1000;
 
 const GEN_SERIES = [
-  { key: 'АЕЦ',                 label: 'АЕЦ',                    color: '#0068b4' },
-  { key: 'Кондензационни ТЕЦ',  label: 'Конд. ТЕЦ (въглища)',    color: '#555f6e' },
-  { key: 'Топлофикационни ТЕЦ', label: 'Топлофик. ТЕЦ',          color: '#8c6d3f' },
-  { key: 'Заводски ТЕЦ',        label: 'Заводски ТЕЦ',           color: '#a07840' },
-  { key: 'ВЕЦ',                 label: 'ВЕЦ',                    color: '#1e6bb0' },
-  { key: 'Малки ВЕЦ',           label: 'Малки ВЕЦ',              color: '#4a9fd4' },
-  { key: 'ВяЕЦ',                label: 'ВяЕЦ',                   color: '#2eaa50' },
-  { key: 'ФЕЦ',                 label: 'ФЕЦ',                    color: '#f5c000' },
-  { key: 'Био ЕЦ',              label: 'Биомаса',                color: '#7db87d' },
+  { key: 'АЕЦ',                 label: 'АЕЦ',           color: '#2caffe' },
+  { key: 'Кондензационни ТЕЦ',  label: 'Конд. ТЕЦ',    color: '#544fc5' },
+  { key: 'Топлофикационни ТЕЦ', label: 'Топло. ТЕЦ',   color: '#00e272' },
+  { key: 'Заводски ТЕЦ',        label: 'Зав. ТЕЦ',      color: '#fe6a35' },
+  { key: 'ВЕЦ',                 label: 'ВЕЦ',           color: '#6b8abc' },
+  { key: 'Малки ВЕЦ',           label: 'Малки ВЕЦ',     color: '#d568fb' },
+  { key: 'ВяЕЦ',                label: 'ВяЕЦ',          color: '#2ee0ca' },
+  { key: 'ФЕЦ',                 label: 'ФЕЦ',           color: '#fa4b42' },
+  { key: 'Био ЕЦ',              label: 'Биомаса',       color: '#feb56a' },
 ];
 
 const FLOW_CFG = [
-  { key: 'RO_mw', label: 'Румъния',    color: '#1565c0' },
-  { key: 'SR_mw', label: 'Сърбия',     color: '#2e7d32' },
-  { key: 'MK_mw', label: 'С.Македония',color: '#f57f17' },
-  { key: 'GR_mw', label: 'Гърция',     color: '#c62828' },
-  { key: 'TR_mw', label: 'Турция',     color: '#6a1b9a' },
+  { key: 'RO_mw', label: 'Румъния',     color: '#2caffe' },
+  { key: 'SR_mw', label: 'Сърбия',      color: '#00e272' },
+  { key: 'MK_mw', label: 'С.Македония', color: '#fe6a35' },
+  { key: 'GR_mw', label: 'Гърция',      color: '#544fc5' },
+  { key: 'TR_mw', label: 'Турция',      color: '#d568fb' },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════════════════════════
 let allDates   = [];
-let currentDay = null;          // null = today
-let priceCache = {};            // ym → { unix_seconds, price }
+let currentDay = null;
+let priceCache = {};
+let chartMode  = 'instant';   // 'instant' | 'hourly'
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
 async function getJSON(url) {
   const r = await fetch(url + '?_=' + Date.now());
-  if (!r.ok) throw new Error(url + ' → ' + r.status);
+  if (!r.ok) throw new Error(r.status);
   return r.json();
 }
-
 async function getJSONL(url) {
   const r = await fetch(url + '?_=' + Date.now());
-  if (!r.ok) throw new Error(url + ' → ' + r.status);
+  if (!r.ok) throw new Error(r.status);
   const text = await r.text();
-  return text.trim().split('\n').filter(Boolean).map(l => {
-    try { return JSON.parse(l); } catch(e) { return null; }
-  }).filter(Boolean);
+  return text.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(Boolean);
 }
-
 function toUtcMs(r) {
   if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
-  // old records: "YYYY-MM-DD HH:MM:SS" is Sofia local time (UTC+3 summer approx)
-  const s = r.timestamp || '';
-  return Date.parse(s.replace(' ', 'T') + '+03:00');
+  return Date.parse((r.timestamp || '').replace(' ', 'T') + '+03:00');
 }
-
-function fmt0(v) {
-  if (v === undefined || v === null || isNaN(v)) return '—';
-  return Math.round(v).toLocaleString('bg-BG');
-}
-
-function fmt1(v) {
-  if (v === undefined || v === null || isNaN(v)) return '—';
-  return v.toFixed(1);
-}
-
-function fmtEur(eur) {
-  if (!isFinite(eur)) return '—';
-  const abs = Math.abs(eur);
-  const sign = eur < 0 ? '−' : '';
-  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + ' млн.€';
-  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(1) + ' хил.€';
-  return sign + abs.toFixed(0) + ' €';
+function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
+function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
+function fmtEur(e) {
+  if (!isFinite(e)) return '—';
+  const a = Math.abs(e), s = e < 0 ? '−' : '';
+  if (a >= 1e6) return s + (a/1e6).toFixed(2) + ' млн.€';
+  if (a >= 1e3) return s + (a/1e3).toFixed(1) + ' хил.€';
+  return s + a.toFixed(0) + ' €';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -474,351 +408,314 @@ function fmtEur(eur) {
 async function loadPrices(dateStr) {
   const ym = dateStr.slice(0, 7);
   if (priceCache[ym]) return priceCache[ym];
-  try {
-    const d = await getJSON(`${BASE}/prices-${ym}.json`);
-    priceCache[ym] = d;
-    return d;
-  } catch(e) {
-    return null;
-  }
+  try { const d = await getJSON(`${BASE}/prices-${ym}.json`); priceCache[ym] = d; return d; }
+  catch(e) { return null; }
 }
-
-function getPriceAt(priceData, unixMs) {
-  if (!priceData) return NaN;
-  const { unix_seconds, price } = priceData;
-  if (!unix_seconds || !price) return NaN;
-  const unixS = unixMs / 1000;
-  // find rightmost ts <= unixS
-  let lo = 0, hi = unix_seconds.length - 1, idx = -1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (unix_seconds[mid] <= unixS) { idx = mid; lo = mid + 1; }
-    else hi = mid - 1;
-  }
-  return idx >= 0 ? price[idx] : NaN;
+function getPriceAt(pd, ms) {
+  if (!pd) return NaN;
+  const { unix_seconds: us, price: pr } = pd;
+  if (!us) return NaN;
+  const s = ms / 1000;
+  let lo = 0, hi = us.length - 1, idx = -1;
+  while (lo <= hi) { const m = (lo+hi)>>1; if (us[m] <= s) { idx=m; lo=m+1; } else hi=m-1; }
+  return idx >= 0 ? pr[idx] : NaN;
 }
-
-function getDayPrices(priceData, dateStr) {
-  if (!priceData) return [];
-  const { unix_seconds, price } = priceData;
-  if (!unix_seconds) return [];
-  const dayStart = Date.parse(dateStr + 'T00:00:00+02:00') / 1000;  // Sofia midnight
-  const dayEnd   = dayStart + 86400;
+function getDayPrices(pd, dateStr) {
+  if (!pd) return [];
+  const { unix_seconds: us, price: pr } = pd;
+  if (!us) return [];
+  const s0 = Date.parse(dateStr + 'T00:00:00+02:00') / 1000;
+  const s1 = s0 + 86400;
   const pts = [];
-  for (let i = 0; i < unix_seconds.length; i++) {
-    if (unix_seconds[i] >= dayStart && unix_seconds[i] < dayEnd) {
-      pts.push({ ts: unix_seconds[i] * 1000, price: price[i] });
-    }
-  }
+  for (let i = 0; i < us.length; i++) if (us[i] >= s0 && us[i] < s1) pts.push({ ts: us[i]*1000, price: pr[i] });
   return pts;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  15-MIN BINNING
+//  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
+const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw'];
+
+function avgOf(arr, key) {
+  const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : NaN;
+}
+
 function bin15min(records) {
-  const WINDOW = 15 * 60 * 1000;
-  const buckets = {};
+  const W = 15*60*1000, buckets = {};
   for (const r of records) {
     const ms = toUtcMs(r);
     if (!isFinite(ms)) continue;
-    const bin = Math.floor(ms / WINDOW) * WINDOW;
-    if (!buckets[bin]) buckets[bin] = [];
-    buckets[bin].push(r);
+    const b = Math.floor(ms/W)*W;
+    if (!buckets[b]) buckets[b] = [];
+    buckets[b].push(r);
   }
-  return Object.entries(buckets)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([bin, recs]) => {
-      const ts  = Number(bin);
-      const avg = (key) => {
-        const vals = recs.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
-        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : NaN;
-      };
-      const obj = { ts };
-      for (const s of GEN_SERIES) obj[s.key] = avg(s.key);
-      for (const f of FLOW_CFG)  obj[f.key]  = avg(f.key);
-      obj['gen_total_mw']  = avg('gen_total_mw');
-      obj['load_mw']       = avg('load_mw') || avg('Товар на РБ');
-      obj['net_import_mw'] = avg('net_import_mw');
-      obj['ССЕЕ_mw']       = avg('ССЕЕ_mw');
-      return obj;
-    });
+  return Object.entries(buckets).sort(([a],[b])=>Number(a)-Number(b)).map(([bin,recs])=>{
+    const ts = Number(bin), obj = { ts };
+    for (const k of ALL_KEYS) obj[k] = avgOf(recs, k);
+    if (isNaN(obj['load_mw'])) obj['load_mw'] = avgOf(recs, 'Товар на РБ');
+    return obj;
+  });
+}
+
+function binByHour(binned) {
+  // average 15-min bins by UTC hour → 24 points labelled by clock hour
+  const hours = {};
+  for (const b of binned) {
+    const h = new Date(b.ts).getUTCHours();
+    if (!hours[h]) hours[h] = [];
+    hours[h].push(b);
+  }
+  return Array.from({length:24},(_,h)=>{
+    const recs = hours[h] || [];
+    const obj = { hour: h, ts: h };
+    for (const k of ALL_KEYS) obj[k] = recs.length ? avgOf(recs, k) : NaN;
+    return obj;
+  }).filter(o => Object.values(o).some(v => typeof v === 'number' && isFinite(v) && v !== o.hour && v !== o.ts));
+}
+
+function computeDayAvg(binned) {
+  const obj = {};
+  for (const k of ALL_KEYS) obj[k] = avgOf(binned, k);
+  if (isNaN(obj['load_mw'])) obj['load_mw'] = NaN;
+  return obj;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════════════════════════════════════════
 function todayStr() {
-  const d = new Date(Date.now() + 2 * 3600 * 1000);
-  return d.toISOString().slice(0, 10);
+  return new Date(Date.now() + 2*3600*1000).toISOString().slice(0,10);
 }
-
-function shiftDay(delta) {
+function pickDate(v) {
+  if (!v) return;
+  currentDay = v === todayStr() ? null : v;
+  refresh();
+}
+function shiftDay(d) {
   const base = currentDay || todayStr();
   const idx  = allDates.indexOf(base);
   if (idx === -1) return;
-  const ni = Math.max(0, Math.min(allDates.length - 1, idx + delta));
+  const ni = Math.max(0, Math.min(allDates.length-1, idx+d));
   currentDay = allDates[ni] === todayStr() ? null : allDates[ni];
   refresh();
 }
-
 function goToday() { currentDay = null; refresh(); }
 
 function updateNav() {
-  const today = todayStr();
-  const base  = currentDay || today;
+  const today = todayStr(), base = currentDay || today;
   const idx   = allDates.indexOf(base);
   document.getElementById('prev-btn').disabled  = idx <= 0;
-  document.getElementById('next-btn').disabled  = idx >= allDates.length - 1 || currentDay === null;
+  document.getElementById('next-btn').disabled  = idx >= allDates.length-1 || currentDay === null;
   document.getElementById('today-btn').classList.toggle('active', currentDay === null);
   document.getElementById('day-label').textContent = base;
+
+  const picker = document.getElementById('date-picker');
+  if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1]; }
+  picker.value = base;
+
+  const banner = document.getElementById('past-banner');
+  banner.classList.toggle('show', currentDay !== null);
+}
+
+function setChartMode(mode) {
+  chartMode = mode;
+  document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
+  document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
+  // redraw is triggered by refresh; if already have data, just redraw
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  CARDS / TABLES
 // ══════════════════════════════════════════════════════════════════════════════
-function updateStatusCards(latest, priceData) {
+function updateStatusCards(latest, pd) {
   if (!latest) return;
-
-  const load  = latest['load_mw'] || latest['Товар на РБ'] || 0;
-  const gen   = latest['gen_total_mw'] || 0;
-  const nImp  = latest['net_import_mw'] || 0;
-
-  document.getElementById('s-load').textContent  = fmt0(load);
-  document.getElementById('s-gen').textContent   = fmt0(gen);
-  document.getElementById('s-nuc').textContent   = fmt0(latest['АЕЦ']);
-  const hydro = (latest['ВЕЦ'] || 0) + (latest['Малки ВЕЦ'] || 0);
-  document.getElementById('s-hydro').textContent = fmt0(hydro);
+  const load = latest['load_mw'] || latest['Товар на РБ'] || 0;
+  const gen  = latest['gen_total_mw'] || 0;
+  const nImp = latest['net_import_mw'] || 0;
+  document.getElementById('s-load').textContent = fmt0(load);
+  document.getElementById('s-gen').textContent  = fmt0(gen);
+  document.getElementById('s-nuc').textContent  = fmt0(latest['АЕЦ']);
+  document.getElementById('s-hydro').textContent = fmt0((latest['ВЕЦ']||0)+(latest['Малки ВЕЦ']||0));
   document.getElementById('s-wind').textContent  = fmt0(latest['ВяЕЦ']);
   document.getElementById('s-solar').textContent = fmt0(latest['ФЕЦ']);
+  const bMw = latest['ССЕЕ_mw'];
+  document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
+  document.getElementById('s-batt-state').textContent = bMw===undefined?'MW':(latest['ССЕЕ_state']==='charging'?'MW — зареждане':'MW — разреждане');
 
-  const battMw = latest['ССЕЕ_mw'];
-  document.getElementById('s-batt').textContent = fmt0(Math.abs(battMw || 0));
-  document.getElementById('s-batt-state').textContent =
-    battMw === undefined ? 'MW' :
-    (latest['ССЕЕ_state'] === 'charging' ? 'MW — зареждане' : 'MW — разреждане');
-
-  const price = getPriceAt(priceData, toUtcMs(latest));
-  const card  = document.getElementById('s-import-card');
+  const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
-  card.className = 'stat-card ' + (isImp ? 'red' : 'green');
-  document.getElementById('s-import-label').textContent = isImp ? 'Внос' : 'Износ';
+  document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
+  document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
-  if (isFinite(price)) {
-    const eurh = Math.abs(nImp) * price;
-    document.getElementById('s-import-eur').textContent =
-      (isImp ? 'Разход: ' : 'Приход: ') + fmtEur(eurh) + '/h';
-  } else {
-    document.getElementById('s-import-eur').textContent = '';
-  }
+  document.getElementById('s-import-eur').textContent = isFinite(price)
+    ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
 }
 
-function updateFlowsTable(latest, priceData) {
+function updateFlowsTable(latest, pd) {
   if (!latest) return;
-  const price = getPriceAt(priceData, toUtcMs(latest));
-  const maxAbs = Math.max(1, ...FLOW_CFG.map(f => Math.abs(latest[f.key] || 0)));
-  // Show which price is used. BG DA price is correct for EU-coupled neighbors (RO, GR).
-  // SR, MK, TR trade bilaterally — their real price is unknown; BG DA used as proxy.
+  const price  = getPriceAt(pd, toUtcMs(latest));
+  const maxAbs = Math.max(1, ...FLOW_CFG.map(f=>Math.abs(latest[f.key]||0)));
   const noteEl = document.getElementById('flows-price-note');
-  if (noteEl) noteEl.textContent = isFinite(price) ? `@ ${price.toFixed(1)} €/MWh IBEX` : '';
+  if (noteEl) noteEl.textContent = isFinite(price)?`@ ${price.toFixed(1)} €/MWh IBEX`:'';
 
   const tbody = document.getElementById('flows-tbody');
   tbody.innerHTML = '';
   for (const f of FLOW_CFG) {
-    const mw   = latest[f.key] || 0;
-    const isImp = mw > 0;
-    const pct  = Math.min(100, (Math.abs(mw) / maxAbs) * 48);   // up to 48% each side
-    const eurh = isFinite(price) ? Math.abs(mw) * price : NaN;
-    const eur  = isFinite(eurh) ? fmtEur(isImp ? -eurh : eurh) + '/h' : '—';
-
+    const mw = latest[f.key]||0, isImp = mw>0;
+    const pct = Math.min(100,(Math.abs(mw)/maxAbs)*48);
+    const eurh = isFinite(price)?Math.abs(mw)*price:NaN;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:600;">${f.label}</td>
-      <td class="${isImp ? 'import-val' : 'export-val'}">${fmt0(Math.abs(mw))} MW ${isImp ? '▲' : '▼'}</td>
-      <td>
-        <div class="flow-bar-wrap">
-          <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
-          <div class="flow-bar ${isImp ? 'import' : 'export'}"
-               style="width:${pct}%;"></div>
-        </div>
-      </td>
-      <td style="text-align:right;font-size:0.75rem;color:${isImp ? '#cc2200' : '#1a8a1a'};">${eur}</td>
-    `;
+      <td class="${isImp?'import-val':'export-val'}">${fmt0(Math.abs(mw))} MW ${isImp?'▲':'▼'}</td>
+      <td><div class="flow-bar-wrap">
+        <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
+        <div class="flow-bar ${isImp?'import':'export'}" style="width:${pct}%;"></div>
+      </div></td>
+      <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h':'—'}</td>`;
     tbody.appendChild(tr);
   }
 }
 
-function updateGenTable(latest) {
-  if (!latest) return;
-  const gen  = latest['gen_total_mw'] || 1;
+function updateGenTable(dayAvg) {
+  const gen = dayAvg['gen_total_mw'] || 1;
+  const rows = GEN_SERIES.map(s => ({ ...s, mw: dayAvg[s.key]||0 }))
+    .sort((a,b) => b.mw - a.mw);
   const tbody = document.getElementById('gen-tbody');
   tbody.innerHTML = '';
-  for (const s of GEN_SERIES) {
-    const mw  = latest[s.key] || 0;
-    const pct = (mw / gen * 100);
-    const tr  = document.createElement('tr');
+  for (const s of rows) {
+    const pct = s.mw / gen * 100;
+    const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:600;color:${s.color}">${s.label}</td>
-      <td style="text-align:right;">${fmt0(mw)}</td>
+      <td style="text-align:right;">${fmt0(s.mw)}</td>
       <td style="text-align:right;">${pct.toFixed(1)}%</td>
-      <td>
-        <div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
-          <div style="width:${Math.min(100,pct)}%;height:100%;background:${s.color};border-radius:3px;"></div>
-        </div>
-      </td>
-    `;
+      <td><div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
+        <div style="width:${Math.min(100,pct)}%;height:100%;background:${s.color};border-radius:3px;"></div>
+      </div></td>`;
     tbody.appendChild(tr);
   }
 }
 
-function updateDayBalance(binned, priceData, dateStr) {
-  let importMwh = 0, exportMwh = 0, importEur = 0, exportEur = 0;
-  const dayPrices = getDayPrices(priceData, dateStr);
+function updateDayBalance(binned, pd, dateStr) {
+  const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr);
+  const pByBin = {};
+  for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
-  // build price lookup indexed by 15-min bin
-  const WINDOW = 15 * 60 * 1000;
-  const priceByBin = {};
-  for (const p of dayPrices) {
-    const bin = Math.floor(p.ts / WINDOW) * WINDOW;
-    priceByBin[bin] = p.price;
-  }
-
-  let pSum = 0, pCount = 0, pMin = Infinity, pMax = -Infinity;
+  let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
   for (const b of binned) {
-    const mw    = b['net_import_mw'];
-    if (!isFinite(mw)) continue;
-    const mwh   = mw * (15 / 60);  // 15-min interval
-    const price = priceByBin[b.ts] ?? getPriceAt(priceData, b.ts);
-
-    if (mwh > 0) importMwh += mwh;
-    else         exportMwh += Math.abs(mwh);
-
-    if (isFinite(price)) {
-      if (mwh > 0)  importEur += mwh * price;
-      else          exportEur += Math.abs(mwh) * price;
-      pSum += price; pCount++;
-      if (price < pMin) pMin = price;
-      if (price > pMax) pMax = price;
+    const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
+    const mwh = mw*(15/60);
+    const p   = pByBin[b.ts] ?? getPriceAt(pd, b.ts);
+    if (mwh>0) impMwh+=mwh; else expMwh+=Math.abs(mwh);
+    if (isFinite(p)) {
+      if (mwh>0) impEur+=mwh*p; else expEur+=Math.abs(mwh)*p;
+      pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
     }
   }
+  const net = expEur - impEur;
+  document.getElementById('b-import-eur').textContent = fmtEur(impEur);
+  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос';
+  document.getElementById('b-export-eur').textContent = fmtEur(expEur);
+  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ';
+  const netEl = document.getElementById('b-net-eur');
+  netEl.textContent = fmtEur(net);
+  netEl.className   = 'balance-val '+(net>=0?'revenue':'expense');
+  document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
 
-  const netEur = exportEur - importEur;
-  document.getElementById('b-import-eur').textContent = fmtEur(importEur);
-  document.getElementById('b-import-mwh').textContent = fmt0(importMwh) + ' MWh внос';
-  document.getElementById('b-export-eur').textContent = fmtEur(exportEur);
-  document.getElementById('b-export-mwh').textContent = fmt0(exportMwh) + ' MWh износ';
-
-  const netEl  = document.getElementById('b-net-eur');
-  netEl.textContent = fmtEur(netEur);
-  netEl.className   = 'balance-val ' + (netEur >= 0 ? 'revenue' : 'expense');
-  document.getElementById('b-net-mwh').textContent =
-    fmt0(exportMwh - importMwh) + ' MWh нет';
-
-  // price stats
-  const latestPrice = dayPrices.length ? dayPrices[dayPrices.length - 1].price : NaN;
-  document.getElementById('p-current').textContent = isFinite(latestPrice) ? fmt1(latestPrice) : '—';
-  document.getElementById('p-avg').textContent     = pCount ? fmt1(pSum / pCount) : '—';
-  document.getElementById('p-minmax').textContent  = pCount ? `${fmt1(pMin)} / ${fmt1(pMax)}` : '—';
+  const dayPts = getDayPrices(pd, dateStr);
+  const lastP  = dayPts.length ? dayPts[dayPts.length-1].price : NaN;
+  document.getElementById('p-current').textContent = isFinite(lastP)?fmt1(lastP):'—';
+  document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
+  document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  TIMESTAMP / LIVE DOT
+//  PIE CHART — daily avg + import segment
 // ══════════════════════════════════════════════════════════════════════════════
-function updateTimestamp(latest) {
-  const el  = document.getElementById('ts-label');
-  const dot = document.getElementById('dot');
-  if (!latest) { el.textContent = 'Няма данни'; return; }
-  const ms   = toUtcMs(latest);
-  const age  = Date.now() - ms;
-  const mins = Math.round(age / 60000);
-  el.textContent = mins < 2 ? 'Обновено току-що' : `Обновено преди ${mins} мин.`;
-  dot.className  = 'dot' + (age > STALE_MS ? ' stale' : '');
-}
+function drawPie(dayAvg) {
+  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: dayAvg[s.key]||0 }))
+    .filter(r => r.v > 0).sort((a,b) => b.v - a.v);
+  const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
+  // battery discharge (positive ССЕЕ_mw = discharging)
+  const batt = dayAvg['ССЕЕ_mw']||0;
+  if (batt > 0) { vals.push(batt); labels.push('ССЕЕ разреждане'); colors.push('#e00000'); }
+  // net import — only when importing
+  const nImp = dayAvg['net_import_mw']||0;
+  if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#888888'); }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  PLOTLY CHARTS
-// ══════════════════════════════════════════════════════════════════════════════
-const LAYOUT_BASE = {
-  paper_bgcolor: '#fff',
-  plot_bgcolor:  '#fafcff',
-  font:   { family: 'Arial, sans-serif', color: '#2a3a5a', size: 11 },
-  xaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
-  yaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
-  legend: { bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#c5d8ee', borderwidth: 1, font: { size: 10 } },
-  margin: { t: 8, b: 50, l: 58, r: 10 },
-  hovermode: 'x unified',
-};
-
-function drawPie(latest) {
-  if (!latest) return;
-  const vals   = GEN_SERIES.map(s => Math.max(0, latest[s.key] || 0));
-  const labels = GEN_SERIES.map(s => s.label);
-  const colors = GEN_SERIES.map(s => s.color);
-  const total  = vals.reduce((a, b) => a + b, 0) || 1;
-
+  const total = vals.reduce((a,b)=>a+b,0);
   Plotly.react('chart-pie', [{
-    type: 'pie',
-    values: vals,
-    labels: labels,
-    marker: { colors },
-    hole: 0.42,
+    type: 'pie', values: vals, labels: labels,
+    marker: { colors, line: { color: '#fff', width: 1.5 } },
+    hole: 0.44,
     textinfo: 'label+percent',
-    textfont: { size: 10 },
-    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
+    textfont: { size: 10, family: 'Arial' },
+    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW ср.<br>%{percent}<extra></extra>',
     insidetextorientation: 'radial',
   }], {
     paper_bgcolor: '#fff',
     font: { family: 'Arial, sans-serif', size: 10, color: '#2a3a5a' },
-    showlegend: false,
-    margin: { t: 8, b: 8, l: 8, r: 8 },
+    showlegend: true,
+    legend: { orientation: 'h', y: -0.05, font: { size: 10 }, bgcolor: 'transparent' },
+    margin: { t: 10, b: 60, l: 10, r: 10 },
     annotations: [{
-      text: `<b>${fmt0(total)}</b><br>MW`,
+      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">MW ср.</span>`,
       x: 0.5, y: 0.5, showarrow: false,
-      font: { size: 14, color: '#004494' },
+      font: { size: 15, color: '#004494', family: 'Arial' },
     }],
   }, { responsive: true, displayModeBar: false });
 }
 
-function drawTimeline(binned, priceData, dateStr) {
-  if (!binned.length) return;
-  const xs = binned.map(b => new Date(b.ts));
+// ══════════════════════════════════════════════════════════════════════════════
+//  TIMELINE CHART
+// ══════════════════════════════════════════════════════════════════════════════
+const LO = {
+  paper_bgcolor: '#fff', plot_bgcolor: '#fafcff',
+  font:   { family: 'Arial', color: '#2a3a5a', size: 11 },
+  xaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
+  yaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
+  legend: { bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#c5d8ee', borderwidth: 1, font: { size: 10 } },
+  hovermode: 'x unified',
+};
 
-  // stacked generation areas
+function drawTimeline(binned, pd, dateStr) {
+  window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
+
+  const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
+  const isHour = chartMode === 'hourly';
+  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+
   const genTraces = GEN_SERIES.map(s => ({
-    x: xs,
-    y: binned.map(b => b[s.key] || 0),
-    name: s.label,
-    stackgroup: 'gen',
-    fillcolor: s.color + 'cc',
-    line: { width: 0.5, color: s.color },
+    x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
+    name: s.label, stackgroup: 'gen',
+    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color },
     hovertemplate: `${s.label}: %{y:.0f} MW<extra></extra>`,
   }));
 
-  // load line
   const loadTrace = {
-    x: xs,
-    y: binned.map(b => b['load_mw'] || 0),
-    name: 'Товар',
-    line: { color: '#cc2200', width: 2.5 },
+    x: xs, y: pts.map(p=>isNaN(p['load_mw'])?null:p['load_mw']||0),
+    name: 'Товар', line: { color: '#e53935', width: 2.5 },
     hovertemplate: 'Товар: %{y:.0f} MW<extra></extra>',
   };
-
-  // battery line
   const battTrace = {
-    x: xs,
-    y: binned.map(b => b['ССЕЕ_mw'] || 0),
-    name: 'ССЕЕ (+ разреждане)',
-    line: { color: '#7b3fa0', width: 1.5, dash: 'dot' },
+    x: xs, y: pts.map(p=>isNaN(p['ССЕЕ_mw'])?null:p['ССЕЕ_mw']||0),
+    name: 'ССЕЕ (+ разреждане)', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
     hovertemplate: 'ССЕЕ: %{y:.0f} MW<extra></extra>',
   };
 
-  // IBEX price on secondary Y
-  const dayPrices = getDayPrices(priceData, dateStr);
+  const dayPrices = getDayPrices(pd, dateStr);
+  const priceXs   = isHour
+    ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
+    : dayPrices.map(p=>new Date(p.ts));
   const priceTrace = dayPrices.length ? {
-    x: dayPrices.map(p => new Date(p.ts)),
-    y: dayPrices.map(p => p.price),
-    name: 'IBEX цена',
-    yaxis: 'y2',
+    x: priceXs, y: dayPrices.map(p=>p.price),
+    name: 'IBEX цена', yaxis: 'y2',
     line: { color: '#e07000', width: 1.5 },
     hovertemplate: 'IBEX: %{y:.1f} EUR/MWh<extra></extra>',
   } : null;
@@ -827,48 +724,54 @@ function drawTimeline(binned, priceData, dateStr) {
   if (priceTrace) traces.push(priceTrace);
 
   Plotly.react('chart-timeline', traces, {
-    ...LAYOUT_BASE,
-    yaxis: { ...LAYOUT_BASE.yaxis, title: 'MW' },
-    yaxis2: {
-      title: 'EUR/MWh',
-      overlaying: 'y', side: 'right',
-      gridcolor: 'transparent', linecolor: '#e07000',
-      tickfont: { size: 9, color: '#e07000' },
-      titlefont: { size: 10, color: '#e07000' },
-    },
-    legend: { ...LAYOUT_BASE.legend, orientation: 'h', y: -0.22 },
-    margin: { t: 8, b: 80, l: 58, r: 58 },
+    ...LO,
+    xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
+    yaxis:  { ...LO.yaxis, title: 'MW' },
+    yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
+              gridcolor: 'transparent', linecolor: '#e07000',
+              tickfont: { size: 9, color: '#e07000' }, titlefont: { size: 10, color: '#e07000' } },
+    legend: { ...LO.legend, orientation: 'h', y: -0.15 },
+    margin: { t: 8, b: 90, l: 58, r: 58 },
   }, { responsive: true, displayModeBar: false });
 }
 
 function drawFlowsTimeline(binned) {
   if (!binned.length) return;
-  const xs = binned.map(b => new Date(b.ts));
+  const pts  = chartMode === 'hourly' ? binByHour(binned) : binned;
+  const isH  = chartMode === 'hourly';
+  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
 
   const traces = FLOW_CFG.map(f => ({
-    x: xs,
-    y: binned.map(b => b[f.key] || 0),
-    name: f.label,
-    line: { color: f.color, width: 1.5 },
+    x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
+    name: f.label, line: { color: f.color, width: 1.5 },
     hovertemplate: `${f.label}: %{y:.0f} MW<extra></extra>`,
   }));
-
-  const netTrace = {
-    x: xs,
-    y: binned.map(b => b['net_import_mw'] || 0),
-    name: 'Нетен внос',
-    line: { color: '#1a2233', width: 2.5, dash: 'dot' },
+  traces.push({
+    x: xs, y: pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0),
+    name: 'Нетен внос', line: { color: '#1a2233', width: 2.5, dash: 'dot' },
     hovertemplate: 'Нетен внос: %{y:.0f} MW<extra></extra>',
-  };
+  });
 
-  Plotly.react('chart-flows-ts', [...traces, netTrace], {
-    ...LAYOUT_BASE,
-    yaxis: { ...LAYOUT_BASE.yaxis, title: 'MW (+ внос / − износ)' },
-    legend: { ...LAYOUT_BASE.legend, orientation: 'h', y: -0.3 },
-    margin: { t: 8, b: 80, l: 58, r: 10 },
-    shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1,
-               y0: 0, y1: 0, line: { color: '#aaa', width: 1, dash: 'dash' } }],
+  Plotly.react('chart-flows-ts', traces, {
+    ...LO,
+    xaxis: { ...LO.xaxis, type: isH ? 'category' : 'date', title: isH ? 'Час (UTC)' : 'Час' },
+    yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
+    legend: { ...LO.legend, orientation: 'h', y: -0.2 },
+    margin: { t: 8, b: 90, l: 58, r: 10 },
+    shapes: [{ type:'line', xref:'paper', x0:0, x1:1, y0:0, y1:0,
+               line: { color:'#aaa', width:1, dash:'dash' } }],
   }, { responsive: true, displayModeBar: false });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TIMESTAMP
+// ══════════════════════════════════════════════════════════════════════════════
+function updateTimestamp(latest) {
+  const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
+  if (!latest) { el.textContent = 'Няма данни'; return; }
+  const ms  = toUtcMs(latest), age = Date.now()-ms, mins = Math.round(age/60000);
+  el.textContent = mins < 2 ? 'Обновено току-що' : `Обновено преди ${mins} мин.`;
+  dot.className  = 'dot'+(age > STALE_MS ? ' stale' : '');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -882,32 +785,28 @@ async function refresh() {
 
     const dateStr = currentDay || todayStr();
     const isToday = currentDay === null;
-    const url     = isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`;
-    const records = await getJSONL(url);
-    const latest  = records.length ? records[records.length - 1] : null;
+    const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
+    const latest  = records.length ? records[records.length-1] : null;
     const binned  = bin15min(records);
-
-    const priceData = await loadPrices(dateStr);
+    const dayAvg  = computeDayAvg(binned);
+    const pd      = await loadPrices(dateStr);
 
     updateTimestamp(latest);
-    updateStatusCards(latest, priceData);
-    updateFlowsTable(latest, priceData);
-    updateGenTable(latest);
-    updateDayBalance(binned, priceData, dateStr);
+    updateStatusCards(latest, pd);
+    updateFlowsTable(latest, pd);
+    updateGenTable(dayAvg);
+    updateDayBalance(binned, pd, dateStr);
 
-    drawPie(latest);
-    drawTimeline(binned, priceData, dateStr);
+    drawPie(dayAvg);
+    drawTimeline(binned, pd, dateStr);
     drawFlowsTimeline(binned);
 
   } catch(e) {
-    console.error('refresh error:', e);
+    console.error(e);
     document.getElementById('ts-label').textContent = 'Грешка: ' + e.message;
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════════════════════════════
 refresh();
 setInterval(refresh, REFRESH_MS);
 </script>
