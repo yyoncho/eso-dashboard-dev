@@ -1,46 +1,47 @@
 #!/usr/bin/env python3
 """
-Fetch ESO Bulgaria real-time data and write to data/ directory.
+Fetch ESO Bulgaria real-time data + IBEX/DA prices and write to data/.
 
-Writes:
-  data/YYYY-MM-DD.jsonl   — per-day log (one JSON per line, appended)
-  data/latest.json        — most recent snapshot
-  data/today.jsonl        — alias: same as today's JSONL (symlink or copy)
-  data/index.json         — list of available dates
+Writes every run:
+  data/YYYY-MM-DD.jsonl    per-day snapshot log
+  data/latest.json         most recent snapshot
+  data/today.jsonl         today's snapshots (copy)
+  data/index.json          list of available dates
+
+Written once per day:
+  data/prices-YYYY-MM.json IBEX 15-min day-ahead prices from energy-charts
 """
 
 import json
 import re
+import sys
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent / "data"
+ROOT     = Path(__file__).parent
+DATA_DIR = ROOT / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
+# energy_charts module lives alongside us once deployed; also try local source
+sys.path.insert(0, str(ROOT))
+try:
+    from energy_charts import fetch as ec_fetch
+    HAS_EC = True
+except ImportError:
+    HAS_EC = False
+
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.eso.bg/"}
-BG_TZ = timezone(timedelta(hours=3))  # Sofia = UTC+3 in summer (approx)
+
+# Sofia is UTC+3 in summer (EEST), UTC+2 in winter (EET).
+# We use UTC+2 as conservative offset for date boundary; DST handled by display.
+BG_TZ = timezone(timedelta(hours=2))
 
 GEN_COLS = [
     "АЕЦ", "Кондензационни ТЕЦ", "Топлофикационни ТЕЦ", "Заводски ТЕЦ",
     "ВЕЦ", "Малки ВЕЦ", "ВяЕЦ", "ФЕЦ", "Био ЕЦ",
 ]
-
-# English labels for the frontend
-GEN_LABELS_EN = {
-    "АЕЦ": "Nuclear",
-    "Кондензационни ТЕЦ": "Coal (condensing)",
-    "Топлофикационни ТЕЦ": "CHP thermal",
-    "Заводски ТЕЦ": "Industrial CHP",
-    "ВЕЦ": "Hydro",
-    "Малки ВЕЦ": "Small hydro",
-    "ВяЕЦ": "Wind",
-    "ФЕЦ": "Solar",
-    "Био ЕЦ": "Biomass",
-}
-
 FLOW_COUNTRIES = ["RO", "SR", "MK", "GR", "TR"]
-FLOW_LABELS_EN = {"RO": "Romania", "SR": "Serbia", "MK": "N.Macedonia", "GR": "Greece", "TR": "Turkey"}
 
 
 def fetch_json(url):
@@ -68,11 +69,8 @@ def build_record():
             except (ValueError, TypeError):
                 pass
 
-    row["RO_mw"] = flows.get("RO_data", 0)
-    row["SR_mw"] = flows.get("SR_data", 0)
-    row["MK_mw"] = flows.get("MK_data", 0)
-    row["GR_mw"] = flows.get("GR_data", 0)
-    row["TR_mw"] = flows.get("TR_data", 0)
+    for c in FLOW_COUNTRIES:
+        row[f"{c}_mw"] = flows.get(f"{c}_data", 0) or 0
 
     gen_sum    = sum(row.get(c, 0) for c in GEN_COLS)
     net_import = sum(row.get(f"{c}_mw", 0) for c in FLOW_COUNTRIES)
@@ -89,14 +87,40 @@ def build_record():
     return row
 
 
+def update_prices(year: int, month: int):
+    """Download IBEX/DA prices from energy-charts if not yet done today."""
+    if not HAS_EC:
+        return
+
+    ym       = f"{year:04d}-{month:02d}"
+    path     = DATA_DIR / f"prices-{ym}.json"
+    today_s  = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    if path.exists():
+        try:
+            cached = json.loads(path.read_text())
+            if cached.get("fetched_date") == today_s:
+                return   # already fresh
+        except Exception:
+            pass
+
+    print(f"Fetching IBEX prices for {ym} …", flush=True)
+    try:
+        data = ec_fetch("price", "bg", ym, ym)
+        data["fetched_date"] = today_s
+        path.write_text(json.dumps(data))
+        print(f"  → {len(data.get('unix_seconds', []))} price points", flush=True)
+    except Exception as e:
+        print(f"  WARN: price fetch failed: {e}", flush=True)
+
+
 def append_day_file(record):
-    date_str = record["date_bg"]
-    path = DATA_DIR / f"{date_str}.jsonl"
+    path = DATA_DIR / f"{record['date_bg']}.jsonl"
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def write_today_file(date_str):
+def write_today_alias(date_str):
     src = DATA_DIR / f"{date_str}.jsonl"
     dst = DATA_DIR / "today.jsonl"
     if src.exists():
@@ -104,25 +128,26 @@ def write_today_file(date_str):
 
 
 def write_index():
-    dates = sorted(
-        p.stem for p in DATA_DIR.glob("????-??-??.jsonl")
-    )
-    (DATA_DIR / "index.json").write_text(
-        json.dumps({"dates": dates}, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    dates = sorted(p.stem for p in DATA_DIR.glob("????-??-??.jsonl"))
+    (DATA_DIR / "index.json").write_text(json.dumps({"dates": dates}))
 
 
 def main():
     record = build_record()
     append_day_file(record)
     (DATA_DIR / "latest.json").write_text(
-        json.dumps(record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+        json.dumps(record, ensure_ascii=False, indent=2)
     )
-    write_today_file(record["date_bg"])
+    write_today_alias(record["date_bg"])
     write_index()
-    print(f"[{record['timestamp_utc']}] written — load {record['load_mw']} MW, gen {record['gen_total_mw']} MW")
+
+    # refresh prices for current month (once per day)
+    now_utc = datetime.now(timezone.utc)
+    update_prices(now_utc.year, now_utc.month)
+
+    print(f"[{record['timestamp_utc']}] load {record['load_mw']} MW  "
+          f"gen {record['gen_total_mw']} MW  "
+          f"net_import {record['net_import_mw']} MW")
 
 
 if __name__ == "__main__":
