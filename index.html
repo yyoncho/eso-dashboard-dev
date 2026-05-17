@@ -667,8 +667,8 @@ function drawPie(latest) {
     .filter(r => r.v > 0).sort((a,b) => b.v - a.v);
   const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
 
-  const battMw = latest['ССЕЕ_mw']||0;
-  if (battMw > 0) { vals.push(battMw); labels.push('ССЕЕ разреждане'); colors.push('#e53935'); }
+  const residual = latest['residual_mw']||0;
+  if (residual > 50) { vals.push(residual); labels.push('ССЕЕ разреждане'); colors.push('#e53935'); }
 
   const nImp = latest['net_import_mw']||0;
   if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#9e9e9e'); }

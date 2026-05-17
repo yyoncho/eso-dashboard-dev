@@ -80,6 +80,7 @@ def build_record():
     row["gen_total_mw"]  = round(gen_sum, 1)
     row["net_import_mw"] = round(net_import, 1)
     row["load_mw"]       = round(load, 1)
+    row["residual_mw"]   = round(load - gen_sum - net_import, 1)
 
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
