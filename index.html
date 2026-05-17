@@ -292,7 +292,7 @@ header {
                 <th>Страна</th>
                 <th>Баланс</th>
                 <th style="width:100px;">Поток</th>
-                <th style="text-align:right;">EUR/h</th>
+                <th style="text-align:right;">EUR/h <span id="flows-price-note" style="font-weight:400;font-size:0.65rem;color:#8aaacc;"></span></th>
               </tr>
             </thead>
             <tbody id="flows-tbody"></tbody>
@@ -375,7 +375,7 @@ header {
   <div class="panel timeline-panel">
     <div class="panel-header">Дневен профил — 15 мин. средни</div>
     <div class="panel-body" style="padding:6px 8px 10px;">
-      <div id="chart-timeline" style="height:360px;"></div>
+      <div id="chart-timeline" style="height:520px;"></div>
     </div>
   </div>
 
@@ -605,7 +605,7 @@ function updateStatusCards(latest, priceData) {
   document.getElementById('s-import-label').textContent = isImp ? 'Внос' : 'Износ';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
   if (isFinite(price)) {
-    const eurh = Math.abs(nImp) * price / 1000;
+    const eurh = Math.abs(nImp) * price;
     document.getElementById('s-import-eur').textContent =
       (isImp ? 'Разход: ' : 'Приход: ') + fmtEur(eurh) + '/h';
   } else {
@@ -617,6 +617,10 @@ function updateFlowsTable(latest, priceData) {
   if (!latest) return;
   const price = getPriceAt(priceData, toUtcMs(latest));
   const maxAbs = Math.max(1, ...FLOW_CFG.map(f => Math.abs(latest[f.key] || 0)));
+  // Show which price is used. BG DA price is correct for EU-coupled neighbors (RO, GR).
+  // SR, MK, TR trade bilaterally — their real price is unknown; BG DA used as proxy.
+  const noteEl = document.getElementById('flows-price-note');
+  if (noteEl) noteEl.textContent = isFinite(price) ? `@ ${price.toFixed(1)} €/MWh IBEX` : '';
 
   const tbody = document.getElementById('flows-tbody');
   tbody.innerHTML = '';
@@ -624,7 +628,7 @@ function updateFlowsTable(latest, priceData) {
     const mw   = latest[f.key] || 0;
     const isImp = mw > 0;
     const pct  = Math.min(100, (Math.abs(mw) / maxAbs) * 48);   // up to 48% each side
-    const eurh = isFinite(price) ? Math.abs(mw) * price / 1000 : NaN;
+    const eurh = isFinite(price) ? Math.abs(mw) * price : NaN;
     const eur  = isFinite(eurh) ? fmtEur(isImp ? -eurh : eurh) + '/h' : '—';
 
     const tr = document.createElement('tr');
