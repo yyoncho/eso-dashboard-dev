@@ -13,6 +13,7 @@ Written once per day:
 """
 
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -20,8 +21,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 ROOT     = Path(__file__).parent
-DATA_DIR = ROOT / "data"
-DATA_DIR.mkdir(exist_ok=True)
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "data")))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # energy_charts module lives alongside us once deployed; also try local source
 sys.path.insert(0, str(ROOT))

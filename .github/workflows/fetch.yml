@@ -1,9 +1,7 @@
-name: Fetch ESO data
+name: Fetch ESO data (disabled — runs locally via cron)
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+  workflow_dispatch:   # manual only, kept as fallback
 
 permissions:
   contents: write
@@ -14,7 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: data
           fetch-depth: 1
+
+      - name: Checkout scripts from master
+        run: |
+          git fetch origin master
+          git checkout origin/master -- fetch.py energy_charts.py
 
       - uses: actions/setup-python@v5
         with:
@@ -30,4 +34,4 @@ jobs:
           git add data/
           git diff --cached --quiet && echo "no changes" && exit 0
           git commit -m "data: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push
+          git push origin data
