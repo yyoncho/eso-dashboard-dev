@@ -231,8 +231,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
       <div class="panel">
         <div class="panel-header">
-          <span>Структура на производство</span>
-          <span style="font-weight:400;font-size:0.68rem;opacity:0.75;margin-left:6px;">ген. — ден. средна &bull; батерия/внос — <span style="color:#2ee0ca;font-weight:600;">живо</span></span>
+          <span>Структура на производство — живо</span>
         </div>
         <div style="padding:4px;">
           <div id="chart-pie" style="height:500px;"></div>
@@ -662,18 +661,16 @@ function updateDayBalance(binned, pd, dateStr) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  PIE CHART — daily avg generation + current battery + current import
 // ══════════════════════════════════════════════════════════════════════════════
-function drawPie(dayAvg, latest) {
-  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: dayAvg[s.key]||0 }))
+function drawPie(latest) {
+  if (!latest) return;
+  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }))
     .filter(r => r.v > 0).sort((a,b) => b.v - a.v);
   const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
 
-  // battery: use CURRENT snapshot sign (positive = discharging = supply)
-  // fall back to daily avg if no latest
-  const battMw = latest ? (latest['ССЕЕ_mw']||0) : (dayAvg['ССЕЕ_mw']||0);
+  const battMw = latest['ССЕЕ_mw']||0;
   if (battMw > 0) { vals.push(battMw); labels.push('ССЕЕ разреждане'); colors.push('#e53935'); }
 
-  // net import: use CURRENT snapshot (positive = importing = extra supply source)
-  const nImp = latest ? (latest['net_import_mw']||0) : (dayAvg['net_import_mw']||0);
+  const nImp = latest['net_import_mw']||0;
   if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#9e9e9e'); }
 
   const total = vals.reduce((a,b)=>a+b,0);
@@ -683,7 +680,7 @@ function drawPie(dayAvg, latest) {
     hole: 0.44,
     textinfo: 'label+percent',
     textfont: { size: 10, family: 'Arial' },
-    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW ср.<br>%{percent}<extra></extra>',
+    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
     insidetextorientation: 'radial',
   }], {
     paper_bgcolor: '#fff',
@@ -692,7 +689,7 @@ function drawPie(dayAvg, latest) {
     legend: { orientation: 'h', y: -0.05, font: { size: 10 }, bgcolor: 'transparent' },
     margin: { t: 10, b: 60, l: 10, r: 10 },
     annotations: [{
-      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">MW ср.</span>`,
+      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>`,
       x: 0.5, y: 0.5, showarrow: false,
       font: { size: 15, color: '#004494', family: 'Arial' },
     }],
@@ -828,7 +825,7 @@ async function refresh() {
     updateGenTable(dayAvg);
     updateDayBalance(binned, pd, dateStr);
 
-    drawPie(dayAvg, latest);
+    drawPie(latest);
     drawTimeline(binned, pd, dateStr);
     drawFlowsTimeline(binned);
 
