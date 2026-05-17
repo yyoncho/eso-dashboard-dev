@@ -295,13 +295,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       </div>
 
       <div class="panel">
-        <div class="panel-header">Производство по източници — ден. средна</div>
+        <div class="panel-header">Производство по източници — живо</div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table" id="gen-table">
             <thead>
               <tr>
                 <th>Източник</th>
-                <th style="text-align:right;">MW ср.</th>
+                <th style="text-align:right;">МВт</th>
                 <th style="text-align:right;">%</th>
                 <th style="width:100px;">Дял</th>
               </tr>
@@ -605,17 +605,20 @@ function updateFlowsTable(latest, pd) {
   tbody.appendChild(netTr);
 }
 
-function updateGenTable(dayAvg) {
-  const gen = dayAvg['gen_total_mw'] || 1;
-  const rows = GEN_SERIES.map(s => ({ ...s, mw: dayAvg[s.key]||0 }))
-    .sort((a,b) => b.mw - a.mw);
+function updateGenTable(latest) {
+  if (!latest) return;
+  const battDischarge = latest['batt_discharge_mw'] || 0;
+  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
+  if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#e53935', mw: battDischarge });
+  rows.sort((a,b) => b.mw - a.mw);
+  const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
   tbody.innerHTML = '';
   for (const s of rows) {
-    const pct = s.mw / gen * 100;
+    const pct = s.mw / total * 100;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight:600;color:${s.color}">${s.label}</td>
+      <td>${s.label}</td>
       <td style="text-align:right;">${fmt0(s.mw)}</td>
       <td style="text-align:right;">${pct.toFixed(1)}%</td>
       <td><div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
@@ -828,7 +831,7 @@ async function refresh() {
     updateTimestamp(latest);
     updateStatusCards(latest, pd);
     updateFlowsTable(latest, pd);
-    updateGenTable(dayAvg);
+    updateGenTable(latest);
     updateDayBalance(binned, pd, dateStr);
 
     drawPie(latest);
