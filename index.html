@@ -645,7 +645,7 @@ function updateGenTable(latest) {
   if (!latest) return;
   const battDischarge = latest['batt_discharge_mw'] || 0;
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
-  if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#e53935', mw: battDischarge });
+  if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
   rows.sort((a,b) => b.mw - a.mw);
   const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
@@ -707,7 +707,7 @@ function drawPie(latest) {
   const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
 
   const battDischarge = latest['batt_discharge_mw']||0;
-  if (battDischarge > 0) { vals.push(battDischarge); labels.push('ССЕЕ разреждане'); colors.push('#e53935'); }
+  if (battDischarge > 0) { vals.push(battDischarge); labels.push('ССЕЕ разреждане'); colors.push('#f59f00'); }
 
   const nImp = latest['net_import_mw']||0;
   if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#9e9e9e'); }
@@ -769,7 +769,7 @@ function drawTimeline(binned, pd, dateStr) {
   const battDischargeTrace = {
     x: xs, y: pts.map(p => { const v = p['batt_discharge_mw']; return (v != null && v > 0) ? v : 0; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
-    fillcolor: '#e5393580', line: { width: 0.5, color: '#e53935' },
+    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00' },
     hovertemplate: 'ССЕЕ разреждане: %{y:.0f} MW<extra></extra>',
   };
   const battChargeTrace = {
