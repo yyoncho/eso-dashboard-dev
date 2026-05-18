@@ -83,8 +83,26 @@ def build_record():
 
     ssee  = abs(row.get("ССЕЕ_mw", 0) or 0)
     state = row.get("ССЕЕ_state", "")
-    row["batt_charge_mw"]    = round(ssee if state == "charging" else 0.0, 1)
-    row["batt_discharge_mw"] = round(max(0.0, load - gen_sum - net_import), 1)
+    row["batt_charge_mw"] = round(ssee if state == "charging" else 0.0, 1)
+
+    # Discharge: ESO bakes it into the % denominator — back-calculate implied total
+    implied = []
+    for item in gen_data:
+        if item is None: continue
+        label, value = item[0], item[1]
+        if "ССЕЕ" in label: continue
+        m = re.search(r'(\d+[.,]\d+)%', label)
+        if not m: continue
+        pct = float(m.group(1).replace(',', '.'))
+        try: val = float(str(value).replace(',', '.'))
+        except: continue
+        if pct > 0 and val > 0:
+            implied.append(val / (pct / 100))
+    if implied:
+        api_total = sum(implied) / len(implied)
+        row["batt_discharge_mw"] = round(max(0.0, api_total - gen_sum), 1)
+    else:
+        row["batt_discharge_mw"] = round(max(0.0, load - gen_sum - net_import), 1)
 
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
