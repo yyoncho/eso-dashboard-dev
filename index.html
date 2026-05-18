@@ -443,7 +443,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -745,7 +745,7 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: 'ССЕЕ разреждане: %{y:.0f} MW<extra></extra>',
   };
   const battChargeTrace = {
-    x: xs, y: pts.map(p => { const v = p['ССЕЕ_mw']; return (v != null && v < -10) ? v : 0; }),
+    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; return (v != null && v > 0) ? -v : 0; }),
     name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
     hovertemplate: 'ССЕЕ зареждане: %{y:.0f} MW<extra></extra>',
   };
