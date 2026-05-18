@@ -726,7 +726,7 @@ function drawPie(latest) {
   const traceData = [{
     type: 'pie', values: vals, labels: labels,
     marker: { colors, line: { color: '#fff', width: 1.5 } },
-    hole: 0.44,
+    hole: 0.44, sort: false,
     textinfo: 'label+percent',
     textfont: { size: 10, family: 'Arial' },
     hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
@@ -746,11 +746,16 @@ function drawPie(latest) {
     }],
   };
   if (!_pieInitialized) {
-    Plotly.newPlot('chart-pie', traceData, layout, { responsive: true, displayModeBar: false });
+    Plotly.newPlot('chart-pie', traceData, layout, { responsive: true, displayModeBar: false, transition: { duration: 0 } });
     _pieInitialized = true;
   } else {
-    Plotly.update('chart-pie', { values: [vals], labels: [labels], 'marker.colors': [colors] },
-      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` });
+    Plotly.update('chart-pie',
+      { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false] },
+      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` },
+      [0]);
+    // suppress animation
+    const gd = document.getElementById('chart-pie');
+    if (gd._transitionData) gd._transitionData = null;
   }
 }
 
