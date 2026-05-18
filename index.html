@@ -709,10 +709,11 @@ function updateDayBalance(binned, pd, dateStr) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  PIE CHART — daily avg generation + current battery + current import
 // ══════════════════════════════════════════════════════════════════════════════
+let _pieInitialized = false;
 function drawPie(latest) {
   if (!latest) return;
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }))
-    .filter(r => r.v > 0).sort((a,b) => b.v - a.v);
+    .filter(r => r.v > 0);  // no sort — keep GEN_SERIES order
   const vals = rows.map(r=>r.v), labels = rows.map(r=>r.label), colors = rows.map(r=>r.color);
 
   const battDischarge = latest['batt_discharge_mw']||0;
@@ -722,7 +723,7 @@ function drawPie(latest) {
   if (nImp > 0) { vals.push(nImp); labels.push('Внос'); colors.push('#9e9e9e'); }
 
   const total = vals.reduce((a,b)=>a+b,0);
-  Plotly.react('chart-pie', [{
+  const traceData = [{
     type: 'pie', values: vals, labels: labels,
     marker: { colors, line: { color: '#fff', width: 1.5 } },
     hole: 0.44,
@@ -730,18 +731,27 @@ function drawPie(latest) {
     textfont: { size: 10, family: 'Arial' },
     hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
     insidetextorientation: 'radial',
-  }], {
+  }];
+  const layout = {
     paper_bgcolor: '#fff',
     font: { family: 'Arial, sans-serif', size: 10, color: '#2a3a5a' },
     showlegend: true,
     legend: { orientation: 'h', y: -0.05, font: { size: 10 }, bgcolor: 'transparent' },
     margin: { t: 10, b: 60, l: 10, r: 10 },
+    uirevision: 'pie',
     annotations: [{
       text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>`,
       x: 0.5, y: 0.5, showarrow: false,
       font: { size: 15, color: '#004494', family: 'Arial' },
     }],
-  }, { responsive: true, displayModeBar: false });
+  };
+  if (!_pieInitialized) {
+    Plotly.newPlot('chart-pie', traceData, layout, { responsive: true, displayModeBar: false });
+    _pieInitialized = true;
+  } else {
+    Plotly.update('chart-pie', { values: [vals], labels: [labels], 'marker.colors': [colors] },
+      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
