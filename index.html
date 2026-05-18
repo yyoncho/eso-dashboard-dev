@@ -226,6 +226,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-val" id="s-batt">—</div>
       <div class="stat-unit" id="s-batt-state">MW</div>
     </div>
+    <div class="stat-card" id="s-discharge-card" style="border-top-color:#f59f00;">
+      <div class="stat-label">ССЕЕ разреждане</div>
+      <div class="stat-val" id="s-discharge">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
   </div>
 
   <!-- two-column -->
@@ -589,6 +594,10 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
   document.getElementById('s-batt-state').textContent =
     bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
+
+  const discharge = latest['batt_discharge_mw'] || 0;
+  document.getElementById('s-discharge').textContent = fmt0(discharge);
+  document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
 
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
