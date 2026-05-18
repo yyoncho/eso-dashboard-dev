@@ -375,12 +375,17 @@ const FLOW_CFG = [
 //  STATE
 // ══════════════════════════════════════════════════════════════════════════════
 let allDates   = [];
-let currentDay = null;
 let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
 let _dayRecords = [];
 let _dayPriceData = null;
 let _dayDateStr = null;
+let _pendingSnapTs = null;
+
+// Init state from URL hash
+const _initHash = readHash();
+let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
+_pendingSnapTs = _initHash.snap || null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -496,9 +501,30 @@ function computeDayAvg(binned) {
 function todayStr() {
   return new Date(Date.now() + 2*3600*1000).toISOString().slice(0,10);
 }
+// ── URL hash state: #day=YYYY-MM-DD&snap=YYYY-MM-DDTHH:MM:SSZ ────────────────
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  return { day: p.get('day'), snap: p.get('snap') };
+}
+function writeHash(day, snapTs) {
+  const p = new URLSearchParams();
+  if (day) p.set('day', day);
+  if (snapTs) p.set('snap', snapTs);
+  const h = p.toString() ? '#' + p.toString() : '#';
+  history.replaceState(null, '', h);
+}
+window.addEventListener('hashchange', () => {
+  const { day, snap } = readHash();
+  currentDay = (day && day !== todayStr()) ? day : null;
+  _pendingSnapTs = snap || null;
+  refresh();
+});
+
 function pickDate(v) {
   if (!v) return;
   currentDay = v === todayStr() ? null : v;
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
   refresh();
 }
 function shiftDay(d) {
@@ -507,9 +533,11 @@ function shiftDay(d) {
   if (idx === -1) return;
   const ni = Math.max(0, Math.min(allDates.length-1, idx+d));
   currentDay = allDates[ni] === todayStr() ? null : allDates[ni];
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
   refresh();
 }
-function goToday() { currentDay = null; refresh(); }
+function goToday() { currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
 
 function updateNav() {
   const today = todayStr(), base = currentDay || today;
@@ -852,6 +880,8 @@ function onSnapSlider(val) {
   drawPie(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
   updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
+  const ts = snap['timestamp_utc'] || snap['timestamp'];
+  writeHash(currentDay, ts);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -873,6 +903,16 @@ async function refresh() {
     _dayRecords   = records;
     _dayPriceData = pd;
     _dayDateStr   = dateStr;
+
+    // Restore snap from URL hash if present
+    if (_pendingSnapTs && records.length) {
+      const idx = records.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
+      if (idx >= 0) {
+        document.getElementById('snap-slider').value = idx;
+        onSnapSlider(idx);
+        _pendingSnapTs = null;
+      }
+    }
 
     updateScrubber(records);
     updateTimestamp(latest);

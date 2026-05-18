@@ -83,8 +83,8 @@ def build_record():
 
     ssee  = abs(row.get("ССЕЕ_mw", 0) or 0)
     state = row.get("ССЕЕ_state", "")
-    row["batt_discharge_mw"] = round(ssee if state == "discharging" else 0.0, 1)
-    row["batt_charge_mw"]    = round(ssee if state == "charging"    else 0.0, 1)
+    row["batt_charge_mw"]    = round(ssee if state == "charging" else 0.0, 1)
+    row["batt_discharge_mw"] = round(max(0.0, load - gen_sum - net_import), 1)
 
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
