@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>БГ Мрежов Монитор — неофициален</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; }
+
+/* ── header ── */
+header {
+  background: linear-gradient(180deg, #004494 0%, #003070 100%);
+  color: #fff;
+  border-bottom: 3px solid #ffd700;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  max-width: 1600px; margin: 0 auto; padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.logo-area { display: flex; align-items: center; gap: 14px; }
+.logo-circle {
+  width: 48px; height: 48px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 0.85rem; color: #003070; flex-shrink: 0; letter-spacing: -0.03em;
+}
+.logo-text h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.03em; }
+.logo-text p  { font-size: 0.68rem; opacity: 0.6; margin-top: 2px; letter-spacing: 0.01em; }
+
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.live-badge { display: flex; align-items: center; gap: 7px; font-size: 0.72rem; color: rgba(255,255,255,0.85); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #4cde6e; box-shadow: 0 0 6px #4cde6e; animation: blink 2s infinite; }
+.dot.stale { background: #ff5555; box-shadow: 0 0 6px #ff5555; animation: none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+.day-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.nav-btn {
+  padding: 4px 10px; background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  color: #fff; font-size: 0.78rem; cursor: pointer; transition: background 0.15s;
+}
+.nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
+.nav-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; font-weight: 700; }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+#day-label { font-size: 0.82rem; color: rgba(255,255,255,0.9); font-weight: 600; }
+
+input[type="date"]#date-picker {
+  padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12); color: #fff; font-size: 0.78rem; cursor: pointer;
+  color-scheme: dark;
+}
+input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
+
+/* ── past-day banner ── */
+.past-banner {
+  display: none; background: #fff3cd; border-bottom: 2px solid #e0a800;
+  padding: 6px 20px; font-size: 0.8rem; color: #664d03; font-weight: 600;
+  text-align: center; letter-spacing: 0.02em;
+}
+.past-banner.show { display: block; }
+
+/* ── content ── */
+.content { max-width: 1600px; margin: 0 auto; padding: 14px 20px 30px; }
+
+/* ── stat cards ── */
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 14px;
+}
+.stat-card {
+  background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
+  border-radius: 4px; padding: 12px 14px 10px;
+}
+.stat-card.green  { border-top-color: #1a8a1a; }
+.stat-card.orange { border-top-color: #e07000; }
+.stat-card.purple { border-top-color: #7b3fa0; }
+.stat-card.red    { border-top-color: #cc2200; }
+.stat-card.teal   { border-top-color: #0088aa; }
+.stat-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
+.stat-val   { font-size: 1.6rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
+.stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
+.stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
+
+/* ── two-column layout ── */
+.main-cols { display: grid; grid-template-columns: 460px 1fr; gap: 12px; margin-bottom: 12px; }
+
+/* ── panels ── */
+.panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
+.panel-header {
+  background: #004494; color: #fff; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; padding: 7px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-body { padding: 10px 12px; }
+
+/* ── toggle ── */
+.toggle-group { display: flex; gap: 4px; }
+.tog-btn {
+  padding: 2px 9px; font-size: 0.68rem; font-weight: 600; border-radius: 3px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.5); background: transparent; color: rgba(255,255,255,0.7);
+  text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.12s;
+}
+.tog-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; }
+.tog-btn:hover:not(.active) { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* ── flows table ── */
+.flows-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.flows-table th {
+  text-align: left; font-weight: 700; font-size: 0.68rem; color: #5a7090;
+  text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid #dde8f5;
+}
+.flows-table td { padding: 5px 6px; border-bottom: 1px solid #edf2f8; }
+.flows-table tr:last-child td { border-bottom: none; }
+.flow-bar-wrap { position: relative; height: 14px; background: #edf2f8; border-radius: 3px; width: 100px; overflow: hidden; }
+.flow-bar { position: absolute; height: 100%; top: 0; border-radius: 3px; }
+.flow-bar.import { background: #cc2200; right: 50%; }
+.flow-bar.export { background: #1a8a1a; left: 50%; }
+.import-val { color: #cc2200; font-weight: 700; }
+.export-val { color: #1a8a1a; font-weight: 700; }
+
+/* ── balance ── */
+.balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.balance-item { background: #f0f6ff; border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 10px; }
+.balance-item.expense { background: #fff5f5; border-color: #f5c5c5; }
+.balance-item.revenue { background: #f0fff5; border-color: #a5d5b5; }
+.balance-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a7090; margin-bottom: 3px; }
+.balance-val   { font-size: 1.1rem; font-weight: 700; }
+.balance-val.expense { color: #cc2200; }
+.balance-val.revenue { color: #1a8a1a; }
+.balance-val.neutral { color: #004494; }
+
+.price-box {
+  display: flex; gap: 10px; flex-wrap: wrap; background: #f5f8ff;
+  border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 12px;
+  margin-top: 8px; align-items: center;
+}
+.price-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
+.price-val   { font-size: 1.1rem; font-weight: 700; color: #004494; }
+.price-unit  { font-size: 0.68rem; color: #7a8aaa; }
+
+/* ── gen table ── */
+#gen-table td, #gen-table th { font-size: 0.8rem; }
+
+@media (max-width: 960px) { .main-cols { grid-template-columns: 1fr; } }
+
+/* ── records bar ── */
+.rec-card {
+  padding: 10px 20px 10px 14px; border-right: 1px solid #c5d8ee;
+  min-width: 160px; flex: 1;
+}
+.rec-card:last-child { border-right: none; }
+.rec-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a7090; }
+.rec-val   { font-size: 1.5rem; font-weight: 700; color: #1a2233; line-height: 1.15; }
+.rec-unit  { font-size: 0.68rem; color: #7a8aaa; }
+.rec-date  { font-size: 0.72rem; margin-top: 3px; }
+.rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
+.rec-date a:hover { text-decoration: underline; }
+
+/* ── RE stats bar ── */
+#re-stats-bar { display: none; }
+#re-stats-bar.show { display: flex !important; }
+.re-stat {
+  padding: 6px 20px 6px 12px; border-right: 1px solid #c5e8c5;
+  display: flex; flex-direction: column; min-width: 100px;
+}
+.re-stat:last-child { border-right: none; }
+.re-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #3a7050; }
+.re-stat-val   { font-size: 1.25rem; font-weight: 700; color: #1a6030; line-height: 1.15; }
+.re-stat-val.re-stat-gap { color: #cc2200; }
+.re-stat-unit  { font-size: 0.68rem; color: #5a9070; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-circle">БГ</div>
+      <div class="logo-text">
+        <h1>Мрежов монитор — България</h1>
+        <p>Неофициален ресурс &bull; данни от ЕСО ЕАД и IBEX &bull; не представлява ЕСО ЕАД</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge">
+        <div class="dot" id="dot"></div>
+        <span id="ts-label">Зареждане…</span>
+      </div>
+      <div class="day-nav">
+        <button class="nav-btn" id="prev-btn" onclick="shiftDay(-1)">&#8592;</button>
+        <input type="date" id="date-picker" onchange="pickDate(this.value)">
+        <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
+        <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
+        <span id="day-label"></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="past-banner" id="past-banner">
+  📅 Исторически данни — показват се архивни записи, не актуална информация
+</div>
+<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
+  <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
+  <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
+</div>
+
+<div class="content">
+
+  <!-- status cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Товар на РБ</div>
+      <div class="stat-val" id="s-load">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Производство</div>
+      <div class="stat-val" id="s-gen">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card" id="s-import-card">
+      <div class="stat-label" id="s-import-label">Внос/Износ</div>
+      <div class="stat-val" id="s-import">—</div>
+      <div class="stat-unit">MW</div>
+      <div class="stat-sub" id="s-import-eur">—</div>
+    </div>
+    <div class="stat-card teal">
+      <div class="stat-label">АЕЦ</div>
+      <div class="stat-val" id="s-nuc">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">ВЕЦ</div>
+      <div class="stat-val" id="s-hydro">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">ВяЕЦ</div>
+      <div class="stat-val" id="s-wind">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">ФЕЦ</div>
+      <div class="stat-val" id="s-solar">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">ССЕЕ</div>
+      <div class="stat-val" id="s-batt">—</div>
+      <div class="stat-unit" id="s-batt-state">MW</div>
+    </div>
+    <div class="stat-card" id="s-discharge-card" style="border-top-color:#f59f00;">
+      <div class="stat-label">ССЕЕ разреждане</div>
+      <div class="stat-val" id="s-discharge">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
+  </div>
+
+  <!-- renewable records -->
+  <div id="records-bar" style="display:none;margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-header">Рекорди — ВЕИ и ССЕЕ</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0;" id="records-inner"></div>
+    </div>
+  </div>
+
+  <!-- two-column -->
+  <div class="main-cols">
+
+    <!-- LEFT: pie + flows -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>Структура на производство — живо</span>
+        </div>
+        <div style="padding:4px;">
+          <div id="chart-pie" style="height:500px;"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          Трансгранични потоци
+          <span id="flows-price-note" style="font-weight:400;font-size:0.68rem;opacity:0.8;"></span>
+        </div>
+        <div class="panel-body" style="padding:6px 12px 10px;">
+          <table class="flows-table">
+            <thead>
+              <tr>
+                <th>Страна</th>
+                <th>Баланс</th>
+                <th style="width:100px;">Поток</th>
+                <th style="text-align:right;">EUR/h</th>
+              </tr>
+            </thead>
+            <tbody id="flows-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT: balance + gen table -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <div class="panel">
+        <div class="panel-header">Дневен баланс</div>
+        <div class="panel-body">
+          <div class="balance-grid">
+            <div class="balance-item expense">
+              <div class="balance-label">Разходи за внос</div>
+              <div class="balance-val expense" id="b-import-eur">—</div>
+              <div class="stat-unit" id="b-import-mwh">—</div>
+            </div>
+            <div class="balance-item revenue">
+              <div class="balance-label">Приходи от износ</div>
+              <div class="balance-val revenue" id="b-export-eur">—</div>
+              <div class="stat-unit" id="b-export-mwh">—</div>
+            </div>
+            <div class="balance-item" style="grid-column:1/-1;">
+              <div class="balance-label">Нетен баланс (+ приход / &minus; разход)</div>
+              <div class="balance-val neutral" id="b-net-eur">—</div>
+              <div class="stat-unit" id="b-net-mwh">—</div>
+            </div>
+          </div>
+          <div class="price-box">
+            <div><div class="price-label">IBEX DA (текуща)</div>
+              <span class="price-val" id="p-current">—</span> <span class="price-unit">EUR/MWh</span></div>
+            <div><div class="price-label">Средна за деня</div>
+              <span class="price-val" id="p-avg">—</span> <span class="price-unit">EUR/MWh</span></div>
+            <div><div class="price-label">Мин / Макс</div>
+              <span class="price-val" id="p-minmax">—</span> <span class="price-unit">EUR/MWh</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Производство по източници — живо</div>
+        <div class="panel-body" style="padding:6px 12px 10px;">
+          <table class="flows-table" id="gen-table">
+            <thead>
+              <tr>
+                <th>Източник</th>
+                <th style="text-align:right;">МВт</th>
+                <th style="text-align:right;">%</th>
+                <th style="width:100px;">Дял</th>
+              </tr>
+            </thead>
+            <tbody id="gen-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+  </div><!-- /main-cols -->
+
+  <!-- timeline chart -->
+  <div class="panel" style="margin-bottom:12px;">
+    <div class="panel-header">
+      <span>Дневен профил</span>
+      <div class="toggle-group">
+        <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
+        <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
+        <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
+      </div>
+    </div>
+    <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
+      <div class="re-stat"><div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-val" id="rs-pct">—</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val re-stat-gap" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч.</div></div>
+    </div>
+    <div style="padding:6px 8px 10px;">
+      <div id="chart-timeline" style="height:520px;"></div>
+    </div>
+  </div>
+
+  <!-- flows timeline -->
+  <div class="panel">
+    <div class="panel-header">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</div>
+    <div style="padding:6px 8px 10px;">
+      <div id="chart-flows-ts" style="height:480px;"></div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+//  CONFIG — colors match ESO.bg Highcharts palette
+// ══════════════════════════════════════════════════════════════════════════════
+const BASE       = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+const REFRESH_MS = 5 * 60 * 1000;
+const STALE_MS   = 9 * 60 * 1000;
+
+const GEN_SERIES = [
+  { key: 'АЕЦ',                 label: 'АЕЦ',           color: '#2caffe' },
+  { key: 'Кондензационни ТЕЦ',  label: 'Конд. ТЕЦ',    color: '#544fc5' },
+  { key: 'Топлофикационни ТЕЦ', label: 'Топло. ТЕЦ',   color: '#00e272' },
+  { key: 'Заводски ТЕЦ',        label: 'Зав. ТЕЦ',      color: '#fe6a35' },
+  { key: 'ВЕЦ',                 label: 'ВЕЦ',           color: '#6b8abc' },
+  { key: 'Малки ВЕЦ',           label: 'Малки ВЕЦ',     color: '#d568fb' },
+  { key: 'ВяЕЦ',                label: 'ВяЕЦ',          color: '#2ee0ca' },
+  { key: 'ФЕЦ',                 label: 'ФЕЦ',           color: '#fa4b42' },
+  { key: 'Био ЕЦ',              label: 'Биомаса',       color: '#feb56a' },
+];
+
+const FLOW_CFG = [
+  { key: 'RO_mw', label: 'Румъния',     color: '#2caffe' },
+  { key: 'SR_mw', label: 'Сърбия',      color: '#00e272' },
+  { key: 'MK_mw', label: 'С.Македония', color: '#fe6a35' },
+  { key: 'GR_mw', label: 'Гърция',      color: '#544fc5' },
+  { key: 'TR_mw', label: 'Турция',      color: '#d568fb' },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════════════════
+let allDates   = [];
+let priceCache = {};
+let chartMode  = 'instant';   // 'instant' | 'hourly'
+let reMode     = false;
+
+const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
+let _dayRecords = [];
+let _dayPriceData = null;
+let _dayDateStr = null;
+let _pendingSnapTs = null;
+
+// Init state from URL hash
+const _initHash = readHash();
+let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
+_pendingSnapTs = _initHash.snap || null;
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+async function getJSON(url) {
+  const r = await fetch(url + '?_=' + Date.now());
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+async function getJSONL(url) {
+  const r = await fetch(url + '?_=' + Date.now());
+  if (!r.ok) throw new Error(r.status);
+  const text = await r.text();
+  return text.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(Boolean);
+}
+function toUtcMs(r) {
+  if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
+  return Date.parse((r.timestamp || '').replace(' ', 'T') + '+03:00');
+}
+function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
+function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
+function fmtEur(e) {
+  if (!isFinite(e)) return '—';
+  const a = Math.abs(e), s = e < 0 ? '−' : '';
+  if (a >= 1e6) return s + (a/1e6).toFixed(2) + ' млн.€';
+  if (a >= 1e3) return s + (a/1e3).toFixed(1) + ' хил.€';
+  return s + a.toFixed(0) + ' €';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PRICES
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadPrices(dateStr) {
+  const ym = dateStr.slice(0, 7);
+  if (priceCache[ym]) return priceCache[ym];
+  try { const d = await getJSON(`${BASE}/prices-${ym}.json`); priceCache[ym] = d; return d; }
+  catch(e) { return null; }
+}
+function getPriceAt(pd, ms) {
+  if (!pd) return NaN;
+  const { unix_seconds: us, price: pr } = pd;
+  if (!us) return NaN;
+  const s = ms / 1000;
+  let lo = 0, hi = us.length - 1, idx = -1;
+  while (lo <= hi) { const m = (lo+hi)>>1; if (us[m] <= s) { idx=m; lo=m+1; } else hi=m-1; }
+  return idx >= 0 ? pr[idx] : NaN;
+}
+function getDayPrices(pd, dateStr) {
+  if (!pd) return [];
+  const { unix_seconds: us, price: pr } = pd;
+  if (!us) return [];
+  const s0 = Date.parse(dateStr + 'T00:00:00+02:00') / 1000;
+  const s1 = s0 + 86400;
+  const pts = [];
+  for (let i = 0; i < us.length; i++) if (us[i] >= s0 && us[i] < s1) pts.push({ ts: us[i]*1000, price: pr[i] });
+  return pts;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  AGGREGATION
+// ══════════════════════════════════════════════════════════════════════════════
+const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
+
+function avgOf(arr, key) {
+  const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : NaN;
+}
+
+function bin15min(records) {
+  const W = 15*60*1000, buckets = {};
+  for (const r of records) {
+    const ms = toUtcMs(r);
+    if (!isFinite(ms)) continue;
+    const b = Math.floor(ms/W)*W;
+    if (!buckets[b]) buckets[b] = [];
+    buckets[b].push(r);
+  }
+  return Object.entries(buckets).sort(([a],[b])=>Number(a)-Number(b)).map(([bin,recs])=>{
+    const ts = Number(bin), obj = { ts };
+    for (const k of ALL_KEYS) obj[k] = avgOf(recs, k);
+    if (isNaN(obj['load_mw'])) obj['load_mw'] = avgOf(recs, 'Товар на РБ');
+    return obj;
+  });
+}
+
+function binByHour(binned) {
+  // average 15-min bins by UTC hour → 24 points labelled by clock hour
+  const hours = {};
+  for (const b of binned) {
+    const h = new Date(b.ts).getUTCHours();
+    if (!hours[h]) hours[h] = [];
+    hours[h].push(b);
+  }
+  return Array.from({length:24},(_,h)=>{
+    const recs = hours[h] || [];
+    const obj = { hour: h, ts: h };
+    for (const k of ALL_KEYS) obj[k] = recs.length ? avgOf(recs, k) : NaN;
+    return obj;
+  }).filter(o => Object.values(o).some(v => typeof v === 'number' && isFinite(v) && v !== o.hour && v !== o.ts));
+}
+
+function computeDayAvg(binned) {
+  const obj = {};
+  for (const k of ALL_KEYS) obj[k] = avgOf(binned, k);
+  if (isNaN(obj['load_mw'])) obj['load_mw'] = NaN;
+  return obj;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════════════════════════════
+function todayStr() {
+  return new Date(Date.now() + 2*3600*1000).toISOString().slice(0,10);
+}
+// ── URL hash state: #day=YYYY-MM-DD&snap=YYYY-MM-DDTHH:MM:SSZ ────────────────
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  return { day: p.get('day'), snap: p.get('snap') };
+}
+function writeHash(day, snapTs) {
+  const p = new URLSearchParams();
+  if (day) p.set('day', day);
+  if (snapTs) p.set('snap', snapTs);
+  const h = p.toString() ? '#' + p.toString() : '#';
+  history.replaceState(null, '', h);
+}
+window.addEventListener('hashchange', () => {
+  const { day, snap } = readHash();
+  currentDay = (day && day !== todayStr()) ? day : null;
+  _pendingSnapTs = snap || null;
+  refresh();
+});
+
+function pickDate(v) {
+  if (!v) return;
+  currentDay = v === todayStr() ? null : v;
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
+  refresh();
+}
+function shiftDay(d) {
+  const base = currentDay || todayStr();
+  const idx  = allDates.indexOf(base);
+  if (idx === -1) return;
+  const ni = Math.max(0, Math.min(allDates.length-1, idx+d));
+  currentDay = allDates[ni] === todayStr() ? null : allDates[ni];
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
+  refresh();
+}
+function goToday() { currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
+
+function updateNav() {
+  const today = todayStr(), base = currentDay || today;
+  const idx   = allDates.indexOf(base);
+  document.getElementById('prev-btn').disabled  = idx <= 0;
+  document.getElementById('next-btn').disabled  = idx >= allDates.length-1 || currentDay === null;
+  document.getElementById('today-btn').classList.toggle('active', currentDay === null);
+  document.getElementById('day-label').textContent = base;
+
+  const picker = document.getElementById('date-picker');
+  if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1]; }
+  picker.value = base;
+
+  const banner = document.getElementById('past-banner');
+  banner.classList.toggle('show', currentDay !== null);
+}
+
+function setChartMode(mode) {
+  chartMode = mode;
+  document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
+  document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  }
+}
+
+function setReMode(on) {
+  reMode = on;
+  document.getElementById('tog-re').classList.toggle('active', on);
+  document.getElementById('re-stats-bar').classList.toggle('show', on);
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    updateReStats(window._lastBinned);
+  }
+}
+
+function updateReStats(binned) {
+  if (!binned || !binned.length) return;
+  const ih = 15 / 60;  // each bin = 15 min
+  let loadGwh = 0, reGwh = 0, excessGwh = 0, fullH = 0;
+  for (const b of binned) {
+    const load = b['load_mw'] || 0; if (!load) continue;
+    const re   = [...RE_KEYS].reduce((s,k) => s + (b[k]||0), 0) + (b['batt_discharge_mw']||0);
+    const rfl  = Math.min(re, load);
+    loadGwh   += load * ih / 1000;
+    reGwh     += rfl  * ih / 1000;
+    excessGwh += Math.max(0, re - load) * ih / 1000;
+    if (rfl >= load) fullH += ih;
+  }
+  const gapGwh = loadGwh - reGwh;
+  const pct    = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
+  document.getElementById('rs-pct').textContent  = pct.toFixed(1) + '%';
+  document.getElementById('rs-re').textContent   = reGwh.toFixed(1);
+  document.getElementById('rs-gap').textContent  = gapGwh.toFixed(1);
+  document.getElementById('rs-exc').textContent  = excessGwh.toFixed(2);
+  document.getElementById('rs-full').textContent = fullH.toFixed(1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CARDS / TABLES
+// ══════════════════════════════════════════════════════════════════════════════
+function battState(mw) {
+  if (mw === undefined || mw === null || isNaN(mw) || mw === 0) return 'idle';
+  return mw < 0 ? 'charging' : 'discharging';
+}
+
+function updateStatusCards(latest, pd) {
+  if (!latest) return;
+  const load = latest['load_mw'] || latest['Товар на РБ'] || 0;
+  const gen  = latest['gen_total_mw'] || 0;
+  const nImp = latest['net_import_mw'] || 0;
+  document.getElementById('s-load').textContent = fmt0(load);
+  document.getElementById('s-gen').textContent  = fmt0(gen);
+  document.getElementById('s-nuc').textContent  = fmt0(latest['АЕЦ']);
+  document.getElementById('s-hydro').textContent = fmt0((latest['ВЕЦ']||0)+(latest['Малки ВЕЦ']||0));
+  document.getElementById('s-wind').textContent  = fmt0(latest['ВяЕЦ']);
+  document.getElementById('s-solar').textContent = fmt0(latest['ФЕЦ']);
+  const bMw  = latest['ССЕЕ_mw'];
+  const bSt  = battState(bMw);
+  document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
+  document.getElementById('s-batt-state').textContent =
+    bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
+
+  const discharge = latest['batt_discharge_mw'] || 0;
+  document.getElementById('s-discharge').textContent = fmt0(discharge);
+  document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
+
+  const price = getPriceAt(pd, toUtcMs(latest));
+  const isImp = nImp > 0;
+  document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
+  document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
+  document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
+  document.getElementById('s-import-eur').textContent = isFinite(price)
+    ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
+}
+
+function updateFlowsTable(latest, pd) {
+  if (!latest) return;
+  const price  = getPriceAt(pd, toUtcMs(latest));
+  const maxAbs = Math.max(1, ...FLOW_CFG.map(f=>Math.abs(latest[f.key]||0)));
+  const noteEl = document.getElementById('flows-price-note');
+  if (noteEl) noteEl.textContent = isFinite(price)?`@ ${price.toFixed(1)} €/MWh IBEX`:'';
+
+  const tbody = document.getElementById('flows-tbody');
+  tbody.innerHTML = '';
+  for (const f of FLOW_CFG) {
+    const mw = latest[f.key]||0, isImp = mw>0;
+    const pct = Math.min(100,(Math.abs(mw)/maxAbs)*48);
+    const eurh = isFinite(price)?Math.abs(mw)*price:NaN;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600;">${f.label}</td>
+      <td class="${isImp?'import-val':'export-val'}">${fmt0(Math.abs(mw))} MW ${isImp?'▲':'▼'}</td>
+      <td><div class="flow-bar-wrap">
+        <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
+        <div class="flow-bar ${isImp?'import':'export'}" style="width:${pct}%;"></div>
+      </div></td>
+      <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h ~':'—'}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  // Net total row
+  const netMw  = latest['net_import_mw'] || 0;
+  const isNetImp = netMw > 0;
+  const netEurh  = isFinite(price) ? Math.abs(netMw) * price : NaN;
+  const netTr = document.createElement('tr');
+  netTr.style.cssText = 'border-top:2px solid #c5d8ee;font-weight:700;';
+  netTr.innerHTML = `
+    <td style="font-weight:700;color:#1a2233;">Нетна позиция</td>
+    <td class="${isNetImp?'import-val':'export-val'}">${fmt0(Math.abs(netMw))} MW ${isNetImp?'▲':'▼'}</td>
+    <td><div class="flow-bar-wrap">
+      <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#999;"></div>
+      <div class="flow-bar ${isNetImp?'import':'export'}" style="width:${Math.min(48,(Math.abs(netMw)/maxAbs)*48)}%;"></div>
+    </div></td>
+    <td style="text-align:right;font-size:0.75rem;color:${isNetImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(netEurh)?fmtEur(isNetImp?-netEurh:netEurh)+'/h ~':'—'}</td>`;
+  tbody.appendChild(netTr);
+}
+
+function updateGenTable(latest) {
+  if (!latest) return;
+  const battDischarge = latest['batt_discharge_mw'] || 0;
+  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
+  if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
+  rows.sort((a,b) => b.mw - a.mw);
+  const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
+  const tbody = document.getElementById('gen-tbody');
+  tbody.innerHTML = '';
+  for (const s of rows) {
+    const pct = s.mw / total * 100;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.label}</td>
+      <td style="text-align:right;">${fmt0(s.mw)}</td>
+      <td style="text-align:right;">${pct.toFixed(1)}%</td>
+      <td><div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
+        <div style="width:${Math.min(100,pct)}%;height:100%;background:${s.color};border-radius:3px;"></div>
+      </div></td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function updateDayBalance(binned, pd, dateStr) {
+  const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr);
+  const pByBin = {};
+  for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
+
+  let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
+  for (const b of binned) {
+    const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
+    const mwh = mw*(15/60);
+    const p   = pByBin[b.ts] ?? getPriceAt(pd, b.ts);
+    if (mwh>0) impMwh+=mwh; else expMwh+=Math.abs(mwh);
+    if (isFinite(p)) {
+      if (mwh>0) impEur+=mwh*p; else expEur+=Math.abs(mwh)*p;
+      pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
+    }
+  }
+  const net = expEur - impEur;
+  document.getElementById('b-import-eur').textContent = fmtEur(impEur);
+  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос';
+  document.getElementById('b-export-eur').textContent = fmtEur(expEur);
+  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ';
+  const netEl = document.getElementById('b-net-eur');
+  netEl.textContent = fmtEur(net);
+  netEl.className   = 'balance-val '+(net>=0?'revenue':'expense');
+  document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
+
+  const dayPts = getDayPrices(pd, dateStr);
+  const lastP  = dayPts.length ? dayPts[dayPts.length-1].price : NaN;
+  document.getElementById('p-current').textContent = isFinite(lastP)?fmt1(lastP):'—';
+  document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
+  document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PIE CHART — daily avg generation + current battery + current import
+// ══════════════════════════════════════════════════════════════════════════════
+let _pieInitialized = false;
+function drawPie(latest) {
+  if (!latest) return;
+  // Always include every source (even at 0) so label count never changes → no resize
+  const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }));
+  const vals   = [...rows.map(r=>r.v),   latest['batt_discharge_mw']||0, Math.max(0, latest['net_import_mw']||0)];
+  const labels = [...rows.map(r=>r.label), 'ССЕЕ разреждане',              'Внос'];
+  const colors = [...rows.map(r=>r.color), '#f59f00',                       '#9e9e9e'];
+
+  const total = vals.reduce((a,b)=>a+b,0);
+  const traceData = [{
+    type: 'pie', values: vals, labels: labels,
+    marker: { colors, line: { color: '#fff', width: 1.5 } },
+    hole: 0.44, sort: false,
+    textinfo: 'label+percent',
+    textfont: { size: 10, family: 'Arial' },
+    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
+    insidetextorientation: 'radial',
+  }];
+  const layout = {
+    paper_bgcolor: '#fff',
+    font: { family: 'Arial, sans-serif', size: 10, color: '#2a3a5a' },
+    showlegend: true,
+    legend: { orientation: 'h', y: -0.05, font: { size: 10 }, bgcolor: 'transparent' },
+    margin: { t: 10, b: 60, l: 10, r: 10 },
+    uirevision: 'pie',
+    annotations: [{
+      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>`,
+      x: 0.5, y: 0.5, showarrow: false,
+      font: { size: 15, color: '#004494', family: 'Arial' },
+    }],
+  };
+  if (!_pieInitialized) {
+    Plotly.newPlot('chart-pie', traceData, layout, { responsive: true, displayModeBar: false, transition: { duration: 0 } });
+    _pieInitialized = true;
+  } else {
+    Plotly.update('chart-pie',
+      { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false] },
+      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` },
+      [0]);
+    // suppress animation
+    const gd = document.getElementById('chart-pie');
+    if (gd._transitionData) gd._transitionData = null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TIMELINE CHART
+// ══════════════════════════════════════════════════════════════════════════════
+const LO = {
+  paper_bgcolor: '#fff', plot_bgcolor: '#fafcff',
+  font:   { family: 'Arial', color: '#2a3a5a', size: 11 },
+  xaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
+  yaxis:  { gridcolor: '#dde8f5', linecolor: '#b8d9f5', tickfont: { size: 10 } },
+  legend: { bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#c5d8ee', borderwidth: 1, font: { size: 10 } },
+  hovermode: 'x unified',
+};
+
+function drawTimeline(binned, pd, dateStr) {
+  window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
+
+  const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
+  const isHour = chartMode === 'hourly';
+  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+
+  const genTraces = GEN_SERIES.map(s => ({
+    x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
+    name: s.label, stackgroup: 'gen',
+    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color },
+    visible: (reMode && !RE_KEYS.has(s.key)) ? 'legendonly' : true,
+    hovertemplate: `${s.label}: %{y:.0f} MW<extra></extra>`,
+  }));
+
+  const loadTrace = {
+    x: xs, y: pts.map(p=>isNaN(p['load_mw'])?null:p['load_mw']||0),
+    name: 'Товар', line: { color: '#e53935', width: 2.5 },
+    hovertemplate: 'Товар: %{y:.0f} MW<extra></extra>',
+  };
+  const battDischargeTrace = {
+    x: xs, y: pts.map(p => { const v = p['batt_discharge_mw']; return (v != null && v > 0) ? v : 0; }),
+    name: 'ССЕЕ разреждане', stackgroup: 'gen',
+    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00' },
+    hovertemplate: 'ССЕЕ разреждане: %{y:.0f} MW<extra></extra>',
+  };
+  const battChargeTrace = {
+    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; return (v != null && v > 0) ? -v : 0; }),
+    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
+    visible: reMode ? 'legendonly' : true,
+    hovertemplate: 'ССЕЕ зареждане: %{y:.0f} MW<extra></extra>',
+  };
+
+  const dayPrices = getDayPrices(pd, dateStr);
+  const priceXs   = isHour
+    ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
+    : dayPrices.map(p=>new Date(p.ts));
+  const priceTrace = dayPrices.length ? {
+    x: priceXs, y: dayPrices.map(p=>p.price),
+    name: 'IBEX цена', yaxis: 'y2',
+    visible: reMode ? 'legendonly' : true,
+    line: { color: '#e07000', width: 1.5 },
+    hovertemplate: 'IBEX: %{y:.1f} EUR/MWh<extra></extra>',
+  } : null;
+
+  const traces = [...genTraces, battDischargeTrace, loadTrace, battChargeTrace];
+  if (priceTrace) traces.push(priceTrace);
+
+  Plotly.react('chart-timeline', traces, {
+    ...LO,
+    uirevision: reMode ? 'timeline-re' : 'timeline',
+    xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
+    yaxis:  { ...LO.yaxis, title: 'MW' },
+    yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
+              gridcolor: 'transparent', linecolor: '#e07000',
+              tickfont: { size: 9, color: '#e07000' }, titlefont: { size: 10, color: '#e07000' } },
+    legend: { ...LO.legend, orientation: 'h', y: -0.15 },
+    margin: { t: 8, b: 90, l: 58, r: 58 },
+  }, { responsive: true, displayModeBar: false });
+}
+
+function drawFlowsTimeline(binned) {
+  if (!binned.length) return;
+  const pts  = chartMode === 'hourly' ? binByHour(binned) : binned;
+  const isH  = chartMode === 'hourly';
+  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+
+  const traces = FLOW_CFG.map(f => ({
+    x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
+    name: f.label, line: { color: f.color, width: 1.5 },
+    hovertemplate: `${f.label}: %{y:.0f} MW<extra></extra>`,
+  }));
+  const netY = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
+  // filled area below/above zero for net position
+  traces.push({
+    x: xs, y: netY,
+    name: 'Нетна позиция', fill: 'tozeroy',
+    fillcolor: 'rgba(80,80,80,0.15)',
+    line: { color: '#1a2233', width: 2.5 },
+    hovertemplate: 'Нетна позиция: %{y:.0f} MW<extra></extra>',
+  });
+
+  Plotly.react('chart-flows-ts', traces, {
+    ...LO,
+    uirevision: 'flows',
+    xaxis: { ...LO.xaxis, type: isH ? 'category' : 'date', title: isH ? 'Час (UTC)' : 'Час' },
+    yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
+    legend: { ...LO.legend, orientation: 'h', y: -0.2 },
+    margin: { t: 8, b: 90, l: 58, r: 10 },
+    shapes: [{ type:'line', xref:'paper', x0:0, x1:1, y0:0, y1:0,
+               line: { color:'#aaa', width:1, dash:'dash' } }],
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TIMESTAMP
+// ══════════════════════════════════════════════════════════════════════════════
+function updateTimestamp(latest) {
+  const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
+  if (!latest) { el.textContent = 'Няма данни'; return; }
+  const ms  = toUtcMs(latest), age = Date.now()-ms, mins = Math.round(age/60000);
+  el.textContent = mins < 2 ? 'Обновено току-що' : `Обновено преди ${mins} мин.`;
+  dot.className  = 'dot'+(age > STALE_MS ? ' stale' : '');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SNAPSHOT SCRUBBER
+// ══════════════════════════════════════════════════════════════════════════════
+function updateScrubber(records) {
+  const el = document.getElementById('snap-scrubber');
+  const slider = document.getElementById('snap-slider');
+  const isToday = currentDay === null;
+  el.style.display = records.length > 1 ? 'flex' : 'none';
+  slider.max = records.length - 1;
+  slider.value = records.length - 1;
+  updateSnapLabel(records[records.length - 1]);
+}
+
+function updateSnapLabel(snap) {
+  if (!snap) return;
+  const ms = toUtcMs(snap);
+  const el = document.getElementById('snap-ts');
+  if (!isFinite(ms)) { el.textContent = '—'; return; }
+  const d = new Date(ms);
+  el.textContent = d.toLocaleTimeString('bg-BG', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit' }) + ' ч. (местно)';
+}
+
+function onSnapSlider(val) {
+  const idx  = +val;
+  const snap = _dayRecords[idx];
+  if (!snap) return;
+  updateSnapLabel(snap);
+  updateStatusCards(snap, _dayPriceData);
+  updateFlowsTable(snap, _dayPriceData);
+  updateGenTable(snap);
+  drawPie(snap);
+  const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
+  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
+  const ts = snap['timestamp_utc'] || snap['timestamp'];
+  writeHash(currentDay, ts);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MAIN REFRESH
+// ══════════════════════════════════════════════════════════════════════════════
+async function refresh() {
+  try {
+    const idx = await getJSON(`${BASE}/index.json`);
+    allDates = idx.dates || [];
+    updateNav();
+
+    const dateStr = currentDay || todayStr();
+    const isToday = currentDay === null;
+    const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
+    const latest  = records.length ? records[records.length-1] : null;
+    const binned  = bin15min(records);
+    const pd      = await loadPrices(dateStr);
+
+    _dayRecords   = records;
+    _dayPriceData = pd;
+    _dayDateStr   = dateStr;
+
+    updateScrubber(records);
+
+    let displaySnap   = latest;
+    let displayBinned = binned;
+
+    // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
+    if (_pendingSnapTs && records.length) {
+      const idx = records.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
+      if (idx >= 0) {
+        document.getElementById('snap-slider').value = idx;
+        displaySnap   = records[idx];
+        displayBinned = bin15min(records.slice(0, idx + 1));
+        updateSnapLabel(displaySnap);
+        _pendingSnapTs = null;
+      }
+    }
+    updateTimestamp(displaySnap);
+    updateStatusCards(displaySnap, pd);
+    updateFlowsTable(displaySnap, pd);
+    updateGenTable(displaySnap);
+    updateDayBalance(displayBinned, pd, dateStr);
+
+    drawPie(displaySnap);
+    drawTimeline(displayBinned, pd, dateStr);
+    drawFlowsTimeline(displayBinned);
+    updateReStats(displayBinned);
+    loadRecords();
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('ts-label').textContent = 'Грешка: ' + e.message;
+  }
+}
+
+let _recordsLoaded = false;
+async function loadRecords() {
+  if (_recordsLoaded) return;
+  try {
+    const rec = await getJSON(`${BASE}/records.json`);
+    const inner = document.getElementById('records-inner');
+    inner.innerHTML = '';
+    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 'export'];
+    for (const key of ORDER) {
+      const r = rec[key]; if (!r) continue;
+      const div = document.createElement('div');
+      div.className = 'rec-card';
+      div.innerHTML = `
+        <div class="rec-label">${r.label}</div>
+        <div class="rec-val">${r.unit === '%' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG')}</div>
+        <div class="rec-unit">${r.unit}</div>
+        <div class="rec-date">${r.date ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>` : '—'}</div>`;
+      inner.appendChild(div);
+    }
+    document.getElementById('records-bar').style.display = 'block';
+    _recordsLoaded = true;
+  } catch(e) { console.warn('records.json not available', e); }
+}
+
+function navigateRecord(e, el) {
+  e.preventDefault();
+  const day  = el.dataset.day;
+  const snap = el.dataset.snap || null;
+  currentDay = (day && day !== todayStr()) ? day : null;
+  _pendingSnapTs = snap || null;
+  writeHash(currentDay, snap);
+  refresh();
+}
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
