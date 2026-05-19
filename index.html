@@ -1049,14 +1049,14 @@ async function loadRecords() {
     const rec = await getJSON(`${BASE}/records.json`);
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
-    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 'export'];
+    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
     for (const key of ORDER) {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
-        <div class="rec-val">${r.unit === '%' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG')}</div>
+        <div class="rec-val">${r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG')}</div>
         <div class="rec-unit">${r.unit}</div>
         <div class="rec-date">${r.date ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>` : '—'}</div>`;
       inner.appendChild(div);

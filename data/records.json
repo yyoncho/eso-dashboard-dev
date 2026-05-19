@@ -33,5 +33,12 @@
     "unit": "%",
     "date": "2026-05-18",
     "snap_ts": null
+  },
+  "re_hours": {
+    "val": 6.44,
+    "label": "Най-дълго 100% ВЕИ",
+    "unit": "ч",
+    "date": "2026-05-15",
+    "snap_ts": null
   }
 }
