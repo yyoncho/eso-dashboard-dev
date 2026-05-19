@@ -147,16 +147,29 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
 @media (max-width: 960px) { .main-cols { grid-template-columns: 1fr; } }
 
-/* ── records bar ── */
-.rec-card {
-  padding: 10px 20px 10px 14px; border-right: 1px solid #c5d8ee;
-  min-width: 160px; flex: 1;
+/* ── records dropdown ── */
+.rec-dropdown-wrap { position: relative; }
+#rec-dropdown-panel {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: #fff; border: 1px solid #c5d8ee; border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18); z-index: 200;
+  min-width: 260px; overflow: hidden;
 }
-.rec-card:last-child { border-right: none; }
-.rec-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a7090; }
-.rec-val   { font-size: 1.5rem; font-weight: 700; color: #1a2233; line-height: 1.15; }
-.rec-unit  { font-size: 0.68rem; color: #7a8aaa; }
-.rec-date  { font-size: 0.72rem; margin-top: 3px; }
+#rec-dropdown-panel.open { display: block; }
+.rec-dropdown-title {
+  background: #004494; color: #fff; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; padding: 7px 12px;
+}
+.rec-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; border-bottom: 1px solid #edf2f8;
+}
+.rec-card:last-child { border-bottom: none; }
+.rec-card:hover { background: #f5f9ff; }
+.rec-label { font-size: 0.7rem; color: #5a7090; flex: 1; }
+.rec-val   { font-size: 1.1rem; font-weight: 700; color: #1a2233; white-space: nowrap; }
+.rec-unit  { font-size: 0.65rem; color: #7a8aaa; width: 20px; }
+.rec-date  { font-size: 0.7rem; white-space: nowrap; }
 .rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
 .rec-date a:hover { text-decoration: underline; }
 
@@ -196,6 +209,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
         <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
         <span id="day-label"></span>
+        <div class="rec-dropdown-wrap">
+          <button class="nav-btn" id="rec-btn" onclick="toggleRecords(event)">🏆 Рекорди</button>
+          <div id="rec-dropdown-panel">
+            <div class="rec-dropdown-title">Рекорди — ВЕИ и ССЕЕ</div>
+            <div id="records-inner"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -259,14 +279,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-label">ССЕЕ разреждане</div>
       <div class="stat-val" id="s-discharge">—</div>
       <div class="stat-unit">MW</div>
-    </div>
-  </div>
-
-  <!-- renewable records -->
-  <div id="records-bar" style="display:none;margin-bottom:14px;">
-    <div class="panel">
-      <div class="panel-header">Рекорди — ВЕИ и ССЕЕ</div>
-      <div style="display:flex;flex-wrap:wrap;gap:0;" id="records-inner"></div>
     </div>
   </div>
 
@@ -1054,17 +1066,28 @@ async function loadRecords() {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
+      const valStr = r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const dateHtml = r.date
+        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
+        : '—';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
-        <div class="rec-val">${r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG')}</div>
+        <div class="rec-val">${valStr}</div>
         <div class="rec-unit">${r.unit}</div>
-        <div class="rec-date">${r.date ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>` : '—'}</div>`;
+        <div class="rec-date">${dateHtml}</div>`;
       inner.appendChild(div);
     }
-    document.getElementById('records-bar').style.display = 'block';
     _recordsLoaded = true;
   } catch(e) { console.warn('records.json not available', e); }
 }
+
+function toggleRecords(e) {
+  e.stopPropagation();
+  document.getElementById('rec-dropdown-panel').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('rec-dropdown-panel').classList.remove('open');
+});
 
 function navigateRecord(e, el) {
   e.preventDefault();
