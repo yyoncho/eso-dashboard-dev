@@ -466,7 +466,14 @@ async function getJSONL(url) {
   const r = await fetch(url + '?_=' + Date.now());
   if (!r.ok) throw new Error(r.status);
   const text = await r.text();
-  return text.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(Boolean);
+  return text.trim().split('\n').filter(Boolean).map(l => {
+    try {
+      const r = JSON.parse(l);
+      // old records used residual_mw; new ones use batt_discharge_mw
+      if (r.batt_discharge_mw == null && r.residual_mw != null) r.batt_discharge_mw = r.residual_mw;
+      return r;
+    } catch(e){ return null; }
+  }).filter(Boolean);
 }
 function toUtcMs(r) {
   if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
