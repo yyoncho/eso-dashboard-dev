@@ -174,6 +174,26 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
 .rec-date a:hover { text-decoration: underline; }
 
+/* ── yearly RE table ── */
+.yearly-re-title {
+  background: #1a6030; color: #fff; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; padding: 7px 12px;
+}
+.yearly-re-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.yearly-re-table th {
+  text-align: right; font-size: 0.65rem; color: #5a7090; text-transform: uppercase;
+  padding: 4px 10px; border-bottom: 1px solid #dde8f5; font-weight: 600;
+}
+.yearly-re-table th:first-child { text-align: left; }
+.yearly-re-table td { padding: 5px 10px; border-bottom: 1px solid #edf2f8; text-align: right; }
+.yearly-re-table td:first-child { text-align: left; font-weight: 700; color: #1a2233; }
+.yearly-re-table tr:last-child td { border-bottom: none; }
+.yearly-re-table tr:hover td { background: #f5f9ff; }
+.yearly-re-table td a { color: #004494; text-decoration: none; font-weight: 600; }
+.yearly-re-table td a:hover { text-decoration: underline; }
+.yr-bar-wrap { display: inline-block; width: 60px; height: 7px; background: #edf2f8; border-radius: 3px; vertical-align: middle; margin-left: 4px; }
+.yr-bar { height: 100%; border-radius: 3px; background: #1a8a1a; }
+
 /* ── RE stats bar ── */
 #re-stats-bar { display: none; }
 #re-stats-bar.show { display: flex !important; }
@@ -215,6 +235,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <div id="rec-dropdown-panel">
             <div class="rec-dropdown-title">Рекорди — ВЕИ и ССЕЕ</div>
             <div id="records-inner"></div>
+            <div class="yearly-re-title">ВЕИ покритие по години</div>
+            <div id="yearly-re-inner"></div>
           </div>
         </div>
       </div>
@@ -1059,7 +1081,11 @@ let _recordsLoaded = false;
 async function loadRecords() {
   if (_recordsLoaded) return;
   try {
-    const rec = await getJSON(`${BASE}/records.json`);
+    const [rec, yearly] = await Promise.all([
+      getJSON(`${BASE}/records.json`),
+      getJSON(`${BASE}/yearly_re.json`).catch(() => null),
+    ]);
+
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
     const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
@@ -1078,6 +1104,29 @@ async function loadRecords() {
         <div class="rec-date">${dateHtml}</div>`;
       inner.appendChild(div);
     }
+
+    if (yearly) {
+      const maxRe = Math.max(...Object.values(yearly).map(y => y.daily_re.val));
+      const yrInner = document.getElementById('yearly-re-inner');
+      yrInner.innerHTML = `<table class="yearly-re-table">
+        <thead><tr><th>Год.</th><th>Макс. ВЕИ дял</th><th>Часове 100%</th></tr></thead>
+        <tbody>${
+          Object.entries(yearly).reverse().map(([yr, y]) => {
+            const pct = y.daily_re.val;
+            const barW = Math.round(pct / maxRe * 100);
+            const dateLink = y.daily_re.date
+              ? `<a href="#day=${y.daily_re.date}" data-day="${y.daily_re.date}" data-snap="" onclick="navigateRecord(event,this)">${y.daily_re.date}</a>`
+              : '—';
+            const hrs = y.re_hours.val > 0 ? `${y.re_hours.val}ч` : '—';
+            return `<tr>
+              <td>${yr}</td>
+              <td>${pct.toFixed(1)}%&nbsp;<span class="yr-bar-wrap"><span class="yr-bar" style="width:${barW}%"></span></span><br><small>${dateLink}</small></td>
+              <td>${hrs}</td>
+            </tr>`;
+          }).join('')
+        }</tbody></table>`;
+    }
+
     _recordsLoaded = true;
   } catch(e) { console.warn('records.json not available', e); }
 }
