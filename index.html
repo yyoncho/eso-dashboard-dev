@@ -14,6 +14,9 @@ header {
   background: linear-gradient(180deg, #004494 0%, #003070 100%);
   color: #fff;
   border-bottom: 3px solid #ffd700;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .header-inner {
   max-width: 1600px; margin: 0 auto; padding: 10px 20px;
@@ -143,6 +146,46 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 #gen-table td, #gen-table th { font-size: 0.8rem; }
 
 @media (max-width: 960px) { .main-cols { grid-template-columns: 1fr; } }
+
+/* ── records dropdown ── */
+.rec-dropdown-wrap { position: relative; }
+#rec-dropdown-panel {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: #fff; border: 1px solid #c5d8ee; border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18); z-index: 200;
+  min-width: 260px; max-width: calc(100vw - 16px);
+  max-height: calc(100svh - 120px); overflow-y: auto;
+}
+#rec-dropdown-panel.open { display: block; }
+.rec-dropdown-title {
+  background: #004494; color: #fff; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; padding: 7px 12px;
+}
+.rec-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; border-bottom: 1px solid #edf2f8;
+}
+.rec-card:last-child { border-bottom: none; }
+.rec-card:hover { background: #f5f9ff; }
+.rec-label { font-size: 0.7rem; color: #5a7090; flex: 1; }
+.rec-val   { font-size: 1.1rem; font-weight: 700; color: #1a2233; white-space: nowrap; }
+.rec-unit  { font-size: 0.65rem; color: #7a8aaa; width: 20px; }
+.rec-date  { font-size: 0.7rem; white-space: nowrap; }
+.rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
+.rec-date a:hover { text-decoration: underline; }
+
+/* ── RE stats bar ── */
+#re-stats-bar { display: none; }
+#re-stats-bar.show { display: flex !important; }
+.re-stat {
+  padding: 6px 20px 6px 12px; border-right: 1px solid #c5e8c5;
+  display: flex; flex-direction: column; min-width: 100px;
+}
+.re-stat:last-child { border-right: none; }
+.re-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #3a7050; }
+.re-stat-val   { font-size: 1.25rem; font-weight: 700; color: #1a6030; line-height: 1.15; }
+.re-stat-val.re-stat-gap { color: #cc2200; }
+.re-stat-unit  { font-size: 0.68rem; color: #5a9070; }
 </style>
 </head>
 <body>
@@ -167,6 +210,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
         <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
         <span id="day-label"></span>
+        <div class="rec-dropdown-wrap">
+          <button class="nav-btn" id="rec-btn" onclick="toggleRecords(event)">🏆 Рекорди</button>
+          <div id="rec-dropdown-panel">
+            <div class="rec-dropdown-title">Рекорди — ВЕИ и ССЕЕ</div>
+            <div id="records-inner"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -331,7 +381,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="toggle-group">
         <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
         <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
+        <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
       </div>
+    </div>
+    <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
+      <div class="re-stat"><div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-val" id="rs-pct">—</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val re-stat-gap" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч.</div></div>
     </div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
@@ -382,6 +440,9 @@ const FLOW_CFG = [
 let allDates   = [];
 let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
+let reMode     = false;
+
+const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
 let _dayRecords = [];
 let _dayPriceData = null;
 let _dayDateStr = null;
@@ -564,10 +625,41 @@ function setChartMode(mode) {
   chartMode = mode;
   document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
   document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
-  // redraw is triggered by refresh; if already have data, just redraw
   if (window._lastBinned) {
     drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
+}
+
+function setReMode(on) {
+  reMode = on;
+  document.getElementById('tog-re').classList.toggle('active', on);
+  document.getElementById('re-stats-bar').classList.toggle('show', on);
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    updateReStats(window._lastBinned);
+  }
+}
+
+function updateReStats(binned) {
+  if (!binned || !binned.length) return;
+  const ih = 15 / 60;  // each bin = 15 min
+  let loadGwh = 0, reGwh = 0, excessGwh = 0, fullH = 0;
+  for (const b of binned) {
+    const load = b['load_mw'] || 0; if (!load) continue;
+    const re   = [...RE_KEYS].reduce((s,k) => s + (b[k]||0), 0) + (b['batt_discharge_mw']||0);
+    const rfl  = Math.min(re, load);
+    loadGwh   += load * ih / 1000;
+    reGwh     += rfl  * ih / 1000;
+    excessGwh += Math.max(0, re - load) * ih / 1000;
+    if (rfl >= load) fullH += ih;
+  }
+  const gapGwh = loadGwh - reGwh;
+  const pct    = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
+  document.getElementById('rs-pct').textContent  = pct.toFixed(1) + '%';
+  document.getElementById('rs-re').textContent   = reGwh.toFixed(1);
+  document.getElementById('rs-gap').textContent  = gapGwh.toFixed(1);
+  document.getElementById('rs-exc').textContent  = excessGwh.toFixed(2);
+  document.getElementById('rs-full').textContent = fullH.toFixed(1);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -778,6 +870,7 @@ function drawTimeline(binned, pd, dateStr) {
     x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
     name: s.label, stackgroup: 'gen',
     fillcolor: s.color+'cc', line: { width: 0.5, color: s.color },
+    visible: (reMode && !RE_KEYS.has(s.key)) ? 'legendonly' : true,
     hovertemplate: `${s.label}: %{y:.0f} MW<extra></extra>`,
   }));
 
@@ -795,6 +888,7 @@ function drawTimeline(binned, pd, dateStr) {
   const battChargeTrace = {
     x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; return (v != null && v > 0) ? -v : 0; }),
     name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
+    visible: reMode ? 'legendonly' : true,
     hovertemplate: 'ССЕЕ зареждане: %{y:.0f} MW<extra></extra>',
   };
 
@@ -805,6 +899,7 @@ function drawTimeline(binned, pd, dateStr) {
   const priceTrace = dayPrices.length ? {
     x: priceXs, y: dayPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
+    visible: reMode ? 'legendonly' : true,
     line: { color: '#e07000', width: 1.5 },
     hovertemplate: 'IBEX: %{y:.1f} EUR/MWh<extra></extra>',
   } : null;
@@ -814,6 +909,7 @@ function drawTimeline(binned, pd, dateStr) {
 
   Plotly.react('chart-timeline', traces, {
     ...LO,
+    uirevision: reMode ? 'timeline-re' : 'timeline',
     xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
     yaxis:  { ...LO.yaxis, title: 'MW' },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
@@ -847,6 +943,7 @@ function drawFlowsTimeline(binned) {
 
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
+    uirevision: 'flows',
     xaxis: { ...LO.xaxis, type: isH ? 'category' : 'date', title: isH ? 'Час (UTC)' : 'Час' },
     yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
@@ -924,31 +1021,83 @@ async function refresh() {
     _dayPriceData = pd;
     _dayDateStr   = dateStr;
 
-    // Restore snap from URL hash if present
+    updateScrubber(records);
+
+    let displaySnap   = latest;
+    let displayBinned = binned;
+
+    // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
     if (_pendingSnapTs && records.length) {
       const idx = records.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
       if (idx >= 0) {
         document.getElementById('snap-slider').value = idx;
-        onSnapSlider(idx);
+        displaySnap   = records[idx];
+        displayBinned = bin15min(records.slice(0, idx + 1));
+        updateSnapLabel(displaySnap);
         _pendingSnapTs = null;
       }
     }
+    updateTimestamp(displaySnap);
+    updateStatusCards(displaySnap, pd);
+    updateFlowsTable(displaySnap, pd);
+    updateGenTable(displaySnap);
+    updateDayBalance(displayBinned, pd, dateStr);
 
-    updateScrubber(records);
-    updateTimestamp(latest);
-    updateStatusCards(latest, pd);
-    updateFlowsTable(latest, pd);
-    updateGenTable(latest);
-    updateDayBalance(binned, pd, dateStr);
-
-    drawPie(latest);
-    drawTimeline(binned, pd, dateStr);
-    drawFlowsTimeline(binned);
+    drawPie(displaySnap);
+    drawTimeline(displayBinned, pd, dateStr);
+    drawFlowsTimeline(displayBinned);
+    updateReStats(displayBinned);
+    loadRecords();
 
   } catch(e) {
     console.error(e);
     document.getElementById('ts-label').textContent = 'Грешка: ' + e.message;
   }
+}
+
+let _recordsLoaded = false;
+async function loadRecords() {
+  if (_recordsLoaded) return;
+  try {
+    const rec = await getJSON(`${BASE}/records.json`);
+    const inner = document.getElementById('records-inner');
+    inner.innerHTML = '';
+    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
+    for (const key of ORDER) {
+      const r = rec[key]; if (!r) continue;
+      const div = document.createElement('div');
+      div.className = 'rec-card';
+      const valStr = r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const dateHtml = r.date
+        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
+        : '—';
+      div.innerHTML = `
+        <div class="rec-label">${r.label}</div>
+        <div class="rec-val">${valStr}</div>
+        <div class="rec-unit">${r.unit}</div>
+        <div class="rec-date">${dateHtml}</div>`;
+      inner.appendChild(div);
+    }
+    _recordsLoaded = true;
+  } catch(e) { console.warn('records.json not available', e); }
+}
+
+function toggleRecords(e) {
+  e.stopPropagation();
+  document.getElementById('rec-dropdown-panel').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('rec-dropdown-panel').classList.remove('open');
+});
+
+function navigateRecord(e, el) {
+  e.preventDefault();
+  const day  = el.dataset.day;
+  const snap = el.dataset.snap || null;
+  currentDay = (day && day !== todayStr()) ? day : null;
+  _pendingSnapTs = snap || null;
+  writeHash(currentDay, snap);
+  refresh();
 }
 
 refresh();
