@@ -545,8 +545,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw',
-                  'api_implied_total_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -803,7 +802,7 @@ function updateDayBalance(binned, pd, dateStr) {
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
   let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
-  let battChgMwh=0, battDisMwh=0, hasDisField=false;
+  let battChgMwh=0, battDisMwh=0;
   for (const b of binned) {
     const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
     const mwh = mw*(15/60);
@@ -813,31 +812,10 @@ function updateDayBalance(binned, pd, dateStr) {
       if (mwh>0) impEur+=mwh*p; else expEur+=Math.abs(mwh)*p;
       pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
     }
-    // Newer records have batt_charge_mw/batt_discharge_mw; older records need fallback.
-    // ССЕЕ_state is not in binned records; use sign of ССЕЕ_mw (always negative = charging draw).
-    const sseeMw  = b['ССЕЕ_mw'];
-    const chgRaw  = b['batt_charge_mw'];
-    const disRaw  = b['batt_discharge_mw'];
-    // Charge: prefer explicit field; fall back to abs(ССЕЕ_mw) (battery always draws from grid)
-    const chg = (chgRaw != null && isFinite(chgRaw)) ? chgRaw
-              : (isFinite(sseeMw) ? Math.abs(sseeMw) : 0);
-    let dis;
-    if (disRaw != null && isFinite(disRaw)) {
-      dis = disRaw;
-      hasDisField = true;
-    } else {
-      // Fall back to implied total trick: api_implied_total_mw - gen_total_mw
-      const impliedTotal = b['api_implied_total_mw'];
-      const genTotal     = b['gen_total_mw'];
-      if (isFinite(impliedTotal) && isFinite(genTotal)) {
-        dis = Math.max(0, impliedTotal - genTotal);
-        hasDisField = true;
-      } else {
-        dis = 0;
-      }
-    }
-    if (chg > 0) battChgMwh += chg * (15/60);
-    if (dis > 0) battDisMwh += dis * (15/60);
+    const chg = b['batt_charge_mw'];
+    const dis = b['batt_discharge_mw'];
+    if (isFinite(chg) && chg > 0) battChgMwh += chg * (15/60);
+    if (isFinite(dis) && dis > 0) battDisMwh += dis * (15/60);
   }
   const net = expEur - impEur;
   document.getElementById('b-import-eur').textContent = fmtEur(impEur);
@@ -853,8 +831,8 @@ function updateDayBalance(binned, pd, dateStr) {
   if (battChgMwh > 0 || battDisMwh > 0) {
     battBox.style.display = '';
     document.getElementById('b-batt-chg').textContent = fmt0(battChgMwh);
-    document.getElementById('b-batt-dis').textContent = hasDisField ? fmt0(battDisMwh) : '—';
-    const eff = (hasDisField && battChgMwh > 0 && battDisMwh > 0) ? (battDisMwh / battChgMwh * 100) : 0;
+    document.getElementById('b-batt-dis').textContent = fmt0(battDisMwh);
+    const eff = battChgMwh > 0 ? battDisMwh / battChgMwh * 100 : 0;
     document.getElementById('b-batt-eff').textContent = eff > 0 ? fmt1(eff) : '—';
   } else {
     battBox.style.display = 'none';
