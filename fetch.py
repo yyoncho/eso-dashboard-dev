@@ -8,8 +8,8 @@ Writes every run:
   data/today.jsonl         today's snapshots (copy)
   data/index.json          list of available dates
 
-Written once per day:
-  data/prices-YYYY-MM.json IBEX 15-min day-ahead prices from energy-charts
+Refreshed every 4 hours (energy-charts updates prices throughout the day):
+  data/prices-YYYY-MM.json IBEX 15-min prices from energy-charts
 """
 
 import json
@@ -111,27 +111,54 @@ def build_record():
     return row
 
 
-def update_prices(year: int, month: int):
-    """Download IBEX/DA prices from energy-charts if not yet done today."""
-    if not HAS_EC:
-        return
+def _fetch_prices_direct(year: int, month: int) -> dict:
+    """Fetch BG prices directly using bzn=BG (not country=bg).
 
-    ym       = f"{year:04d}-{month:02d}"
-    path     = DATA_DIR / f"prices-{ym}.json"
-    today_s  = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    The energy_charts module uses ?country=bg for all endpoints, but the price
+    endpoint requires ?bzn=BG — these return different data. Calling directly
+    ensures we get the correct IBEX bidding-zone prices.
+    """
+    from calendar import monthrange
+    import urllib.parse
+    _, last_day = monthrange(year, month)
+    start = f"{year}-{month:02d}-01T00:00+00:00"
+    end   = f"{year}-{month:02d}-{last_day:02d}T23:59+00:00"
+    url = (
+        "https://api.energy-charts.info/price"
+        f"?bzn=BG"
+        f"&start={urllib.parse.quote(start)}"
+        f"&end={urllib.parse.quote(end)}"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "eso-dashboard/1.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+
+def update_prices(year: int, month: int):
+    """Download IBEX/DA prices from energy-charts, refreshing every 4 hours.
+
+    energy-charts blends DA and real-time prices and updates throughout the day,
+    so a once-per-day fetch produces stale values for past hours.
+    """
+    ym   = f"{year:04d}-{month:02d}"
+    path = DATA_DIR / f"prices-{ym}.json"
+    now  = datetime.now(timezone.utc)
 
     if path.exists():
         try:
             cached = json.loads(path.read_text())
-            if cached.get("fetched_date") == today_s:
-                return   # already fresh
+            fetched_at = cached.get("fetched_at")
+            if fetched_at:
+                age_h = (now - datetime.fromisoformat(fetched_at)).total_seconds() / 3600
+                if age_h < 4:
+                    return   # still fresh
         except Exception:
             pass
 
     print(f"Fetching IBEX prices for {ym} …", flush=True)
     try:
-        data = ec_fetch("price", "bg", ym, ym)
-        data["fetched_date"] = today_s
+        data = _fetch_prices_direct(year, month)
+        data["fetched_at"] = now.isoformat()
         path.write_text(json.dumps(data))
         print(f"  → {len(data.get('unix_seconds', []))} price points", flush=True)
     except Exception as e:
