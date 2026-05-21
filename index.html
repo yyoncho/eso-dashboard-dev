@@ -410,7 +410,12 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val re-stat-gap" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч.</div></div>
+      <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч:мин</div></div>
+      <div class="re-stat" style="border-left:2px solid #a5d5b5;margin-left:8px;padding-left:16px;"><div class="re-stat-label">ФЕЦ</div><div class="re-stat-val" id="rs-solar">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВяЕЦ</div><div class="re-stat-val" id="rs-wind">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВЕЦ</div><div class="re-stat-val" id="rs-hydro">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Биомаса</div><div class="re-stat-val" id="rs-bio">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" id="rs-batt">—</div><div class="re-stat-unit">GWh</div></div>
     </div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
@@ -501,6 +506,10 @@ function toUtcMs(r) {
 }
 function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
 function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
+function fmtHMin(h) { const m = Math.round(h*60); return `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`; }
+// Convert UTC ms → Sofia local datetime string ("YYYY-MM-DD HH:MM") for Plotly axis
+// Plotly treats strings without timezone as-is, so this pins display to Sofia time.
+function toSofiaStr(ms) { return new Date(ms).toLocaleString('sv',{timeZone:'Europe/Sofia'}).substring(0,16); }
 function fmtEur(e) {
   if (!isFinite(e)) return '—';
   const a = Math.abs(e), s = e < 0 ? '−' : '';
@@ -673,24 +682,40 @@ function setReMode(on) {
 
 function updateReStats(binned) {
   if (!binned || !binned.length) return;
-  const ih = 15 / 60;  // each bin = 15 min
+  const ih = 15 / 60;  // each bin = 15 min = 0.25 h
   let loadGwh = 0, reGwh = 0, excessGwh = 0, fullH = 0;
+  let solarGwh = 0, windGwh = 0, hydroGwh = 0, bioGwh = 0, battGwh = 0;
   for (const b of binned) {
     const load = b['load_mw'] || 0; if (!load) continue;
-    const re   = [...RE_KEYS].reduce((s,k) => s + (b[k]||0), 0) + (b['batt_discharge_mw']||0);
-    const rfl  = Math.min(re, load);
-    loadGwh   += load * ih / 1000;
-    reGwh     += rfl  * ih / 1000;
+    const solar = b['ФЕЦ'] || 0;
+    const wind  = b['ВяЕЦ'] || 0;
+    const hydro = (b['ВЕЦ'] || 0) + (b['Малки ВЕЦ'] || 0);
+    const bio   = b['Био ЕЦ'] || 0;
+    const batt  = b['batt_discharge_mw'] || 0;
+    const re    = solar + wind + hydro + bio + batt;
+    const rfl   = Math.min(re, load);
+    loadGwh   += load  * ih / 1000;
+    reGwh     += rfl   * ih / 1000;
     excessGwh += Math.max(0, re - load) * ih / 1000;
+    solarGwh  += solar * ih / 1000;
+    windGwh   += wind  * ih / 1000;
+    hydroGwh  += hydro * ih / 1000;
+    bioGwh    += bio   * ih / 1000;
+    battGwh   += batt  * ih / 1000;
     if (rfl >= load) fullH += ih;
   }
   const gapGwh = loadGwh - reGwh;
   const pct    = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
-  document.getElementById('rs-pct').textContent  = pct.toFixed(1) + '%';
-  document.getElementById('rs-re').textContent   = reGwh.toFixed(1);
-  document.getElementById('rs-gap').textContent  = gapGwh.toFixed(1);
-  document.getElementById('rs-exc').textContent  = excessGwh.toFixed(2);
-  document.getElementById('rs-full').textContent = fullH.toFixed(1);
+  document.getElementById('rs-pct').textContent   = pct.toFixed(1) + '%';
+  document.getElementById('rs-re').textContent    = reGwh.toFixed(1);
+  document.getElementById('rs-gap').textContent   = gapGwh.toFixed(1);
+  document.getElementById('rs-exc').textContent   = excessGwh.toFixed(2);
+  document.getElementById('rs-full').textContent  = fmtHMin(fullH);
+  document.getElementById('rs-solar').textContent = solarGwh.toFixed(1);
+  document.getElementById('rs-wind').textContent  = windGwh.toFixed(1);
+  document.getElementById('rs-hydro').textContent = hydroGwh.toFixed(1);
+  document.getElementById('rs-bio').textContent   = bioGwh.toFixed(2);
+  document.getElementById('rs-batt').textContent  = battGwh.toFixed(1);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -911,7 +936,7 @@ function drawTimeline(binned, pd, dateStr) {
 
   const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
   const isHour = chartMode === 'hourly';
-  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>toSofiaStr(p.ts));
 
   const genTraces = GEN_SERIES.map(s => ({
     x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
@@ -942,7 +967,7 @@ function drawTimeline(binned, pd, dateStr) {
   const dayPrices = getDayPrices(pd, dateStr);
   const priceXs   = isHour
     ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
-    : dayPrices.map(p=>new Date(p.ts));
+    : dayPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = dayPrices.length ? {
     x: priceXs, y: dayPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
@@ -971,7 +996,7 @@ function drawFlowsTimeline(binned) {
   if (!binned.length) return;
   const pts  = chartMode === 'hourly' ? binByHour(binned) : binned;
   const isH  = chartMode === 'hourly';
-  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>toSofiaStr(p.ts));
 
   const traces = FLOW_CFG.map(f => ({
     x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
@@ -1060,26 +1085,39 @@ async function refresh() {
     const dateStr = currentDay || todayStr();
     const isToday = currentDay === null;
     const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
-    const latest  = records.length ? records[records.length-1] : null;
-    const binned  = bin15min(records);
+
+    // Also load previous day to pick up 00:00–01:00 Sofia records that landed there
+    // (happens when date_bg was computed with UTC+2 but Sofia is UTC+3 in summer)
+    const prevDate = new Date(dateStr + 'T12:00:00Z');
+    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+    const prevStr  = prevDate.toISOString().slice(0, 10);
+    let prevRecs = [];
+    try {
+      prevRecs = (await getJSONL(`${BASE}/${prevStr}.jsonl`))
+        .filter(r => { const ms = toUtcMs(r); return isFinite(ms) && toSofiaStr(ms).slice(0, 10) === dateStr; });
+    } catch(_) {}
+    const allRecords = prevRecs.length ? [...prevRecs, ...records].sort((a,b)=>toUtcMs(a)-toUtcMs(b)) : records;
+
+    const latest  = allRecords.length ? allRecords[allRecords.length-1] : null;
+    const binned  = bin15min(allRecords);
     const pd      = await loadPrices(dateStr);
 
-    _dayRecords   = records;
+    _dayRecords   = allRecords;
     _dayPriceData = pd;
     _dayDateStr   = dateStr;
 
-    updateScrubber(records);
+    updateScrubber(allRecords);
 
     let displaySnap   = latest;
     let displayBinned = binned;
 
     // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
-    if (_pendingSnapTs && records.length) {
-      const idx = records.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
+    if (_pendingSnapTs && allRecords.length) {
+      const idx = allRecords.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
       if (idx >= 0) {
         document.getElementById('snap-slider').value = idx;
-        displaySnap   = records[idx];
-        displayBinned = bin15min(records.slice(0, idx + 1));
+        displaySnap   = allRecords[idx];
+        displayBinned = bin15min(allRecords.slice(0, idx + 1));
         updateSnapLabel(displaySnap);
         _pendingSnapTs = null;
       }

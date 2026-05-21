@@ -19,6 +19,7 @@ import sys
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT     = Path(__file__).parent
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "data")))
@@ -34,9 +35,7 @@ except ImportError:
 
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.eso.bg/"}
 
-# Sofia is UTC+3 in summer (EEST), UTC+2 in winter (EET).
-# We use UTC+2 as conservative offset for date boundary; DST handled by display.
-BG_TZ = timezone(timedelta(hours=2))
+BG_TZ = ZoneInfo('Europe/Sofia')
 
 GEN_COLS = [
     "АЕЦ", "Кондензационни ТЕЦ", "Топлофикационни ТЕЦ", "Заводски ТЕЦ",
