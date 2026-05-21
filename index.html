@@ -511,7 +511,10 @@ function getDayPrices(pd, dateStr) {
   if (!pd) return [];
   const { unix_seconds: us, price: pr } = pd;
   if (!us) return [];
-  const s0 = Date.parse(dateStr + 'T00:00:00+02:00') / 1000;
+  // DST-aware Sofia midnight: sample noon UTC, measure Sofia offset, shift UTC midnight
+  const noon = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const s0 = (new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000) / 1000;
   const s1 = s0 + 86400;
   const pts = [];
   for (let i = 0; i < us.length; i++) if (us[i] >= s0 && us[i] < s1) pts.push({ ts: us[i]*1000, price: pr[i] });
