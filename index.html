@@ -413,7 +413,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
       <div class="re-stat"><div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-val" id="rs-pct">—</div></div>
       <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val re-stat-gap" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч:мин</div></div>
       <div class="re-stat" style="border-left:2px solid #a5d5b5;margin-left:8px;padding-left:16px;"><div class="re-stat-label">ФЕЦ</div><div class="re-stat-val" id="rs-solar">—</div><div class="re-stat-unit">GWh</div></div>
@@ -855,10 +855,12 @@ function updateDayBalance(binned, pd, dateStr) {
     if (dis > 0) battDisMwh += dis * (15/60);
   }
   const net = expEur - impEur;
+  const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
+  const avgExpPrice = expMwh > 0 ? expEur / expMwh : NaN;
   document.getElementById('b-import-eur').textContent = fmtEur(impEur);
-  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос';
+  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос'+(isFinite(avgImpPrice)?` @ ${fmt1(avgImpPrice)} EUR/MWh`:'');
   document.getElementById('b-export-eur').textContent = fmtEur(expEur);
-  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ';
+  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ'+(isFinite(avgExpPrice)?` @ ${fmt1(avgExpPrice)} EUR/MWh`:'');
   const netEl = document.getElementById('b-net-eur');
   netEl.textContent = fmtEur(net);
   netEl.className   = 'balance-val '+(net>=0?'revenue':'expense');
