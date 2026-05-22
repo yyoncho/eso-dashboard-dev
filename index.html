@@ -613,7 +613,7 @@ function computeDayAvg(binned) {
 //  NAV
 // ══════════════════════════════════════════════════════════════════════════════
 function todayStr() {
-  return new Date(Date.now() + 2*3600*1000).toISOString().slice(0,10);
+  return new Date().toLocaleString('sv', {timeZone: 'Europe/Sofia'}).slice(0, 10);
 }
 // ── URL hash state: #day=YYYY-MM-DD&snap=YYYY-MM-DDTHH:MM:SSZ ────────────────
 function readHash() {
