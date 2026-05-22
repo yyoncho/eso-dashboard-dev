@@ -877,9 +877,8 @@ function updateDayBalance(binned, pd, dateStr) {
     battBox.style.display = 'none';
   }
 
-  const dayPts = getDayPrices(pd, dateStr);
-  const lastP  = dayPts.length ? dayPts[dayPts.length-1].price : NaN;
-  document.getElementById('p-current').textContent = isFinite(lastP)?fmt1(lastP):'—';
+  const curP = getPriceAt(pd, Date.now());
+  document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
   document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
   document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
 }
