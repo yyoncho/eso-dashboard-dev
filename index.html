@@ -408,20 +408,21 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
         <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
         <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
+        <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
       </div>
     </div>
     <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
       <div class="re-stat"><div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-val" id="rs-pct">—</div></div>
-      <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val" id="rs-gap">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч:мин</div></div>
-      <div class="re-stat" style="border-left:2px solid #a5d5b5;margin-left:8px;padding-left:16px;"><div class="re-stat-label">ФЕЦ</div><div class="re-stat-val" id="rs-solar">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">ВяЕЦ</div><div class="re-stat-val" id="rs-wind">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">ВЕЦ</div><div class="re-stat-val" id="rs-vec">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">М.ВЕЦ</div><div class="re-stat-val" id="rs-mvec">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Биомаса</div><div class="re-stat-val" id="rs-bio">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" id="rs-batt">—</div><div class="re-stat-unit">GWh</div></div>
+      <div class="re-stat" style="border-left:2px solid #a5d5b5;margin-left:8px;padding-left:16px;"><div class="re-stat-label">ФЕЦ</div><div class="re-stat-val" id="rs-solar">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВяЕЦ</div><div class="re-stat-val" id="rs-wind">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ВЕЦ</div><div class="re-stat-val" id="rs-vec">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">М.ВЕЦ</div><div class="re-stat-val" id="rs-mvec">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">Биомаса</div><div class="re-stat-val" id="rs-bio">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
+      <div class="re-stat"><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" id="rs-batt">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
     </div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
@@ -473,6 +474,7 @@ let allDates   = [];
 let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
 let reMode     = false;
+let eurMode    = false;
 
 const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
 let _dayRecords = [];
@@ -687,46 +689,63 @@ function setReMode(on) {
     updateReStats(window._lastBinned);
   }
 }
+function setEurMode(on) {
+  eurMode = on;
+  document.getElementById('tog-eur').classList.toggle('active', on);
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    if (reMode) updateReStats(window._lastBinned);
+  }
+}
 
 function updateReStats(binned) {
   if (!binned || !binned.length) return;
-  const ih = 15 / 60;  // each bin = 15 min = 0.25 h
-  let loadGwh = 0, reGwh = 0, excessGwh = 0, fullH = 0;
-  let solarGwh = 0, windGwh = 0, vecGwh = 0, mvecGwh = 0, bioGwh = 0, battGwh = 0;
+  const ih = 15 / 60;
+
+  const priceByBin = {};
+  if (eurMode && window._lastPriceData && window._lastDateStr) {
+    for (const p of getDayPrices(window._lastPriceData, window._lastDateStr))
+      priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
+  }
+
+  let loadAcc = 0, reAcc = 0, excessAcc = 0, fullH = 0;
+  let solarAcc = 0, windAcc = 0, vecAcc = 0, mvecAcc = 0, bioAcc = 0, battAcc = 0;
   for (const b of binned) {
     const load = b['load_mw'] || 0; if (!load) continue;
-    const solar = b['ФЕЦ'] || 0;
-    const wind  = b['ВяЕЦ'] || 0;
-    const vec   = b['ВЕЦ'] || 0;
-    const mvec  = b['Малки ВЕЦ'] || 0;
-    const bio   = b['Био ЕЦ'] || 0;
+    const solar = b['ФЕЦ'] || 0, wind = b['ВяЕЦ'] || 0, vec = b['ВЕЦ'] || 0;
+    const mvec  = b['Малки ВЕЦ'] || 0, bio = b['Био ЕЦ'] || 0;
     const batt  = battDis(b['batt_discharge_mw']);
-    const re    = solar + wind + vec + mvec + bio + batt;
-    const rfl   = Math.min(re, load);
-    loadGwh   += load  * ih / 1000;
-    reGwh     += rfl   * ih / 1000;
-    excessGwh += Math.max(0, re - load) * ih / 1000;
-    solarGwh  += solar * ih / 1000;
-    windGwh   += wind  * ih / 1000;
-    vecGwh    += vec   * ih / 1000;
-    mvecGwh   += mvec  * ih / 1000;
-    bioGwh    += bio   * ih / 1000;
-    battGwh   += batt  * ih / 1000;
+    const re = solar + wind + vec + mvec + bio + batt;
+    const rfl = Math.min(re, load);
+    const pr = eurMode ? (priceByBin[b.ts] ?? NaN) : 1;
+    if (eurMode && !isFinite(pr)) continue;
+    const scale = eurMode ? pr * ih / 1000 : ih / 1000;
+    loadAcc   += load  * scale;
+    reAcc     += rfl   * scale;
+    excessAcc += Math.max(0, re - load) * scale;
+    solarAcc  += solar * scale;
+    windAcc   += wind  * scale;
+    vecAcc    += vec   * scale;
+    mvecAcc   += mvec  * scale;
+    bioAcc    += bio   * scale;
+    battAcc   += batt  * scale;
     if (rfl >= load) fullH += ih;
   }
-  const gapGwh = loadGwh - reGwh;
-  const pct    = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
+  const gapAcc = loadAcc - reAcc;
+  const pct    = loadAcc > 0 ? reAcc / loadAcc * 100 : 0;
+  const unit   = eurMode ? 'хил.€' : 'GWh';
+  for (const el of document.querySelectorAll('.rs-energy-unit')) el.textContent = unit;
   document.getElementById('rs-pct').textContent   = pct.toFixed(1) + '%';
-  document.getElementById('rs-re').textContent    = reGwh.toFixed(1);
-  document.getElementById('rs-gap').textContent   = gapGwh.toFixed(1);
-  document.getElementById('rs-exc').textContent   = excessGwh.toFixed(2);
+  document.getElementById('rs-re').textContent    = reAcc.toFixed(1);
+  document.getElementById('rs-gap').textContent   = gapAcc.toFixed(1);
+  document.getElementById('rs-exc').textContent   = excessAcc.toFixed(2);
   document.getElementById('rs-full').textContent  = fmtHMin(fullH);
-  document.getElementById('rs-solar').textContent = solarGwh.toFixed(1);
-  document.getElementById('rs-wind').textContent  = windGwh.toFixed(1);
-  document.getElementById('rs-vec').textContent   = vecGwh.toFixed(1);
-  document.getElementById('rs-mvec').textContent  = mvecGwh.toFixed(1);
-  document.getElementById('rs-bio').textContent   = bioGwh.toFixed(2);
-  document.getElementById('rs-batt').textContent  = battGwh.toFixed(1);
+  document.getElementById('rs-solar').textContent = solarAcc.toFixed(1);
+  document.getElementById('rs-wind').textContent  = windAcc.toFixed(1);
+  document.getElementById('rs-vec').textContent   = vecAcc.toFixed(1);
+  document.getElementById('rs-mvec').textContent  = mvecAcc.toFixed(1);
+  document.getElementById('rs-bio').textContent   = bioAcc.toFixed(2);
+  document.getElementById('rs-batt').textContent  = battAcc.toFixed(1);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -951,37 +970,54 @@ function drawTimeline(binned, pd, dateStr) {
   const isHour = chartMode === 'hourly';
   const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>toSofiaStr(p.ts));
 
+  // Build price lookup for EUR mode
+  const dayPrices = getDayPrices(pd, dateStr);
+  const priceByBin = {}, priceByHour = {};
+  for (const p of dayPrices) {
+    priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
+    const h = new Date(p.ts).getUTCHours();
+    if (!priceByHour[h]) priceByHour[h] = { s: 0, n: 0 };
+    priceByHour[h].s += p.price; priceByHour[h].n++;
+  }
+  for (const h in priceByHour) priceByHour[h] = priceByHour[h].s / priceByHour[h].n;
+  function pAt(p) { return isHour ? (priceByHour[p.hour] ?? NaN) : (priceByBin[p.ts] ?? NaN); }
+  function eur(mw, p) { // MW → хил.€/h
+    if (!eurMode || mw == null || isNaN(mw)) return mw;
+    const pr = pAt(p); return isFinite(pr) ? mw * pr / 1000 : null;
+  }
+  const yUnit = eurMode ? 'хил.€/h' : 'MW';
+  const htFmt = eurMode ? (lbl => `${lbl}: %{y:.1f} хил.€/h<extra></extra>`) : (lbl => `${lbl}: %{y:.0f} MW<extra></extra>`);
+
   const genTraces = GEN_SERIES.map(s => ({
-    x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
+    x: xs, y: pts.map(p => { const v = isNaN(p[s.key])?null:Math.max(0,p[s.key]||0); return eur(v,p)??v; }),
     name: s.label, stackgroup: 'gen',
-    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color },
+    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color, shape: 'spline' },
     visible: (reMode && !RE_KEYS.has(s.key)) ? 'legendonly' : true,
-    hovertemplate: `${s.label}: %{y:.0f} MW<extra></extra>`,
+    hovertemplate: htFmt(s.label),
   }));
 
   const loadTrace = {
-    x: xs, y: pts.map(p=>isNaN(p['load_mw'])?null:p['load_mw']||0),
-    name: 'Товар', line: { color: '#e53935', width: 2.5 },
-    hovertemplate: 'Товар: %{y:.0f} MW<extra></extra>',
+    x: xs, y: pts.map(p => { const v = isNaN(p['load_mw'])?null:p['load_mw']||0; return eur(v,p)??v; }),
+    name: 'Товар', line: { color: '#e53935', width: 2.5, shape: 'spline' },
+    hovertemplate: htFmt('Товар'),
   };
   const battDischargeTrace = {
-    x: xs, y: pts.map(p => battDis(p['batt_discharge_mw'])),
+    x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw']); return eur(v,p)??v; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
-    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00' },
-    hovertemplate: 'ССЕЕ разреждане: %{y:.0f} MW<extra></extra>',
+    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'spline' },
+    hovertemplate: htFmt('ССЕЕ разреждане'),
   };
   const battChargeTrace = {
-    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; return (v != null && v > 0) ? -v : 0; }),
-    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
+    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; const mw = (v != null && v > 0) ? -v : 0; return eur(mw,p)??mw; }),
+    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot', shape: 'spline' },
     visible: reMode ? 'legendonly' : true,
-    hovertemplate: 'ССЕЕ зареждане: %{y:.0f} MW<extra></extra>',
+    hovertemplate: htFmt('ССЕЕ зареждане'),
   };
 
-  const dayPrices = getDayPrices(pd, dateStr);
-  const priceXs   = isHour
+  const priceXs = isHour
     ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
     : dayPrices.map(p=>toSofiaStr(p.ts));
-  const priceTrace = dayPrices.length ? {
+  const priceTrace = (!eurMode && dayPrices.length) ? {
     x: priceXs, y: dayPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
     visible: reMode ? 'legendonly' : true,
@@ -994,9 +1030,9 @@ function drawTimeline(binned, pd, dateStr) {
 
   Plotly.react('chart-timeline', traces, {
     ...LO,
-    uirevision: reMode ? 'timeline-re' : 'timeline',
+    uirevision: `timeline-${reMode}-${eurMode}`,
     xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
-    yaxis:  { ...LO.yaxis, title: 'MW' },
+    yaxis:  { ...LO.yaxis, title: yUnit },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
               gridcolor: 'transparent', linecolor: '#e07000',
               tickfont: { size: 9, color: '#e07000' }, titlefont: { size: 10, color: '#e07000' } },
