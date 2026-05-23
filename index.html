@@ -409,6 +409,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
         <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
         <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
+        <button class="tog-btn" id="tog-total"   onclick="setTotalStats(!totalStatsVisible)">Общо</button>
+        <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
       </div>
     </div>
     <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
@@ -424,6 +426,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="re-stat"><div class="re-stat-label">Биомаса</div><div class="re-stat-val" id="rs-bio">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" id="rs-batt">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
     </div>
+    <div id="total-stats-bar" style="display:none;padding:8px 12px;background:#f5f8ff;border-bottom:1px solid #c5d8ee;flex-wrap:wrap;gap:0;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
@@ -473,8 +476,10 @@ const FLOW_CFG = [
 let allDates   = [];
 let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
-let reMode     = false;
-let eurMode    = false;
+let reMode            = false;
+let eurMode           = false;
+let totalStatsVisible = false;
+let colMode           = false;
 
 const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
 let _dayRecords = [];
@@ -687,6 +692,7 @@ function setReMode(on) {
   if (window._lastBinned) {
     drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
     updateReStats(window._lastBinned);
+    if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
 }
 function setEurMode(on) {
@@ -695,7 +701,75 @@ function setEurMode(on) {
   if (window._lastBinned) {
     drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
     if (reMode) updateReStats(window._lastBinned);
+    if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
+}
+function setTotalStats(on) {
+  totalStatsVisible = on;
+  document.getElementById('tog-total').classList.toggle('active', on);
+  const bar = document.getElementById('total-stats-bar');
+  bar.style.display = on ? 'flex' : 'none';
+  if (on && window._lastBinned) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+}
+function setColMode(on) {
+  colMode = on;
+  document.getElementById('tog-col').classList.toggle('active', on);
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+}
+function _buildPriceByBin(pd, dateStr) {
+  const m = {};
+  for (const p of getDayPrices(pd, dateStr))
+    m[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
+  return m;
+}
+function updateTotalStats(binned, pd, dateStr) {
+  if (!totalStatsVisible || !binned || !binned.length) return;
+  const priceByBin = _buildPriceByBin(pd, dateStr);
+  const totals = {};
+  for (const s of GEN_SERIES) totals[s.key] = 0;
+  totals['_batt'] = 0;
+  for (const b of binned) {
+    const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
+    const scale = pr * (15/60) / 1e6;
+    for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
+    totals['_batt'] += battDis(b['batt_discharge_mw']) * scale;
+  }
+  const sources = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
+  let html = '';
+  for (const s of sources)
+    html += `<div class="re-stat"><div class="re-stat-label" style="color:${s.color};margin-right:2px;">●</div><div class="re-stat-label">${s.label}</div><div class="re-stat-val" style="margin-left:4px;">${totals[s.key].toFixed(2)}</div><div class="re-stat-unit">млн.€</div></div>`;
+  if (!reMode)
+    html += `<div class="re-stat"><div class="re-stat-label" style="color:#f59f00;margin-right:2px;">●</div><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" style="margin-left:4px;">${totals['_batt'].toFixed(2)}</div><div class="re-stat-unit">млн.€</div></div>`;
+  document.getElementById('total-stats-bar').innerHTML = html;
+}
+function drawColChart(binned, pd, dateStr) {
+  const priceByBin = _buildPriceByBin(pd, dateStr);
+  const totals = {};
+  for (const s of GEN_SERIES) totals[s.key] = 0;
+  totals['_batt'] = 0;
+  for (const b of binned) {
+    const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
+    const scale = pr * (15/60) / 1e6;
+    for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
+    totals['_batt'] += battDis(b['batt_discharge_mw']) * scale;
+  }
+  const sources = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
+  const labels = sources.map(s => s.label);
+  const values = sources.map(s => totals[s.key]);
+  const colors = sources.map(s => s.color);
+  if (!reMode) { labels.push('ССЕЕ разр.'); values.push(totals['_batt']); colors.push('#f59f00'); }
+  Plotly.react('chart-timeline', [{
+    type: 'bar', x: labels, y: values,
+    marker: { color: colors, line: { color: '#fff', width: 0.5 } },
+    hovertemplate: '%{x}: %{y:.3f} млн.€<extra></extra>',
+    text: values.map(v => v.toFixed(2)), textposition: 'outside', textfont: { size: 10 },
+  }], {
+    ...LO, uirevision: `col-${reMode}`,
+    xaxis: { ...LO.xaxis, type: 'category' },
+    yaxis: { ...LO.yaxis, title: 'млн.€' },
+    margin: { t: 20, b: 60, l: 58, r: 10 },
+    showlegend: false,
+  }, { responsive: true, displayModeBar: false });
 }
 
 function updateReStats(binned) {
@@ -965,6 +1039,7 @@ const LO = {
 
 function drawTimeline(binned, pd, dateStr) {
   window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
+  if (colMode) { drawColChart(binned, pd, dateStr); return; }
 
   const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
   const isHour = chartMode === 'hourly';
@@ -1181,6 +1256,7 @@ async function refresh() {
     drawTimeline(displayBinned, pd, dateStr);
     drawFlowsTimeline(displayBinned);
     updateReStats(displayBinned);
+    updateTotalStats(displayBinned, pd, dateStr);
     loadRecords();
 
   } catch(e) {
