@@ -412,8 +412,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div class="panel-header">
       <span>Дневен профил</span>
       <div class="toggle-group">
-        <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
-        <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
         <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
         <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
         <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
@@ -469,7 +467,7 @@ const FLOW_CFG = [
 // ══════════════════════════════════════════════════════════════════════════════
 let allDates   = [];
 let priceCache = {};
-let chartMode  = 'instant';   // 'instant' | 'hourly'
+const chartMode = 'instant';
 let reMode            = false;
 let eurMode           = false;
 const totalStatsVisible = true;
@@ -486,7 +484,6 @@ let _pendingSnapTs = null;
 const _initHash = readHash();
 let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
 _pendingSnapTs = _initHash.snap || null;
-if (_initHash.mode) chartMode = _initHash.mode;
 if (_initHash.flags) {
   const f = _initHash.flags.split(',');
   reMode            = f.includes('re');
@@ -633,7 +630,6 @@ function readHash() {
   return {
     day:    p.get('day'),
     snap:   p.get('snap'),
-    mode:   p.get('mode'),   // 'instant'|'hourly'
     flags:  p.get('flags'),  // e.g. 're,eur,tot,col'
     hidden: p.get('hidden'), // e.g. 'АЕЦ,ВЕЦ'
   };
@@ -642,7 +638,6 @@ function writeHash(day, snapTs) {
   const p = new URLSearchParams();
   if (day) p.set('day', day);
   if (snapTs) p.set('snap', snapTs);
-  if (chartMode !== 'instant') p.set('mode', chartMode);
   const flags = [reMode && 're', eurMode && 'eur', colMode && 'col'].filter(Boolean);
   if (flags.length) p.set('flags', flags.join(','));
   if (hiddenGenKeys.size) p.set('hidden', [...hiddenGenKeys].join('\t'));
@@ -691,13 +686,6 @@ function updateNav() {
   banner.classList.toggle('show', currentDay !== null);
 }
 
-function setChartMode(mode) {
-  chartMode = mode;
-  document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
-  document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
-  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-  writeHash(currentDay, null);
-}
 
 function setReMode(on) {
   reMode = on;
@@ -1097,21 +1085,15 @@ function drawTimeline(binned, pd, dateStr) {
   window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
   if (colMode) { drawColChart(binned, pd, dateStr); return; }
 
-  const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
-  const isHour = chartMode === 'hourly';
-  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>toSofiaStr(p.ts));
+  const pts = binned;
+  const xs  = pts.map(p => toSofiaStr(p.ts));
 
   // Build price lookup for EUR mode
   const dayPrices = getDayPrices(pd, dateStr);
-  const priceByBin = {}, priceByHour = {};
-  for (const p of dayPrices) {
+  const priceByBin = {};
+  for (const p of dayPrices)
     priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
-    const h = new Date(p.ts).getUTCHours();
-    if (!priceByHour[h]) priceByHour[h] = { s: 0, n: 0 };
-    priceByHour[h].s += p.price; priceByHour[h].n++;
-  }
-  for (const h in priceByHour) priceByHour[h] = priceByHour[h].s / priceByHour[h].n;
-  function pAt(p) { return isHour ? (priceByHour[p.hour] ?? NaN) : (priceByBin[p.ts] ?? NaN); }
+  function pAt(p) { return priceByBin[p.ts] ?? NaN; }
   function eur(mw, p) { // MW → хил.€/h
     if (!eurMode || mw == null || isNaN(mw)) return mw;
     const pr = pAt(p); return isFinite(pr) ? mw * pr / 1000 : null;
@@ -1146,9 +1128,7 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: htFmt('ССЕЕ зареждане'),
   };
 
-  const priceXs = isHour
-    ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
-    : dayPrices.map(p=>toSofiaStr(p.ts));
+  const priceXs = dayPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = (!eurMode && dayPrices.length) ? {
     x: priceXs, y: dayPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
@@ -1163,7 +1143,7 @@ function drawTimeline(binned, pd, dateStr) {
   Plotly.react('chart-timeline', traces, {
     ...LO,
     uirevision: `timeline-${reMode}-${eurMode}`,
-    xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
     yaxis:  { ...LO.yaxis, title: yUnit },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
               gridcolor: 'transparent', linecolor: '#e07000',
@@ -1198,9 +1178,8 @@ function drawTimeline(binned, pd, dateStr) {
 
 function drawFlowsTimeline(binned) {
   if (!binned.length) return;
-  const pts  = chartMode === 'hourly' ? binByHour(binned) : binned;
-  const isH  = chartMode === 'hourly';
-  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>toSofiaStr(p.ts));
+  const pts = binned;
+  const xs  = pts.map(p => toSofiaStr(p.ts));
 
   const traces = FLOW_CFG.map(f => ({
     x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
@@ -1220,7 +1199,7 @@ function drawFlowsTimeline(binned) {
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
-    xaxis: { ...LO.xaxis, type: isH ? 'category' : 'date', title: isH ? 'Час (UTC)' : 'Час' },
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
     yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
     margin: { t: 8, b: 90, l: 58, r: 10 },
@@ -1391,8 +1370,6 @@ function navigateRecord(e, el) {
 
 // Apply persisted toggle state to UI before first render
 (function applyInitialUIState() {
-  document.getElementById('tog-instant').classList.toggle('active', chartMode === 'instant');
-  document.getElementById('tog-hourly').classList.toggle('active',  chartMode === 'hourly');
   document.getElementById('tog-re').classList.toggle('active', reMode);
   document.getElementById('re-stats-bar').classList.toggle('show', reMode);
   document.getElementById('tog-eur').classList.toggle('active', eurMode);
