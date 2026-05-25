@@ -411,7 +411,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
         <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
         <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
-        <button class="tog-btn" id="tog-total"   onclick="setTotalStats(!totalStatsVisible)">Общо</button>
         <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
       </div>
     </div>
@@ -428,7 +427,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="re-stat"><div class="re-stat-label">Биомаса</div><div class="re-stat-val" id="rs-bio">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
       <div class="re-stat"><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" id="rs-batt">—</div><div class="re-stat-unit rs-energy-unit">GWh</div></div>
     </div>
-    <div id="total-stats-bar" style="display:none;padding:8px 12px;background:#f5f8ff;border-bottom:1px solid #c5d8ee;flex-wrap:wrap;gap:0;"></div>
+    <div id="total-stats-bar" style="display:flex;padding:8px 12px;background:#f5f8ff;border-bottom:1px solid #c5d8ee;flex-wrap:wrap;gap:0;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
@@ -480,7 +479,7 @@ let priceCache = {};
 let chartMode  = 'instant';   // 'instant' | 'hourly'
 let reMode            = false;
 let eurMode           = false;
-let totalStatsVisible = false;
+const totalStatsVisible = true;
 let colMode           = false;
 let hiddenGenKeys     = new Set();
 
@@ -499,7 +498,6 @@ if (_initHash.flags) {
   const f = _initHash.flags.split(',');
   reMode            = f.includes('re');
   eurMode           = f.includes('eur');
-  totalStatsVisible = f.includes('tot');
   colMode           = f.includes('col');
 }
 if (_initHash.hidden) {
@@ -652,7 +650,7 @@ function writeHash(day, snapTs) {
   if (day) p.set('day', day);
   if (snapTs) p.set('snap', snapTs);
   if (chartMode !== 'instant') p.set('mode', chartMode);
-  const flags = [reMode && 're', eurMode && 'eur', totalStatsVisible && 'tot', colMode && 'col'].filter(Boolean);
+  const flags = [reMode && 're', eurMode && 'eur', colMode && 'col'].filter(Boolean);
   if (flags.length) p.set('flags', flags.join(','));
   if (hiddenGenKeys.size) p.set('hidden', [...hiddenGenKeys].join('\t'));
   const h = p.toString() ? '#' + p.toString() : '#';
@@ -727,14 +725,6 @@ function setEurMode(on) {
     if (reMode) updateReStats(window._lastBinned);
     if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
-  writeHash(currentDay, null);
-}
-function setTotalStats(on) {
-  totalStatsVisible = on;
-  document.getElementById('tog-total').classList.toggle('active', on);
-  const bar = document.getElementById('total-stats-bar');
-  bar.style.display = on ? 'flex' : 'none';
-  if (on && window._lastBinned) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   writeHash(currentDay, null);
 }
 function setColMode(on) {
@@ -1401,10 +1391,7 @@ function navigateRecord(e, el) {
   document.getElementById('tog-re').classList.toggle('active', reMode);
   document.getElementById('re-stats-bar').classList.toggle('show', reMode);
   document.getElementById('tog-eur').classList.toggle('active', eurMode);
-  document.getElementById('tog-total').classList.toggle('active', totalStatsVisible);
   document.getElementById('tog-col').classList.toggle('active', colMode);
-  const bar = document.getElementById('total-stats-bar');
-  bar.style.display = totalStatsVisible ? 'flex' : 'none';
 })();
 
 refresh();
