@@ -337,7 +337,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
       <div class="panel">
         <div class="panel-header">Дневен баланс <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
-        <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности.</div>
+        <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности. Печалбата от арбитраж на ССЕЕ (Δ) е изчислена като разлика между приход от разреждане и разход за зареждане по борсова цена — реалният финансов резултат зависи от договорните условия на оператора.</div>
         <div class="panel-body">
           <div class="balance-grid">
             <div class="balance-item expense">
@@ -371,11 +371,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
                 <div class="price-label">Зареждане</div>
                 <span class="price-val" id="b-batt-chg" style="color:#e07000;">—</span>
                 <span class="price-unit">MWh</span>
+                <div id="b-batt-chg-eur" style="display:none;font-size:0.72rem;color:#e07000;margin-top:2px;"></div>
               </div>
               <div style="background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;padding:7px 9px;">
                 <div class="price-label">Разреждане</div>
                 <span class="price-val" id="b-batt-dis" style="color:#1a8a1a;">—</span>
                 <span class="price-unit">MWh</span>
+                <div id="b-batt-dis-eur" style="display:none;font-size:0.72rem;color:#1a8a1a;margin-top:2px;"></div>
               </div>
               <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:7px 9px;">
                 <div class="price-label">Разр./Зар.</div>
@@ -778,15 +780,21 @@ function updateTotalStats(binned, pd, dateStr) {
     return isFinite(avgDis) && isFinite(avgChg) ? `${avgDis.toFixed(0)} vs ${avgChg.toFixed(0)} €/MWh` : '';
   })();
 
-  // Push Δ arbitrage into Дневен баланс panel
-  const arbBox = document.getElementById('b-batt-arb-box');
+  // Push charge/discharge EUR + Δ into Дневен баланс ССЕЕ section
+  const arbBox   = document.getElementById('b-batt-arb-box');
+  const chgEurEl = document.getElementById('b-batt-chg-eur');
+  const disEurEl = document.getElementById('b-batt-dis-eur');
   if (eurMode && battChgCost > 0 && totals['_batt'] > 0) {
+    chgEurEl.style.display = ''; chgEurEl.textContent = `−${battChgCost.toFixed(2)} млн.€`;
+    disEurEl.style.display = ''; disEurEl.textContent = `+${totals['_batt'].toFixed(2)} млн.€`;
     arbBox.style.display = '';
     const arbColor = battDelta >= 0 ? '#1a8a1a' : '#cc2200';
     document.getElementById('b-batt-arb').style.color = arbColor;
     document.getElementById('b-batt-arb').textContent = (battDelta >= 0 ? '+' : '') + battDelta.toFixed(2);
     document.getElementById('b-batt-arb-prices').textContent = battDeltaAvg;
   } else {
+    chgEurEl.style.display = 'none';
+    disEurEl.style.display = 'none';
     arbBox.style.display = 'none';
   }
 
