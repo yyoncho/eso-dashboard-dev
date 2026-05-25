@@ -355,11 +355,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
               <div class="balance-val neutral" id="b-net-eur">—</div>
               <div class="stat-unit" id="b-net-mwh">—</div>
             </div>
-            <div class="balance-item" id="b-batt-arb-row" style="grid-column:1/-1;display:none;">
-              <div class="balance-label">ССЕЕ арбитраж (разр. &minus; зар.)</div>
-              <div class="balance-val" id="b-batt-arb" style="color:#7b3fa0;">—</div>
-              <div class="stat-unit" id="b-batt-arb-prices"></div>
-            </div>
           </div>
           <div class="price-box">
             <div><div class="price-label">IBEX DA (текуща)</div>
@@ -376,20 +371,35 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
                 <div class="price-label">Зареждане</div>
                 <span class="price-val" id="b-batt-chg" style="color:#e07000;">—</span>
                 <span class="price-unit">MWh</span>
-                <div id="b-batt-chg-eur" style="display:none;font-size:0.72rem;color:#e07000;margin-top:2px;"></div>
               </div>
               <div style="background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;padding:7px 9px;">
                 <div class="price-label">Разреждане</div>
                 <span class="price-val" id="b-batt-dis" style="color:#1a8a1a;">—</span>
                 <span class="price-unit">MWh</span>
-                <div id="b-batt-dis-eur" style="display:none;font-size:0.72rem;color:#1a8a1a;margin-top:2px;"></div>
               </div>
               <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:7px 9px;">
                 <div class="price-label">Разр./Зар.</div>
                 <span class="price-val" id="b-batt-eff" style="color:#004494;">—</span>
                 <span class="price-unit">%</span>
               </div>
-
+            </div>
+            <div id="b-batt-eur-row" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+              <div style="background:#fff8ee;border:1px solid #f5d88a;border-radius:4px;padding:7px 9px;">
+                <div class="price-label">Зареждане</div>
+                <span class="price-val" id="b-batt-chg-eur" style="color:#e07000;">—</span>
+                <span class="price-unit">млн.€</span>
+              </div>
+              <div style="background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;padding:7px 9px;">
+                <div class="price-label">Разреждане</div>
+                <span class="price-val" id="b-batt-dis-eur" style="color:#1a8a1a;">—</span>
+                <span class="price-unit">млн.€</span>
+              </div>
+              <div style="background:#f5f0ff;border:1px solid #c9b0e8;border-radius:4px;padding:7px 9px;">
+                <div class="price-label">Δ Арбитраж</div>
+                <span class="price-val" id="b-batt-arb" style="color:#7b3fa0;">—</span>
+                <span class="price-unit">млн.€</span>
+                <div class="price-label" id="b-batt-arb-prices" style="margin-top:3px;color:#8a6aaa;"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -780,22 +790,18 @@ function updateTotalStats(binned, pd, dateStr) {
     return isFinite(avgDis) && isFinite(avgChg) ? `${avgDis.toFixed(0)} vs ${avgChg.toFixed(0)} €/MWh` : '';
   })();
 
-  // Push charge/discharge EUR sub-lines + Δ row into Дневен баланс
-  const chgEurEl = document.getElementById('b-batt-chg-eur');
-  const disEurEl = document.getElementById('b-batt-dis-eur');
-  const arbRow   = document.getElementById('b-batt-arb-row');
+  // Show/hide EUR money row in ССЕЕ section
+  const eurRow = document.getElementById('b-batt-eur-row');
   if (eurMode && battChgCost > 0 && totals['_batt'] > 0) {
-    chgEurEl.style.display = ''; chgEurEl.textContent = `−${battChgCost.toFixed(2)} млн.€`;
-    disEurEl.style.display = ''; disEurEl.textContent = `+${totals['_batt'].toFixed(2)} млн.€`;
-    arbRow.style.display = '';
+    eurRow.style.display = 'grid';
+    document.getElementById('b-batt-chg-eur').textContent = battChgCost.toFixed(2);
+    document.getElementById('b-batt-dis-eur').textContent = totals['_batt'].toFixed(2);
     const arbColor = battDelta >= 0 ? '#1a8a1a' : '#cc2200';
     document.getElementById('b-batt-arb').style.color = arbColor;
-    document.getElementById('b-batt-arb').textContent = (battDelta >= 0 ? '+' : '') + battDelta.toFixed(2) + ' млн.€';
+    document.getElementById('b-batt-arb').textContent = (battDelta >= 0 ? '+' : '') + battDelta.toFixed(2);
     document.getElementById('b-batt-arb-prices').textContent = battDeltaAvg;
   } else {
-    chgEurEl.style.display = 'none';
-    disEurEl.style.display = 'none';
-    arbRow.style.display = 'none';
+    eurRow.style.display = 'none';
   }
 
   let html = '';
