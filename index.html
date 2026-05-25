@@ -1053,6 +1053,12 @@ function drawPie(latest) {
   const colors = [...rows.map(r=>r.color), '#f59f00',                       '#9e9e9e'];
 
   const total = vals.reduce((a,b)=>a+b,0);
+  const loadMw = latest['load_mw'] || 0;
+  const chgMw  = Math.max(0, latest['batt_charge_mw'] || 0);
+  const centerSub = chgMw > 0
+    ? `<span style="font-size:9px;color:#5a7090">${fmt0(loadMw)} т + ${fmt0(chgMw)} зар.</span>`
+    : `<span style="font-size:9px;color:#5a7090">${fmt0(loadMw)} товар</span>`;
+  const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span><br>${centerSub}`;
   const traceData = [{
     type: 'pie', values: vals, labels: labels,
     marker: { colors, line: { color: '#fff', width: 1.5 } },
@@ -1070,7 +1076,7 @@ function drawPie(latest) {
     margin: { t: 10, b: 60, l: 10, r: 10 },
     uirevision: 'pie',
     annotations: [{
-      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>`,
+      text: centerText(),
       x: 0.5, y: 0.5, showarrow: false,
       font: { size: 15, color: '#004494', family: 'Arial' },
     }],
@@ -1081,7 +1087,7 @@ function drawPie(latest) {
   } else {
     Plotly.update('chart-pie',
       { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false] },
-      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` },
+      { 'annotations[0].text': centerText() },
       [0]);
     // suppress animation
     const gd = document.getElementById('chart-pie');
