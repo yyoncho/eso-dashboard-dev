@@ -738,36 +738,38 @@ function _buildPriceByBin(pd, dateStr) {
 }
 function updateTotalStats(binned, pd, dateStr) {
   if (!totalStatsVisible || !binned || !binned.length) return;
-  const priceByBin = eurMode ? _buildPriceByBin(pd, dateStr) : {};
-  const totals = {}, mwhTotals = {};
-  for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; }
-  totals['_batt'] = 0; mwhTotals['_batt'] = 0;
+  const priceByBin = _buildPriceByBin(pd, dateStr);
+  const totals = {}, mwhTotals = {}, eurTotals = {};
+  for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; eurTotals[s.key] = 0; }
+  totals['_batt'] = 0; mwhTotals['_batt'] = 0; eurTotals['_batt'] = 0;
   let battChgCost = 0, battChgMwh = 0;
   for (const b of binned) {
-    let scale, mwhScale = (15/60) / 1000;
-    if (eurMode) {
-      const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
-      scale = pr * (15/60) / 1e6;
+    const mwhScale = (15/60) / 1000;
+    const pr = priceByBin[b.ts] ?? NaN;
+    const eurScale = isFinite(pr) ? pr * (15/60) / 1e6 : null;
+    const scale = eurMode && eurScale !== null ? eurScale : mwhScale;
+    if (eurMode && eurScale === null) continue;
+    if (isFinite(pr) && eurScale !== null) {
       const chg = Math.max(0, b['batt_charge_mw'] || 0);
-      battChgCost += chg * scale;
+      battChgCost += chg * eurScale;
       battChgMwh  += chg * mwhScale;
-    } else {
-      scale = mwhScale;
     }
     for (const s of GEN_SERIES) {
       const v = Math.max(0, b[s.key]||0);
       totals[s.key] += v * scale;
-      if (eurMode) mwhTotals[s.key] += v * mwhScale;
+      mwhTotals[s.key] += v * mwhScale;
+      if (eurScale !== null) eurTotals[s.key] += v * eurScale;
     }
     const bd = battDis(b['batt_discharge_mw']);
     totals['_batt'] += bd * scale;
-    if (eurMode) mwhTotals['_batt'] += bd * mwhScale;
+    mwhTotals['_batt'] += bd * mwhScale;
+    if (eurScale !== null) eurTotals['_batt'] += bd * eurScale;
   }
   const unit = eurMode ? 'млн.€' : 'GWh';
   const dec  = eurMode ? 2 : 3;
   const avgPr = (key) => {
     const mwh = mwhTotals[key] * 1000;
-    const eur = totals[key] * 1e6;
+    const eur = eurTotals[key] * 1e6;
     return mwh > 0 ? eur / mwh : NaN;
   };
   const priceTag = (key) => {
@@ -781,21 +783,21 @@ function updateTotalStats(binned, pd, dateStr) {
 
   const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
     .filter(s => !hiddenGenKeys.has(s.key));
-  const battDelta = totals['_batt'] - battChgCost;
+  const battEurDis   = eurTotals['_batt'];
+  const battDelta    = battEurDis - battChgCost;
   const battDeltaAvg = (() => {
     const disMwh = mwhTotals['_batt'] * 1000, chgMwh = battChgMwh * 1000;
-    const disEur = totals['_batt'] * 1e6, chgEur = battChgCost * 1e6;
-    const avgDis = disMwh > 0 ? disEur / disMwh : NaN;
-    const avgChg = chgMwh > 0 ? chgEur / chgMwh : NaN;
+    const avgDis = disMwh > 0 ? battEurDis * 1e6 / disMwh : NaN;
+    const avgChg = chgMwh > 0 ? battChgCost * 1e6 / chgMwh : NaN;
     return isFinite(avgDis) && isFinite(avgChg) ? `${avgDis.toFixed(0)} vs ${avgChg.toFixed(0)} €/MWh` : '';
   })();
 
-  // Show/hide EUR money row in ССЕЕ section
+  // EUR money row in ССЕЕ section — always show when battery has data
   const eurRow = document.getElementById('b-batt-eur-row');
-  if (eurMode && battChgCost > 0 && totals['_batt'] > 0) {
+  if (battChgCost > 0 && battEurDis > 0) {
     eurRow.style.display = 'grid';
     document.getElementById('b-batt-chg-eur').textContent = battChgCost.toFixed(2);
-    document.getElementById('b-batt-dis-eur').textContent = totals['_batt'].toFixed(2);
+    document.getElementById('b-batt-dis-eur').textContent = battEurDis.toFixed(2);
     const arbColor = battDelta >= 0 ? '#1a8a1a' : '#cc2200';
     document.getElementById('b-batt-arb').style.color = arbColor;
     document.getElementById('b-batt-arb').textContent = (battDelta >= 0 ? '+' : '') + battDelta.toFixed(2);
