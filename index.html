@@ -185,7 +185,9 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .re-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #3a7050; }
 .re-stat-val   { font-size: 1.25rem; font-weight: 700; color: #1a6030; line-height: 1.15; }
 .re-stat-val.re-stat-gap { color: #cc2200; }
-.re-stat-unit  { font-size: 0.68rem; color: #5a9070; }
+.re-stat-unit   { font-size: 0.68rem; color: #5a9070; }
+.re-stat-valrow { display: flex; align-items: baseline; gap: 3px; margin-top: 1px; }
+.re-stat-avgpr  { font-size: 0.6rem; color: #8a9ab0; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -480,6 +482,7 @@ let reMode            = false;
 let eurMode           = false;
 let totalStatsVisible = false;
 let colMode           = false;
+let hiddenGenKeys     = new Set();
 
 const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
 let _dayRecords = [];
@@ -747,22 +750,25 @@ function updateTotalStats(binned, pd, dateStr) {
   }
   const unit = eurMode ? 'млн.€' : 'GWh';
   const dec  = eurMode ? 2 : 3;
-  const sources = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
   const avgPr = (key) => {
-    const mwh = mwhTotals[key] * 1000; // back to MWh
-    const eur = totals[key] * 1e6;     // back to €
+    const mwh = mwhTotals[key] * 1000;
+    const eur = totals[key] * 1e6;
     return mwh > 0 ? eur / mwh : NaN;
   };
   const priceTag = (key) => {
     if (!eurMode) return '';
     const p = avgPr(key);
-    return isFinite(p) ? `<div class="re-stat-unit" style="margin-left:2px;opacity:0.7;">@ ${p.toFixed(0)}</div>` : '';
+    return isFinite(p) ? `<div class="re-stat-avgpr">@ ${p.toFixed(0)} €/MWh</div>` : '';
   };
+  const statItem = (color, label, key) =>
+    `<div class="re-stat"><div class="re-stat-label"><span style="color:${color}">●</span> ${label}</div><div class="re-stat-valrow"><span class="re-stat-val">${totals[key].toFixed(dec)}</span><span class="re-stat-unit">${unit}</span></div>${priceTag(key)}</div>`;
+
+  const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
+    .filter(s => !hiddenGenKeys.has(s.key));
   let html = '';
-  for (const s of sources)
-    html += `<div class="re-stat"><div class="re-stat-label" style="color:${s.color};margin-right:2px;">●</div><div class="re-stat-label">${s.label}</div><div class="re-stat-val" style="margin-left:4px;">${totals[s.key].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div>${priceTag(s.key)}</div>`;
-  if (!reMode)
-    html += `<div class="re-stat"><div class="re-stat-label" style="color:#f59f00;margin-right:2px;">●</div><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" style="margin-left:4px;">${totals['_batt'].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div>${priceTag('_batt')}</div>`;
+  for (const s of sources) html += statItem(s.color, s.label, s.key);
+  if (!reMode && !hiddenGenKeys.has('_batt'))
+    html += statItem('#f59f00', 'ССЕЕ разр.', '_batt');
   document.getElementById('total-stats-bar').innerHTML = html;
 }
 function drawColChart(binned, pd, dateStr) {
@@ -1097,7 +1103,7 @@ function drawTimeline(binned, pd, dateStr) {
     x: xs, y: pts.map(p => { const v = isNaN(p[s.key])?null:Math.max(0,p[s.key]||0); return eur(v,p)??v; }),
     name: s.label, stackgroup: 'gen',
     fillcolor: s.color+'cc', line: { width: 0.5, color: s.color, shape: 'spline' },
-    visible: (reMode && !RE_KEYS.has(s.key)) ? 'legendonly' : true,
+    visible: (hiddenGenKeys.has(s.key) || (reMode && !RE_KEYS.has(s.key))) ? 'legendonly' : true,
     hovertemplate: htFmt(s.label),
   }));
 
@@ -1110,6 +1116,7 @@ function drawTimeline(binned, pd, dateStr) {
     x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw']); return eur(v,p)??v; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
     fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'spline' },
+    visible: hiddenGenKeys.has('_batt') ? 'legendonly' : true,
     hovertemplate: htFmt('ССЕЕ разреждане'),
   };
   const battChargeTrace = {
@@ -1144,6 +1151,28 @@ function drawTimeline(binned, pd, dateStr) {
     legend: { ...LO.legend, orientation: 'h', y: -0.15 },
     margin: { t: 8, b: 90, l: 58, r: 58 },
   }, { responsive: true, displayModeBar: false });
+
+  // Attach legend click listener once
+  const el = document.getElementById('chart-timeline');
+  if (!el._legendListenerAttached) {
+    el._legendListenerAttached = true;
+    el.on('plotly_legendclick', function(data) {
+      const idx = data.curveNumber;
+      const t = (el.data || [])[idx];
+      if (!t) return;
+      const willHide = t.visible !== 'legendonly';
+      let key = null;
+      if (idx < GEN_SERIES.length) key = GEN_SERIES[idx].key;
+      else if (idx === GEN_SERIES.length) key = '_batt'; // battDischargeTrace is right after genTraces
+      if (key) {
+        if (willHide) hiddenGenKeys.add(key);
+        else hiddenGenKeys.delete(key);
+        setTimeout(() => {
+          if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+        }, 0);
+      }
+    });
+  }
 }
 
 function drawFlowsTimeline(binned) {
