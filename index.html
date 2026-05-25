@@ -494,6 +494,17 @@ let _pendingSnapTs = null;
 const _initHash = readHash();
 let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
 _pendingSnapTs = _initHash.snap || null;
+if (_initHash.mode) chartMode = _initHash.mode;
+if (_initHash.flags) {
+  const f = _initHash.flags.split(',');
+  reMode            = f.includes('re');
+  eurMode           = f.includes('eur');
+  totalStatsVisible = f.includes('tot');
+  colMode           = f.includes('col');
+}
+if (_initHash.hidden) {
+  for (const k of _initHash.hidden.split('\t')) if (k) hiddenGenKeys.add(k);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -625,15 +636,25 @@ function computeDayAvg(binned) {
 function todayStr() {
   return new Date().toLocaleString('sv', {timeZone: 'Europe/Sofia'}).slice(0, 10);
 }
-// ── URL hash state: #day=YYYY-MM-DD&snap=YYYY-MM-DDTHH:MM:SSZ ────────────────
+// ── URL hash state ────────────────────────────────────────────────────────────
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  return { day: p.get('day'), snap: p.get('snap') };
+  return {
+    day:    p.get('day'),
+    snap:   p.get('snap'),
+    mode:   p.get('mode'),   // 'instant'|'hourly'
+    flags:  p.get('flags'),  // e.g. 're,eur,tot,col'
+    hidden: p.get('hidden'), // e.g. 'АЕЦ,ВЕЦ'
+  };
 }
 function writeHash(day, snapTs) {
   const p = new URLSearchParams();
   if (day) p.set('day', day);
   if (snapTs) p.set('snap', snapTs);
+  if (chartMode !== 'instant') p.set('mode', chartMode);
+  const flags = [reMode && 're', eurMode && 'eur', totalStatsVisible && 'tot', colMode && 'col'].filter(Boolean);
+  if (flags.length) p.set('flags', flags.join(','));
+  if (hiddenGenKeys.size) p.set('hidden', [...hiddenGenKeys].join('\t'));
   const h = p.toString() ? '#' + p.toString() : '#';
   history.replaceState(null, '', h);
 }
@@ -683,9 +704,8 @@ function setChartMode(mode) {
   chartMode = mode;
   document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
   document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
-  if (window._lastBinned) {
-    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-  }
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  writeHash(currentDay, null);
 }
 
 function setReMode(on) {
@@ -697,6 +717,7 @@ function setReMode(on) {
     updateReStats(window._lastBinned);
     if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
+  writeHash(currentDay, null);
 }
 function setEurMode(on) {
   eurMode = on;
@@ -706,6 +727,7 @@ function setEurMode(on) {
     if (reMode) updateReStats(window._lastBinned);
     if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
+  writeHash(currentDay, null);
 }
 function setTotalStats(on) {
   totalStatsVisible = on;
@@ -713,11 +735,13 @@ function setTotalStats(on) {
   const bar = document.getElementById('total-stats-bar');
   bar.style.display = on ? 'flex' : 'none';
   if (on && window._lastBinned) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  writeHash(currentDay, null);
 }
 function setColMode(on) {
   colMode = on;
   document.getElementById('tog-col').classList.toggle('active', on);
   if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  writeHash(currentDay, null);
 }
 function _buildPriceByBin(pd, dateStr) {
   const m = {};
@@ -1169,6 +1193,7 @@ function drawTimeline(binned, pd, dateStr) {
         else hiddenGenKeys.delete(key);
         setTimeout(() => {
           if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+          writeHash(currentDay, null);
         }, 0);
       }
     });
@@ -1368,6 +1393,19 @@ function navigateRecord(e, el) {
   writeHash(currentDay, snap);
   refresh();
 }
+
+// Apply persisted toggle state to UI before first render
+(function applyInitialUIState() {
+  document.getElementById('tog-instant').classList.toggle('active', chartMode === 'instant');
+  document.getElementById('tog-hourly').classList.toggle('active',  chartMode === 'hourly');
+  document.getElementById('tog-re').classList.toggle('active', reMode);
+  document.getElementById('re-stats-bar').classList.toggle('show', reMode);
+  document.getElementById('tog-eur').classList.toggle('active', eurMode);
+  document.getElementById('tog-total').classList.toggle('active', totalStatsVisible);
+  document.getElementById('tog-col').classList.toggle('active', colMode);
+  const bar = document.getElementById('total-stats-bar');
+  bar.style.display = totalStatsVisible ? 'flex' : 'none';
+})();
 
 refresh();
 setInterval(refresh, REFRESH_MS);
