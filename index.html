@@ -68,20 +68,20 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
 /* ── stat cards ── */
 .stat-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px; margin-bottom: 14px;
+  display: grid; grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px; margin-bottom: 14px;
 }
 .stat-card {
   background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
-  border-radius: 4px; padding: 12px 14px 10px;
+  border-radius: 4px; padding: 8px 10px 7px; min-width: 0;
 }
 .stat-card.green  { border-top-color: #1a8a1a; }
 .stat-card.orange { border-top-color: #e07000; }
 .stat-card.purple { border-top-color: #7b3fa0; }
 .stat-card.red    { border-top-color: #cc2200; }
 .stat-card.teal   { border-top-color: #0088aa; }
-.stat-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
-.stat-val   { font-size: 1.6rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
+.stat-label { font-size: 0.62rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-val   { font-size: 1.35rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
 .stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
 .stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
 
