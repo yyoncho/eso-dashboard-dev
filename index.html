@@ -420,13 +420,14 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- timeline chart -->
   <div class="panel" style="margin-bottom:12px;">
     <div class="panel-header">
-      <span>Дневен профил</span>
+      <span>Дневен профил <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Информация">?</button></span>
       <div class="toggle-group">
         <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
         <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
         <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
       </div>
     </div>
+    <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
     <div id="re-stats-bar" style="display:none;"></div>
     <div id="total-stats-bar" style="display:flex;padding:8px 12px;background:#f5f8ff;border-bottom:1px solid #c5d8ee;flex-wrap:wrap;gap:0;"></div>
     <div style="padding:6px 8px 10px;">
