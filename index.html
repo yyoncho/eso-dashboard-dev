@@ -787,7 +787,7 @@ function updateTotalStats(binned, pd, dateStr) {
 
   // EUR money row in ССЕЕ section — always show when battery has data
   const eurRow = document.getElementById('b-batt-eur-row');
-  if (battChgCost > 0 && battEurDis > 0) {
+  if (chgMwh > 0 && disMwh > 0) {
     eurRow.style.display = 'block';
     document.getElementById('b-batt-chg-eur').textContent = fmtEur(battChgCost * 1e6);
     document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh зар.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
