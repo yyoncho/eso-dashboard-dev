@@ -341,12 +341,12 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <div class="panel-body">
           <div class="balance-grid">
             <div class="balance-item expense">
-              <div class="balance-label">Разходи за внос</div>
+              <div class="balance-label">Внос</div>
               <div class="balance-val expense" id="b-import-eur">—</div>
               <div class="stat-unit" id="b-import-mwh">—</div>
             </div>
             <div class="balance-item revenue">
-              <div class="balance-label">Приходи от износ</div>
+              <div class="balance-label">Износ</div>
               <div class="balance-val revenue" id="b-export-eur">—</div>
               <div class="stat-unit" id="b-export-mwh">—</div>
             </div>
@@ -383,31 +383,23 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
                 <span class="price-unit">%</span>
               </div>
             </div>
-            <div id="b-batt-eur-row" style="display:none;gap:6px;margin-top:6px;">
-              <div style="background:#fff8f0;border:1px solid #e8c87a;border-radius:4px;padding:7px 9px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
-                <div>
-                  <div class="price-label">Зареждане</div>
-                  <span class="price-val" id="b-batt-chg-eur" style="color:#e07000;">—</span>
-                  <span class="price-unit">млн.€</span>
+            <div id="b-batt-eur-row" style="display:none;margin-top:6px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div class="balance-item expense">
+                  <div class="balance-label">Зареждане</div>
+                  <div class="balance-val expense" id="b-batt-chg-eur">—</div>
+                  <div class="stat-unit" id="b-batt-chg-sub">—</div>
                 </div>
-                <div style="text-align:right;">
-                  <div class="price-label">Разреждане</div>
-                  <span class="price-val" id="b-batt-dis-eur" style="color:#1a8a1a;">—</span>
-                  <span class="price-unit">млн.€</span>
+                <div class="balance-item revenue">
+                  <div class="balance-label">Разреждане</div>
+                  <div class="balance-val revenue" id="b-batt-dis-eur">—</div>
+                  <div class="stat-unit" id="b-batt-dis-sub">—</div>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                <div style="background:#f5f5ff;border:1px solid #c0c0e8;border-radius:4px;padding:7px 9px;">
-                  <div class="price-label">Разр/Зар</div>
-                  <span class="price-val" id="b-batt-ratio" style="color:#445;">—</span>
-                  <span class="price-unit">×</span>
-                </div>
-                <div style="background:#f5f0ff;border:1px solid #c9b0e8;border-radius:4px;padding:7px 9px;">
-                  <div class="price-label">Δ Арбитраж</div>
-                  <span class="price-val" id="b-batt-arb" style="color:#7b3fa0;">—</span>
-                  <span class="price-unit">млн.€</span>
-                  <div class="price-label" id="b-batt-arb-prices" style="margin-top:3px;color:#8a6aaa;"></div>
-                </div>
+              <div class="balance-item" style="margin-top:6px;grid-column:1/-1;">
+                <div class="balance-label">Δ Арбитраж</div>
+                <div class="balance-val neutral" id="b-batt-arb">—</div>
+                <div class="stat-unit" id="b-batt-arb-prices"></div>
               </div>
             </div>
           </div>
@@ -792,26 +784,24 @@ function updateTotalStats(binned, pd, dateStr) {
 
   const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
     .filter(s => !hiddenGenKeys.has(s.key));
-  const battEurDis   = eurTotals['_batt'];
-  const battDelta    = battEurDis - battChgCost;
-  const battDeltaAvg = (() => {
-    const disMwh = mwhTotals['_batt'] * 1000, chgMwh = battChgMwh * 1000;
-    const avgDis = disMwh > 0 ? battEurDis * 1e6 / disMwh : NaN;
-    const avgChg = chgMwh > 0 ? battChgCost * 1e6 / chgMwh : NaN;
-    return isFinite(avgDis) && isFinite(avgChg) ? `${avgDis.toFixed(0)} vs ${avgChg.toFixed(0)} €/MWh` : '';
-  })();
+  const battEurDis = eurTotals['_batt'];
+  const battDelta  = battEurDis - battChgCost;
+  const disMwh = mwhTotals['_batt'] * 1000, chgMwh = battChgMwh * 1000;
+  const avgDis = disMwh > 0 ? battEurDis * 1e6 / disMwh : NaN;
+  const avgChg = chgMwh > 0 ? battChgCost * 1e6 / chgMwh : NaN;
 
   // EUR money row in ССЕЕ section — always show when battery has data
   const eurRow = document.getElementById('b-batt-eur-row');
   if (battChgCost > 0 && battEurDis > 0) {
     eurRow.style.display = 'block';
-    document.getElementById('b-batt-chg-eur').textContent = battChgCost.toFixed(2);
-    document.getElementById('b-batt-dis-eur').textContent = battEurDis.toFixed(2);
-    document.getElementById('b-batt-ratio').textContent = (battEurDis / battChgCost).toFixed(2);
-    const arbColor = battDelta >= 0 ? '#1a8a1a' : '#cc2200';
-    document.getElementById('b-batt-arb').style.color = arbColor;
-    document.getElementById('b-batt-arb').textContent = (battDelta >= 0 ? '+' : '') + battDelta.toFixed(2);
-    document.getElementById('b-batt-arb-prices').textContent = battDeltaAvg;
+    document.getElementById('b-batt-chg-eur').textContent = fmtEur(battChgCost * 1e6);
+    document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh зар.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
+    document.getElementById('b-batt-dis-eur').textContent = fmtEur(battEurDis * 1e6);
+    document.getElementById('b-batt-dis-sub').textContent = `${fmt0(disMwh)} MWh разр.` + (isFinite(avgDis) ? ` @ ${avgDis.toFixed(1)} EUR/MWh` : '');
+    const arbEl = document.getElementById('b-batt-arb');
+    arbEl.className = 'balance-val ' + (battDelta >= 0 ? 'revenue' : 'expense');
+    arbEl.textContent = fmtEur(battDelta * 1e6);
+    document.getElementById('b-batt-arb-prices').textContent = isFinite(avgDis) && isFinite(avgChg) ? `разр. ${avgDis.toFixed(0)} vs зар. ${avgChg.toFixed(0)} €/MWh` : '';
   } else {
     eurRow.style.display = 'none';
   }
