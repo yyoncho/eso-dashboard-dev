@@ -366,24 +366,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           </div>
           <div id="batt-daily-box" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;">
             <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">ССЕЕ — дневен баланс</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-              <div style="background:#fff8ee;border:1px solid #f5d88a;border-radius:4px;padding:7px 9px;">
-                <div class="price-label">Зареждане</div>
-                <span class="price-val" id="b-batt-chg" style="color:#e07000;">—</span>
-                <span class="price-unit">MWh</span>
-              </div>
-              <div style="background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;padding:7px 9px;">
-                <div class="price-label">Разреждане</div>
-                <span class="price-val" id="b-batt-dis" style="color:#1a8a1a;">—</span>
-                <span class="price-unit">MWh</span>
-              </div>
-              <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:7px 9px;">
-                <div class="price-label">Разр./Зар.</div>
-                <span class="price-val" id="b-batt-eff" style="color:#004494;">—</span>
-                <span class="price-unit">%</span>
-              </div>
-            </div>
-            <div id="b-batt-eur-row" style="display:none;margin-top:6px;">
+            <div id="b-batt-eur-row" style="display:none;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                 <div class="balance-item expense">
                   <div class="balance-label">Зареждане</div>
@@ -396,10 +379,17 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
                   <div class="stat-unit" id="b-batt-dis-sub">—</div>
                 </div>
               </div>
-              <div class="balance-item" style="margin-top:6px;grid-column:1/-1;">
-                <div class="balance-label">Δ Арбитраж</div>
-                <div class="balance-val neutral" id="b-batt-arb">—</div>
-                <div class="stat-unit" id="b-batt-arb-prices"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                <div class="balance-item">
+                  <div class="balance-label">Разр./Зар.</div>
+                  <div class="balance-val neutral" id="b-batt-eff">—</div>
+                  <div class="stat-unit">%</div>
+                </div>
+                <div class="balance-item">
+                  <div class="balance-label">Δ Арбитраж</div>
+                  <div class="balance-val neutral" id="b-batt-arb">—</div>
+                  <div class="stat-unit" id="b-batt-arb-prices"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -802,6 +792,8 @@ function updateTotalStats(binned, pd, dateStr) {
     arbEl.className = 'balance-val ' + (battDelta >= 0 ? 'revenue' : 'expense');
     arbEl.textContent = fmtEur(battDelta * 1e6);
     document.getElementById('b-batt-arb-prices').textContent = isFinite(avgDis) && isFinite(avgChg) ? `разр. ${avgDis.toFixed(0)} vs зар. ${avgChg.toFixed(0)} €/MWh` : '';
+    const eff = chgMwh > 0 ? disMwh / chgMwh * 100 : 0;
+    document.getElementById('b-batt-eff').textContent = eff > 0 ? fmt1(eff) : '—';
   } else {
     eurRow.style.display = 'none';
   }
@@ -1035,15 +1027,7 @@ function updateDayBalance(binned, pd, dateStr) {
   document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
 
   const battBox = document.getElementById('batt-daily-box');
-  if (battChgMwh > 0 || battDisMwh > 0) {
-    battBox.style.display = '';
-    document.getElementById('b-batt-chg').textContent = fmt0(battChgMwh);
-    document.getElementById('b-batt-dis').textContent = fmt0(battDisMwh);
-    const eff = battChgMwh > 0 ? battDisMwh / battChgMwh * 100 : 0;
-    document.getElementById('b-batt-eff').textContent = eff > 0 ? fmt1(eff) : '—';
-  } else {
-    battBox.style.display = 'none';
-  }
+  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0) ? '' : 'none';
 
   const curP = getPriceAt(pd, Date.now());
   document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
