@@ -96,6 +96,10 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   display: flex; align-items: center; justify-content: space-between;
 }
 .panel-body { padding: 10px 12px; }
+.info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
+.info-btn:hover { background:rgba(255,255,255,0.2); }
+.info-dropdown { display:none;font-size:0.72rem;color:#4a5a7a;background:#eef3fb;border:1px solid #c5d8ee;border-top:none;padding:8px 12px;line-height:1.5; }
+.info-dropdown.open { display:block; }
 
 /* ── toggle ── */
 .toggle-group { display: flex; gap: 4px; }
@@ -332,7 +336,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div class="panel">
-        <div class="panel-header">Дневен баланс</div>
+        <div class="panel-header">Дневен баланс <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
+        <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности.</div>
         <div class="panel-body">
           <div class="balance-grid">
             <div class="balance-item expense">
@@ -745,11 +750,15 @@ function updateTotalStats(binned, pd, dateStr) {
   const totals = {}, mwhTotals = {};
   for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; }
   totals['_batt'] = 0; mwhTotals['_batt'] = 0;
+  let battChgCost = 0, battChgMwh = 0;
   for (const b of binned) {
     let scale, mwhScale = (15/60) / 1000;
     if (eurMode) {
       const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
       scale = pr * (15/60) / 1e6;
+      const chg = Math.max(0, b['batt_charge_mw'] || 0);
+      battChgCost += chg * scale;
+      battChgMwh  += chg * mwhScale;
     } else {
       scale = mwhScale;
     }
@@ -774,15 +783,33 @@ function updateTotalStats(binned, pd, dateStr) {
     const p = avgPr(key);
     return isFinite(p) ? `<div class="re-stat-avgpr">@ ${p.toFixed(0)} €/MWh</div>` : '';
   };
-  const statItem = (color, label, key) =>
-    `<div class="re-stat"><div class="re-stat-label"><span style="color:${color}">●</span> ${label}</div><div class="re-stat-valrow"><span class="re-stat-val">${totals[key].toFixed(dec)}</span><span class="re-stat-unit">${unit}</span></div>${priceTag(key)}</div>`;
+  const statItem = (color, label, val, unitStr, sub) =>
+    `<div class="re-stat"><div class="re-stat-label"><span style="color:${color}">●</span> ${label}</div><div class="re-stat-valrow"><span class="re-stat-val">${val}</span><span class="re-stat-unit">${unitStr}</span></div>${sub||''}</div>`;
+  const keyItem = (color, label, key) => statItem(color, label, totals[key].toFixed(dec), unit, priceTag(key));
 
   const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
     .filter(s => !hiddenGenKeys.has(s.key));
+  const battDelta = totals['_batt'] - battChgCost;
+  const battDeltaAvg = (() => {
+    const disMwh = mwhTotals['_batt'] * 1000, chgMwh = battChgMwh * 1000;
+    const disEur = totals['_batt'] * 1e6, chgEur = battChgCost * 1e6;
+    const avgDis = disMwh > 0 ? disEur / disMwh : NaN;
+    const avgChg = chgMwh > 0 ? chgEur / chgMwh : NaN;
+    return isFinite(avgDis) && isFinite(avgChg) ? `${avgDis.toFixed(0)} vs ${avgChg.toFixed(0)} €/MWh` : '';
+  })();
+
   let html = '';
-  for (const s of sources) html += statItem(s.color, s.label, s.key);
-  if (!reMode && !hiddenGenKeys.has('_batt'))
-    html += statItem('#f59f00', 'ССЕЕ разр.', '_batt');
+  for (const s of sources) html += keyItem(s.color, s.label, s.key);
+  if (!reMode && !hiddenGenKeys.has('_batt')) {
+    html += keyItem('#f59f00', 'ССЕЕ разр.', '_batt');
+    if (eurMode) {
+      const chgSub = battChgMwh > 0 ? `<div class="re-stat-avgpr">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
+      html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgCost).toFixed(dec), unit, chgSub);
+      const deltaColor = battDelta >= 0 ? '#1a8a1a' : '#cc2200';
+      const deltaSub = battDeltaAvg ? `<div class="re-stat-avgpr">${battDeltaAvg}</div>` : '';
+      html += statItem(deltaColor, 'Δ ССЕЕ', (battDelta >= 0 ? '+' : '') + battDelta.toFixed(dec), unit, deltaSub);
+    }
+  }
   document.getElementById('total-stats-bar').innerHTML = html;
 }
 function drawColChart(binned, pd, dateStr) {
