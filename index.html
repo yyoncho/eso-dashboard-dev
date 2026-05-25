@@ -725,32 +725,44 @@ function _buildPriceByBin(pd, dateStr) {
 function updateTotalStats(binned, pd, dateStr) {
   if (!totalStatsVisible || !binned || !binned.length) return;
   const priceByBin = eurMode ? _buildPriceByBin(pd, dateStr) : {};
-  const totals = {};
-  for (const s of GEN_SERIES) totals[s.key] = 0;
-  totals['_batt'] = 0;
-  let priceSum = 0, priceN = 0;
+  const totals = {}, mwhTotals = {};
+  for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; }
+  totals['_batt'] = 0; mwhTotals['_batt'] = 0;
   for (const b of binned) {
-    let scale;
+    let scale, mwhScale = (15/60) / 1000;
     if (eurMode) {
       const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
       scale = pr * (15/60) / 1e6;
-      priceSum += pr; priceN++;
     } else {
-      scale = (15/60) / 1000;
+      scale = mwhScale;
     }
-    for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
-    totals['_batt'] += battDis(b['batt_discharge_mw']) * scale;
+    for (const s of GEN_SERIES) {
+      const v = Math.max(0, b[s.key]||0);
+      totals[s.key] += v * scale;
+      if (eurMode) mwhTotals[s.key] += v * mwhScale;
+    }
+    const bd = battDis(b['batt_discharge_mw']);
+    totals['_batt'] += bd * scale;
+    if (eurMode) mwhTotals['_batt'] += bd * mwhScale;
   }
   const unit = eurMode ? 'млн.€' : 'GWh';
   const dec  = eurMode ? 2 : 3;
   const sources = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
+  const avgPr = (key) => {
+    const mwh = mwhTotals[key] * 1000; // back to MWh
+    const eur = totals[key] * 1e6;     // back to €
+    return mwh > 0 ? eur / mwh : NaN;
+  };
+  const priceTag = (key) => {
+    if (!eurMode) return '';
+    const p = avgPr(key);
+    return isFinite(p) ? `<div class="re-stat-unit" style="margin-left:2px;opacity:0.7;">@ ${p.toFixed(0)}</div>` : '';
+  };
   let html = '';
-  if (eurMode && priceN > 0)
-    html += `<div class="re-stat" style="margin-right:12px;border-right:1px solid #c5d8ee;padding-right:12px;"><div class="re-stat-label">Ср. цена</div><div class="re-stat-val" style="margin-left:4px;">${(priceSum/priceN).toFixed(1)}</div><div class="re-stat-unit">EUR/MWh</div></div>`;
   for (const s of sources)
-    html += `<div class="re-stat"><div class="re-stat-label" style="color:${s.color};margin-right:2px;">●</div><div class="re-stat-label">${s.label}</div><div class="re-stat-val" style="margin-left:4px;">${totals[s.key].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div></div>`;
+    html += `<div class="re-stat"><div class="re-stat-label" style="color:${s.color};margin-right:2px;">●</div><div class="re-stat-label">${s.label}</div><div class="re-stat-val" style="margin-left:4px;">${totals[s.key].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div>${priceTag(s.key)}</div>`;
   if (!reMode)
-    html += `<div class="re-stat"><div class="re-stat-label" style="color:#f59f00;margin-right:2px;">●</div><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" style="margin-left:4px;">${totals['_batt'].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div></div>`;
+    html += `<div class="re-stat"><div class="re-stat-label" style="color:#f59f00;margin-right:2px;">●</div><div class="re-stat-label">ССЕЕ разр.</div><div class="re-stat-val" style="margin-left:4px;">${totals['_batt'].toFixed(dec)}</div><div class="re-stat-unit">${unit}</div>${priceTag('_batt')}</div>`;
   document.getElementById('total-stats-bar').innerHTML = html;
 }
 function drawColChart(binned, pd, dateStr) {
