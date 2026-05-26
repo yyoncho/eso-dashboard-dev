@@ -1072,15 +1072,19 @@ function drawPie(latest) {
 
   const total = vals.reduce((a,b)=>a+b,0);
   const loadMw = latest['load_mw'] || 0;
-  const discharge = battDis(latest['batt_discharge_mw']);
-  // Use explicit batt_charge_mw if available; otherwise infer from energy balance
+  const netImp = latest['net_import_mw'] || 0;
+  const exportMw = netImp < 0 ? Math.abs(netImp) : 0;
   const explicitChg = latest['batt_charge_mw'];
   const chgMw = explicitChg != null && explicitChg > 0
     ? explicitChg
-    : (loadMw > 0 ? Math.max(0, total - discharge - loadMw) : 0);
-  const centerSub = chgMw > 50
-    ? `<span style="font-size:9px;color:#5a7090">${fmt0(loadMw)} т + ${fmt0(chgMw)} зар.</span>`
-    : `<span style="font-size:9px;color:#5a7090">${fmt0(loadMw)} товар</span>`;
+    : (loadMw > 0 ? Math.max(0, total - loadMw - exportMw) : 0);
+  const subParts = [];
+  if (loadMw > 0) subParts.push(`${fmt0(loadMw)} т`);
+  if (exportMw > 50) subParts.push(`${fmt0(exportMw)} износ`);
+  if (chgMw > 50) subParts.push(`${fmt0(chgMw)} зар.`);
+  const centerSub = subParts.length
+    ? `<span style="font-size:9px;color:#5a7090">${subParts.join(' / ')}</span>`
+    : '';
   const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span><br>${centerSub}`;
   const traceData = [{
     type: 'pie', values: vals, labels: labels,
