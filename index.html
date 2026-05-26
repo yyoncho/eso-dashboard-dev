@@ -68,8 +68,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
 /* ── stat cards ── */
 .stat-grid {
-  display: grid; grid-template-columns: repeat(10, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 8px; margin-bottom: 14px;
+}
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .stat-card {
   background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
@@ -96,13 +99,17 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 4px;
 }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .panel-header { font-size: 0.68rem; letter-spacing: 0.03em; padding: 6px 8px; }
   .tog-btn { padding: 2px 6px; font-size: 0.62rem; }
-  .re-stat { padding: 4px 10px 4px 8px; min-width: 72px; }
-  .re-stat-val { font-size: 1rem; }
-  .re-stat-label { font-size: 0.58rem; letter-spacing: 0.03em; }
-  #total-stats-bar { padding: 6px 8px; gap: 0; row-gap: 2px; }
+  .re-stat { padding: 3px 8px 3px 6px; min-width: 64px; }
+  .re-stat-val { font-size: 0.9rem; }
+  .re-stat-label { font-size: 0.55rem; letter-spacing: 0.02em; }
+  .re-stat-unit { font-size: 0.6rem; }
+  .stat-grid { gap: 5px; }
+  .stat-card { padding: 6px 7px 5px; }
+  .stat-val { font-size: 1.1rem; }
+  .stat-label { font-size: 0.58rem; }
 }
 .panel-body { padding: 10px 12px; }
 .info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
@@ -441,7 +448,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     </div>
     <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
     <div id="re-stats-bar" style="display:none;"></div>
-    <div id="total-stats-bar" style="display:flex;padding:8px 12px;background:#f5f8ff;border-bottom:1px solid #c5d8ee;flex-wrap:wrap;gap:0;"></div>
+    <div id="total-stats-bar" class="stat-grid" style="padding:8px 12px;margin-bottom:0;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
@@ -780,10 +787,10 @@ function updateTotalStats(binned, pd, dateStr) {
   const priceTag = (key) => {
     if (!eurMode) return '';
     const p = avgPr(key);
-    return isFinite(p) ? `<div class="re-stat-avgpr">@ ${p.toFixed(0)} €/MWh</div>` : '';
+    return isFinite(p) ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${p.toFixed(0)} €/MWh</div>` : '';
   };
   const statItem = (color, label, val, unitStr, sub) =>
-    `<div class="re-stat"><div class="re-stat-label"><span style="color:${color}">●</span> ${label}</div><div class="re-stat-valrow"><span class="re-stat-val">${val}</span><span class="re-stat-unit">${unitStr}</span></div>${sub||''}</div>`;
+    `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-val">${val}</div><div class="stat-unit">${unitStr}</div>${sub||''}</div>`;
   const keyItem = (color, label, key) => statItem(color, label, totals[key].toFixed(dec), unit, priceTag(key));
 
   const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
@@ -818,7 +825,7 @@ function updateTotalStats(binned, pd, dateStr) {
   if (!reMode && !hiddenGenKeys.has('_batt')) {
     html += keyItem('#f59f00', 'ССЕЕ разр.', '_batt');
     if (eurMode) {
-      const chgSub = battChgMwh > 0 ? `<div class="re-stat-avgpr">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
+      const chgSub = battChgMwh > 0 ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
       html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgCost).toFixed(dec), unit, chgSub);
     }
   }
@@ -827,8 +834,7 @@ function updateTotalStats(binned, pd, dateStr) {
     const u  = eurMode ? 'хил.€' : 'GWh';
     const d  = eurMode ? 1 : 1;
     const pct = rs.loadAcc > 0 ? rs.reAcc / rs.loadAcc * 100 : 0;
-    html += `<div class="re-stat" style="border-left:2px solid #a5d5b5;margin-left:8px;padding-left:12px;">` +
-      `<div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-valrow"><span class="re-stat-val">${pct.toFixed(1)}</span><span class="re-stat-unit">%</span></div></div>`;
+    html += `<div class="stat-card" style="border-top-color:#2ee0ca"><div class="stat-label">ВЕИ покритие</div><div class="stat-val">${pct.toFixed(1)}</div><div class="stat-unit">%</div></div>`;
     html += statItem('#2ee0ca', 'ВЕИ енергия',  rs.reAcc.toFixed(d),    u);
     html += statItem('#cc2200', 'Непокрито',     rs.gapAcc.toFixed(d),   u);
     html += statItem('#feb56a', 'Излишък',       rs.excessAcc.toFixed(2),u);
