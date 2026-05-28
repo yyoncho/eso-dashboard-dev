@@ -457,18 +457,32 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
-    <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 0 8px;border-top:1px solid #e8eef7;">
-      <button onclick="shiftDayStart(-1)" style="background:none;border:1px solid #c5d8ee;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.85rem;color:#004494;line-height:1.4;" title="Предишен час">◄</button>
-      <span id="day-start-label" style="font-size:0.72rem;color:#5a7090;min-width:110px;text-align:center;">начало 00:00</span>
-      <button onclick="shiftDayStart(1)" style="background:none;border:1px solid #c5d8ee;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.85rem;color:#004494;line-height:1.4;" title="Следващ час">►</button>
+    <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 0 6px;border-top:1px solid #eef2f8;">
+      <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Предишен час">◄</button>
+      <span id="day-start-label" style="font-size:0.68rem;color:#8a9bb5;min-width:120px;text-align:center;">00:00</span>
+      <button onclick="shiftDayStart(1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Следващ час">►</button>
     </div>
   </div>
 
   <!-- flows timeline -->
-  <div class="panel">
+  <div class="panel" style="margin-bottom:12px;">
     <div class="panel-header">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-flows-ts" style="height:480px;"></div>
+    </div>
+  </div>
+
+  <!-- tariff calculator -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>Тарифен калкулатор — Регулирана тарифа vs Свободен пазар</span>
+      <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Информация">?</button>
+    </div>
+    <div id="tariff-info" class="info-dropdown">
+      Сравнение на регулираната тарифа (КЕВР) с борсовата цена (IBEX). Мрежовите такси (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара. Стойностите са ориентировъчни — реалните договорни условия на свободния пазар може да се различават.
+    </div>
+    <div class="panel-body" id="tariff-body">
+      <div style="color:#8a9bb5;font-size:0.78rem;">Зареждане…</div>
     </div>
   </div>
 
@@ -501,6 +515,25 @@ const FLOW_CFG = [
   { key: 'GR_mw', label: 'Гърция',      color: '#544fc5' },
   { key: 'TR_mw', label: 'Турция',      color: '#d568fb' },
 ];
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TARIFF CONFIG — КЕВР Ц-25, юли 2025 (референтни стойности, Енерго-Про)
+//  Всички стойности в лв/кВтч без ДДС, освен ако е отбелязано друго.
+// ══════════════════════════════════════════════════════════════════════════════
+const TARIFF = {
+  BGN_PER_EUR:      1.95583,
+  DAY_START:        7,       // 07:00 Sofia — начало на дневна тарифа
+  DAY_END:          23,      // 23:00 Sofia — край на дневна тарифа
+  supply:           { day: 0.1540, night: 0.0544 },  // Снабдяване
+  transmission:     0.0145,   // Пренос НЕК
+  distribution:     0.0511,   // Разпределение
+  renewables:       0.0250,   // ОЗЕ надбавка
+  excise:           0.00205,  // Акциз (фиксиран по закон: 2,05 лв/МВтч)
+  VAT:              0.20,     // ДДС
+  monthlyBudgetEur: 100,      // Бюджет за калкулатора
+  dayShare:         0.70,     // Дял дневно потребление (за изчисляване на кВтч от бюджет)
+  freeMarketMarkup: 5,        // Надбавка свободен пазар (EUR/МВтч) — балансираща отговорност
+};
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  STATE
@@ -761,9 +794,20 @@ function setPieMwhMode(on) {
 }
 function shiftDayStart(delta) {
   dayStartHour = (dayStartHour + delta + 24) % 24;
-  const lbl = document.getElementById('day-start-label');
-  lbl.textContent = dayStartHour === 0 ? 'начало 00:00' : `начало ${String(dayStartHour).padStart(2,'0')}:00`;
+  updateDayStartLabel();
   if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+}
+function updateDayStartLabel() {
+  const lbl = document.getElementById('day-start-label');
+  if (!lbl) return;
+  const dateStr = window._lastDateStr;
+  const hStr = String(dayStartHour).padStart(2,'0') + ':00';
+  if (!dateStr || dayStartHour === 0) { lbl.textContent = hStr; return; }
+  // Compute end date (dateStr + 1 day)
+  const start = new Date(dateStr + 'T12:00:00Z');
+  const end = new Date(start.getTime() + 24*3600*1000);
+  const fmt = d => `${String(d.getUTCDate()).padStart(2,'0')}.${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+  lbl.textContent = `${fmt(start)} ${hStr} – ${fmt(end)} ${hStr}`;
 }
 function rotatePts(pts, dateStr) {
   if (dayStartHour === 0 || !pts.length) return pts;
@@ -772,7 +816,13 @@ function rotatePts(pts, dateStr) {
   const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
   const midnightUtcMs = new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000;
   const cutMs = midnightUtcMs + dayStartHour * 3600000;
-  return [...pts.filter(p => p.ts >= cutMs), ...pts.filter(p => p.ts < cutMs)];
+  const DAY_MS = 24 * 3600 * 1000;
+  // Bins before cutoff get +24h so Plotly sees a continuous date range (e.g. 06:00 May17 → 05:45 May18)
+  const after  = pts.filter(p => p.ts >= cutMs);
+  const before = pts.filter(p => p.ts <  cutMs).map(p => ({ ...p, ts: p.ts + DAY_MS }));
+  // Sort and deduplicate (prevRecs + main file can produce duplicate bins at midnight)
+  const merged = [...after, ...before].sort((a, b) => a.ts - b.ts);
+  return merged.filter((p, i) => i === 0 || p.ts !== merged[i - 1].ts);
 }
 function _buildPriceByBin(pd, dateStr) {
   const m = {};
@@ -1091,6 +1141,238 @@ function updateDayBalance(binned, pd, dateStr) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  TARIFF CALCULATOR PANEL
+// ══════════════════════════════════════════════════════════════════════════════
+function drawTariffPanel(pd, binned, dateStr) {
+  const el = document.getElementById('tariff-body');
+  if (!el) return;
+  const T = TARIFF;
+  const dayPrices = getDayPrices(pd, dateStr);
+  if (!dayPrices.length) {
+    el.innerHTML = '<div style="color:#8a9bb5;font-size:0.78rem;padding:6px 0;">Няма борсови данни за избрания ден.</div>';
+    return;
+  }
+
+  // ── spot price aggregation ──
+  const spotBySofiaH = {};
+  for (const p of dayPrices) {
+    if (!isFinite(p.price)) continue;
+    const h = parseInt(toSofiaStr(p.ts).slice(11, 13));
+    if (!spotBySofiaH[h]) spotBySofiaH[h] = [];
+    spotBySofiaH[h].push(p.price);
+  }
+  const avgSpotByH = {};
+  for (let h = 0; h < 24; h++) {
+    const arr = spotBySofiaH[h];
+    avgSpotByH[h] = arr && arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : NaN;
+  }
+  const validSpots = Object.values(avgSpotByH).filter(isFinite);
+  const avgSpotEur = validSpots.length ? validSpots.reduce((s, v) => s + v, 0) / validSpots.length : NaN;
+
+  // ── derived tariff values ──
+  const network = T.transmission + T.distribution + T.renewables + T.excise;
+  const freeSupplyAvg = isFinite(avgSpotEur) ? (avgSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : NaN;
+  const regDayExVat   = T.supply.day   + network;
+  const regNightExVat = T.supply.night + network;
+  const freeExVatAvg  = isFinite(freeSupplyAvg) ? freeSupplyAvg + network : NaN;
+  const regDayVat     = regDayExVat   * (1 + T.VAT);
+  const regNightVat   = regNightExVat * (1 + T.VAT);
+  const freeVatAvg    = isFinite(freeExVatAvg) ? freeExVatAvg * (1 + T.VAT) : NaN;
+
+  const pct = (a, b) => isFinite(a) && isFinite(b) && a !== 0 ? (b - a) / a * 100 : NaN;
+  const fmtV = v => isFinite(v) ? v.toFixed(4) : '—';
+  const fmtP = v => !isFinite(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const pctSty = v => !isFinite(v) ? '' : v < -1 ? 'color:#1a8a1a;font-weight:700' : v > 1 ? 'color:#cc2200;font-weight:700' : 'color:#8a9bb5';
+
+  // ── component table rows ──
+  const compRows = [
+    { label: `Снабдяване (ден)<br><span style="font-size:0.6rem;color:#8a9bb5;">avg борса: ${isFinite(avgSpotEur)?avgSpotEur.toFixed(0):'—'} €/МВтч</span>`,
+      reg: T.supply.day, free: freeSupplyAvg },
+    { label: 'Снабдяване (нощ)', reg: T.supply.night, free: freeSupplyAvg },
+    { label: 'Пренос НЕК',       reg: T.transmission, free: T.transmission, fixed: true },
+    { label: 'Разпределение',    reg: T.distribution, free: T.distribution, fixed: true },
+    { label: 'ОЗЕ надбавка',     reg: T.renewables,   free: T.renewables,   fixed: true },
+    { label: 'Акциз',            reg: T.excise,        free: T.excise,       fixed: true },
+  ];
+
+  const compHTML = compRows.map(r => {
+    const d = pct(r.reg, r.free);
+    const dCell = r.fixed
+      ? `<td style="text-align:center;color:#c5d8ee;">—</td>`
+      : `<td style="text-align:right;${pctSty(d)}">${fmtP(d)}</td>`;
+    return `<tr>
+      <td>${r.label}</td>
+      <td style="text-align:right;font-family:monospace;">${fmtV(r.reg)}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(r.free) ? fmtV(r.free) : '—'}</td>
+      ${dCell}
+    </tr>`;
+  }).join('');
+
+  const totDayPct   = pct(regDayVat, freeVatAvg);
+  const totNightPct = pct(regNightVat, freeVatAvg);
+
+  const totHTML = `
+    <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
+      <td>Без ДДС &nbsp;(ден / нощ)</td>
+      <td style="text-align:right;font-family:monospace;">${fmtV(regDayExVat)} / ${fmtV(regNightExVat)}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatAvg)?fmtV(freeExVatAvg):'—'}</td>
+      <td style="text-align:right;${pctSty(pct(regDayExVat,freeExVatAvg))}">${fmtP(pct(regDayExVat,freeExVatAvg))}</td>
+    </tr>
+    <tr style="font-weight:700;background:#f0f6ff;">
+      <td>ОБЩО с ДДС &nbsp;(ден / нощ)</td>
+      <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(regDayVat)} / ${fmtV(regNightVat)}</td>
+      <td style="text-align:right;font-family:monospace;${isFinite(freeVatAvg)?(freeVatAvg<regDayVat?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatAvg)?fmtV(freeVatAvg):'—'}</td>
+      <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totDayPct)}">${fmtP(totDayPct)}</span> / <span style="${pctSty(totNightPct)}">${fmtP(totNightPct)}</span></td>
+    </tr>`;
+
+  // ── 100 EUR/month calculator ──
+  const budgetBgn      = T.monthlyBudgetEur * T.BGN_PER_EUR;
+  const blendedReg     = T.dayShare * regDayVat + (1 - T.dayShare) * regNightVat;
+  const monthlyKwh     = budgetBgn / blendedReg;
+  const dailyKwh       = monthlyKwh / 30;
+
+  // Load profile weights (use today's binned if enough data, else typical profile)
+  let loadWeights;
+  if (binned && binned.length > 20) {
+    const bkts = Array.from({length:24}, () => []);
+    for (const b of binned) {
+      const lv = b['load_mw'];
+      if (!isFinite(lv) || lv <= 0) continue;
+      const h = parseInt(toSofiaStr(b.ts).slice(11, 13));
+      bkts[h].push(lv);
+    }
+    const raw = bkts.map(b => b.length ? b.reduce((s,v)=>s+v,0)/b.length : null);
+    for (let i = 0; i < 24; i++) if (raw[i] === null) raw[i] = raw[(i+23)%24] ?? raw[(i+1)%24] ?? 100;
+    const tot = raw.reduce((s,v)=>s+v,0);
+    loadWeights = raw.map(v => v/tot);
+  } else {
+    const typ = [0.45,0.38,0.34,0.33,0.33,0.38,0.52,0.72,0.82,0.82,0.77,0.72,
+                 0.68,0.63,0.63,0.68,0.78,0.88,0.93,0.98,0.93,0.83,0.68,0.53];
+    const ts = typ.reduce((s,v)=>s+v,0);
+    loadWeights = typ.map(v => v/ts);
+  }
+
+  const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
+
+  // Per-hour cost comparison
+  let regDailyCost = 0, freeDailyCost = 0;
+  const hourlyAna = [];
+  for (let h = 0; h < 24; h++) {
+    const kwhH     = dailyKwh * loadWeights[h];
+    const regRateH = isSofiaDay(h) ? regDayVat : regNightVat;
+    const spotH    = isFinite(avgSpotByH[h]) ? avgSpotByH[h] : avgSpotEur;
+    const freeSupH = isFinite(spotH) ? (spotH + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : freeSupplyAvg;
+    const freeRateH = isFinite(freeSupH) ? (freeSupH + network) * (1 + T.VAT) : NaN;
+    regDailyCost  += kwhH * regRateH;
+    if (isFinite(freeRateH)) freeDailyCost += kwhH * freeRateH;
+    hourlyAna.push({ h, regRate: regRateH, freeRate: freeRateH, cheaper: isFinite(freeRateH) && freeRateH < regRateH });
+  }
+
+  const regDailyEur  = regDailyCost / T.BGN_PER_EUR;
+  const freeDailyEur = freeDailyCost / T.BGN_PER_EUR;
+  const savingEur    = regDailyEur - freeDailyEur;
+  const savingPct    = (savingEur / regDailyEur) * 100;
+  const freeIsCheaper = isFinite(freeDailyCost) && freeDailyCost < regDailyCost;
+
+  // Ranges helper
+  function hoursToRanges(hs) {
+    if (!hs.length) return 'никои';
+    const sorted = [...hs].sort((a,b)=>a-b);
+    const ranges = [];
+    let s = sorted[0], e = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === e+1) e = sorted[i];
+      else { ranges.push([s,e]); s = e = sorted[i]; }
+    }
+    ranges.push([s,e]);
+    return ranges.map(([a,b])=>a===b?`${String(a).padStart(2,'0')}:00`:`${String(a).padStart(2,'0')}:00–${String(b+1).padStart(2,'0')}:00`).join(', ');
+  }
+
+  const dayHours   = hourlyAna.filter(a =>  isSofiaDay(a.h));
+  const nightHours = hourlyAna.filter(a => !isSofiaDay(a.h));
+  const dayCheap   = dayHours.filter(a => a.cheaper);
+  const nightCheap = nightHours.filter(a => a.cheaper);
+  const allCheap   = hourlyAna.filter(a => a.cheaper);
+
+  const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
+
+  el.innerHTML = `
+    <div style="font-size:0.72rem;color:#8a9bb5;margin-bottom:10px;">
+      Референтни стойности по решение <strong style="color:#5a7090;">Ц-25 КЕВР, юли 2025</strong> (Енерго-Про / Електросевер).
+      Мрежовите компоненти (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара.
+      Дневна тарифа: 07:00–23:00 ч. &nbsp;|&nbsp; Нощна: 23:00–07:00 ч.
+    </div>
+
+    <table class="flows-table" style="margin-bottom:16px;">
+      <thead>
+        <tr>
+          <th>Компонент</th>
+          <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
+          <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
+          <th style="text-align:right;">Δ%</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${compHTML}
+        ${totHTML}
+      </tbody>
+    </table>
+
+    <div style="border-top:2px solid #edf2f8;padding-top:12px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+        Консуматор с ${T.monthlyBudgetEur} EUR/месец &nbsp;≈&nbsp; ${Math.round(monthlyKwh)} кВтч/м &nbsp;•&nbsp; ${dailyKwh.toFixed(1)} кВтч/ден
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+        <div class="balance-item">
+          <div class="balance-label">Регулирана</div>
+          <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
+          <div class="stat-unit">${regDailyCost.toFixed(2)} лв/ден</div>
+        </div>
+        <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+          <div class="balance-label">Свободен пазар</div>
+          <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
+          <div class="stat-unit">${freeDailyCost.toFixed(2)} лв/ден</div>
+        </div>
+        <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+          <div class="balance-label">Разлика</div>
+          <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${freeIsCheaper?'−':'+'}${fmtEd(Math.abs(savingEur))} EUR</div>
+          <div class="stat-unit">${isFinite(savingPct)?(freeIsCheaper?'−':'+')+(Math.abs(savingPct)).toFixed(1)+'%':''}</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+        По-евтини часове на свободния пазар
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+          <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Дневна тарифа (07–23ч)</div>
+          <strong>${dayCheap.length}</strong> от 16 часа
+          <div style="font-size:0.68rem;margin-top:3px;${dayCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+            ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+          </div>
+        </div>
+        <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+          <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Нощна тарифа (23–07ч)</div>
+          <strong>${nightCheap.length}</strong> от 8 часа
+          <div style="font-size:0.68rem;margin-top:3px;${nightCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+            ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+          </div>
+        </div>
+      </div>
+
+      ${allCheap.length > 0 ? `
+      <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
+        ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
+        При потребление само в тези часове по-изгоден е свободният пазар.
+      </div>` : `
+      <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
+        ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
+      </div>`}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  PIE CHART — daily avg generation + current battery + current import
 // ══════════════════════════════════════════════════════════════════════════════
 let _pieInitialized = false;
@@ -1193,7 +1475,7 @@ function drawTimeline(binned, pd, dateStr) {
   const genTraces = GEN_SERIES.map(s => ({
     x: xs, y: pts.map(p => { const v = isNaN(p[s.key])?null:Math.max(0,p[s.key]||0); return eur(v,p)??v; }),
     name: s.label, stackgroup: 'gen',
-    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color, shape: 'spline' },
+    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color, shape: 'linear' },
     visible: (hiddenGenKeys.has(s.key) || (reMode && !RE_KEYS.has(s.key))) ? 'legendonly' : true,
     hovertemplate: htFmt(s.label),
   }));
@@ -1206,7 +1488,7 @@ function drawTimeline(binned, pd, dateStr) {
   const battDischargeTrace = {
     x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw']); return eur(v,p)??v; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
-    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'spline' },
+    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'linear' },
     visible: hiddenGenKeys.has('_batt') ? 'legendonly' : true,
     hovertemplate: htFmt('ССЕЕ разреждане'),
   };
@@ -1402,9 +1684,11 @@ async function refresh() {
     updateDayBalance(displayBinned, pd, dateStr);
 
     drawPie(displaySnap);
+    updateDayStartLabel();
     drawTimeline(displayBinned, pd, dateStr);
     drawFlowsTimeline(displayBinned);
     updateTotalStats(displayBinned, pd, dateStr);
+    drawTariffPanel(pd, displayBinned, dateStr);
     loadRecords();
 
   } catch(e) {
