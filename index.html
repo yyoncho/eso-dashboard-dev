@@ -1335,10 +1335,13 @@ function drawTariffPanel(pd, binned, dateStr) {
 
       <!-- Dominant: free-market end price -->
       <div style="flex:1;padding:14px 18px;">
-        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:5px;">Свободен пазар сега</div>
+        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:5px;">Цена за краен потребител (свободен пазар)</div>
         <div style="font-size:2.1rem;font-weight:800;${nowCheaper?'color:#1a8a1a':'color:#cc2200'};line-height:1.05;">${fmtEk(freeEurKwh)} <span style="font-size:0.95rem;font-weight:500;color:#5a7090;">EUR/кВтч</span></div>
-        <div style="font-size:0.68rem;color:#8a9bb5;margin-top:5px;line-height:1.7;">
-          IBEX&nbsp;${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'}&nbsp;EUR/МВтч &nbsp;·&nbsp; борса&nbsp;${fmtEk(supplyEurKwh)} &nbsp;+&nbsp; мрежа&nbsp;${fmtEk(networkEurKwh)} &nbsp;+&nbsp; ДДС&nbsp;${fmtEk(vatEurKwh)} EUR/кВтч
+        <div style="font-size:0.7rem;color:#8a9bb5;margin-top:6px;line-height:1.6;">
+          борса&nbsp;${fmtEk(supplyEurKwh)} &nbsp;+&nbsp; мрежа&nbsp;${fmtEk(networkEurKwh)} &nbsp;+&nbsp; ДДС&nbsp;${fmtEk(vatEurKwh)} EUR/кВтч
+        </div>
+        <div style="font-size:0.65rem;color:#aab8cc;margin-top:2px;">
+          борсова цена (IBEX)&nbsp;${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'}&nbsp;EUR/МВтч
         </div>
       </div>
 
