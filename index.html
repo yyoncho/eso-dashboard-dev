@@ -248,7 +248,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 <div class="past-banner" id="past-banner">
   📅 Исторически данни — показват се архивни записи, не актуална информация
 </div>
-<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;">
+<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;">
   <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
   <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
   <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
@@ -1722,9 +1722,9 @@ function onSnapSlider(val) {
   updateFlowsTable(snap, _dayPriceData);
   updateGenTable(snap);
   drawPie(snap);
+  const snapMs = toUtcMs(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
   updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs);
-  const snapMs = toUtcMs(snap);
   drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
   writeHash(currentDay, ts);
