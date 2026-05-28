@@ -457,6 +457,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
     </div>
+    <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 0 8px;border-top:1px solid #e8eef7;">
+      <button onclick="shiftDayStart(-1)" style="background:none;border:1px solid #c5d8ee;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.85rem;color:#004494;line-height:1.4;" title="Предишен час">◄</button>
+      <span id="day-start-label" style="font-size:0.72rem;color:#5a7090;min-width:110px;text-align:center;">начало 00:00</span>
+      <button onclick="shiftDayStart(1)" style="background:none;border:1px solid #c5d8ee;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.85rem;color:#004494;line-height:1.4;" title="Следващ час">►</button>
+    </div>
   </div>
 
   <!-- flows timeline -->
@@ -508,6 +513,7 @@ let eurMode           = false;
 const totalStatsVisible = true;
 let colMode           = false;
 let pieMwhMode        = false;
+let dayStartHour      = 0;
 let hiddenGenKeys     = new Set();
 
 const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
@@ -752,6 +758,21 @@ function setPieMwhMode(on) {
   pieMwhMode = on;
   document.getElementById('tog-pie-mwh').classList.toggle('active', on);
   if (window._lastPieSnap) drawPie(window._lastPieSnap);
+}
+function shiftDayStart(delta) {
+  dayStartHour = (dayStartHour + delta + 24) % 24;
+  const lbl = document.getElementById('day-start-label');
+  lbl.textContent = dayStartHour === 0 ? 'начало 00:00' : `начало ${String(dayStartHour).padStart(2,'0')}:00`;
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+}
+function rotatePts(pts, dateStr) {
+  if (dayStartHour === 0 || !pts.length) return pts;
+  // Compute Sofia midnight UTC for this date
+  const noon = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const midnightUtcMs = new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000;
+  const cutMs = midnightUtcMs + dayStartHour * 3600000;
+  return [...pts.filter(p => p.ts >= cutMs), ...pts.filter(p => p.ts < cutMs)];
 }
 function _buildPriceByBin(pd, dateStr) {
   const m = {};
@@ -1153,7 +1174,7 @@ function drawTimeline(binned, pd, dateStr) {
   window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
   if (colMode) { drawColChart(binned, pd, dateStr); return; }
 
-  const pts = binned;
+  const pts = rotatePts(binned, dateStr);
   const xs  = pts.map(p => toSofiaStr(p.ts));
 
   // Build price lookup for EUR mode
@@ -1196,9 +1217,10 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: htFmt('ССЕЕ зареждане'),
   };
 
-  const priceXs = dayPrices.map(p=>toSofiaStr(p.ts));
-  const priceTrace = (!eurMode && dayPrices.length) ? {
-    x: priceXs, y: dayPrices.map(p=>p.price),
+  const rotatedPrices = rotatePts(dayPrices, dateStr);
+  const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
+  const priceTrace = (!eurMode && rotatedPrices.length) ? {
+    x: priceXs, y: rotatedPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
     visible: reMode ? 'legendonly' : true,
     line: { color: '#e07000', width: 1.5 },
