@@ -1327,7 +1327,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
     const avgFreeCheap = w(cheapHrs, a => a.freeRate) / cheapW;
     const avgFreeExp   = w(expHrs,   a => a.freeRate) / expW;
     const shift = (freePeriodAvg - regPeriodAvg) / (avgFreeExp - avgFreeCheap) * 100;
-    return { shift: Math.min(100, Math.max(0, shift)), cheapHours: hoursToRanges(cheapHrs.map(a => a.h)) };
+    return { shift: Math.min(100, Math.max(0, shift)), periodW, cheapHours: hoursToRanges(cheapHrs.map(a => a.h)) };
   };
   const dayExp   = dayHours.filter(a => !a.cheaper && isFinite(a.freeRate));
   const nightExp = nightHours.filter(a => !a.cheaper && isFinite(a.freeRate));
@@ -1463,7 +1463,8 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
                 return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;line-height:1.6;">✗ ${label}: регулираната тарифа е по-изгодна през всички часове.</div>`;
               if (be.already || be.shift < 1)
                 return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.6;">✓ ${label}: свободният пазар е по-изгоден при текущия профил.</div>`;
-              return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff8f0;border:1px solid #f5c5a5;border-radius:4px;line-height:1.6;">${label}: преместете ~<strong>${be.shift.toFixed(0)}%</strong> от потреблението в периода към евтините часове (${be.cheapHours}).</div>`;
+              const shiftKwh = (be.shift / 100) * dailyKwh * be.periodW;
+              return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff8f0;border:1px solid #f5c5a5;border-radius:4px;line-height:1.6;">${label}: преместете ~<strong>${be.shift.toFixed(0)}%</strong> (${shiftKwh.toFixed(1)} кВтч/ден) от потреблението в периода към евтините часове (${be.cheapHours}).</div>`;
             };
             const rows = beRow('Ден (07–23ч)', dayBE) + beRow('Нощ (23–07ч)', nightBE);
             return rows ? `<div style="margin-top:8px;">${rows}<div style="margin-top:4px;color:#aab8cc;font-size:0.68rem;padding-left:2px;">профил: ${loadProfileLabel}</div></div>` : '';
