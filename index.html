@@ -1186,7 +1186,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
   const regNightVat   = regNightExVat * (1 + T.VAT);
 
   const pct = (a, b) => isFinite(a) && isFinite(b) && a !== 0 ? (b - a) / a * 100 : NaN;
-  const fmtV = v => isFinite(v) ? v.toFixed(4) : '—';
+  const fmtV = v => isFinite(v) ? (v / T.BGN_PER_EUR).toFixed(4) : '—';
   const fmtP = v => !isFinite(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const pctSty = v => !isFinite(v) ? '' : v < -1 ? 'color:#1a8a1a;font-weight:700' : v > 1 ? 'color:#cc2200;font-weight:700' : 'color:#8a9bb5';
 
@@ -1388,8 +1388,8 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
           <thead>
             <tr>
               <th>Компонент</th>
-              <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
-              <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
+              <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
+              <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
               <th style="text-align:right;">Δ%</th>
             </tr>
           </thead>
@@ -1407,12 +1407,10 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
             <div class="balance-item">
               <div class="balance-label">Регулирана</div>
               <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
-              <div class="stat-unit">${regDailyCost.toFixed(2)} лв/ден</div>
             </div>
             <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
               <div class="balance-label">Свободен пазар</div>
               <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
-              <div class="stat-unit">${freeDailyCost.toFixed(2)} лв/ден</div>
             </div>
             <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
               <div class="balance-label">Разлика</div>
