@@ -475,14 +475,14 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- tariff calculator -->
   <div class="panel">
     <div class="panel-header">
-      <span>Тарифен калкулатор — Регулирана тарифа vs Свободен пазар</span>
+      <span>Борсова цена — Свободен пазар vs Регулирана тарифа</span>
       <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Информация">?</button>
     </div>
     <div id="tariff-info" class="info-dropdown">
-      Сравнение на регулираната тарифа (КЕВР) с борсовата цена (IBEX). Мрежовите такси (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара. Стойностите са ориентировъчни — реалните договорни условия на свободния пазар може да се различават.
+      Сравнение на регулираната тарифа (КЕВР) с текущата борсова цена (IBEX). Мрежовите такси (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара. Стойностите са ориентировъчни — реалните договорни условия на свободния пазар може да се различават.
     </div>
-    <div class="panel-body" id="tariff-body">
-      <div style="color:#8a9bb5;font-size:0.78rem;">Зареждане…</div>
+    <div id="tariff-body">
+      <div style="color:#8a9bb5;font-size:0.78rem;padding:10px 12px;">Зареждане…</div>
     </div>
   </div>
 
@@ -554,6 +554,15 @@ let _dayRecords = [];
 let _dayPriceData = null;
 let _dayDateStr = null;
 let _pendingSnapTs = null;
+let tariffExpanded = false;
+
+function toggleTariffDetails() {
+  tariffExpanded = !tariffExpanded;
+  const det = document.getElementById('tariff-details');
+  const arr = document.getElementById('tariff-arrow');
+  if (det) det.style.display = tariffExpanded ? 'block' : 'none';
+  if (arr) arr.textContent = tariffExpanded ? '▲' : '▼';
+}
 
 // Init state from URL hash
 const _initHash = readHash();
@@ -1296,78 +1305,129 @@ function drawTariffPanel(pd, binned, dateStr) {
 
   const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
 
+  // ── Current spot price — use current clock time; fall back to avg for historical days ──
+  const nowMs = Date.now();
+  let currentSpotEur = getPriceAt(pd, nowMs);
+  if (!isFinite(currentSpotEur)) currentSpotEur = avgSpotEur; // historical day
+  const currentFreeLv  = isFinite(currentSpotEur)
+    ? ((currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR + network) * (1 + T.VAT)
+    : NaN;
+  // Which regulated tier applies now (Sofia local hour)?
+  const nowH = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const regNowLv = isSofiaDay(nowH) ? regDayVat : regNightVat;
+  const regNowLabel = isSofiaDay(nowH) ? 'ден' : 'нощ';
+  const nowPct = pct(regNowLv, currentFreeLv);
+  const nowCheaper = isFinite(currentFreeLv) && currentFreeLv < regNowLv;
+
   el.innerHTML = `
-    <div style="font-size:0.72rem;color:#8a9bb5;margin-bottom:10px;">
-      Референтни стойности по решение <strong style="color:#5a7090;">Ц-25 КЕВР, юли 2025</strong> (Енерго-Про / Електросевер).
-      Мрежовите компоненти (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара.
-      Дневна тарифа: 07:00–23:00 ч. &nbsp;|&nbsp; Нощна: 23:00–07:00 ч.
+    <!-- ── HERO SUMMARY ── -->
+    <div onclick="toggleTariffDetails()"
+         style="display:flex;align-items:center;gap:0;cursor:pointer;border-bottom:1px solid #edf2f8;user-select:none;">
+
+      <!-- Current market price block -->
+      <div style="flex:1;padding:12px 16px;border-right:1px solid #edf2f8;">
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:4px;">Борсова цена сега (IBEX)</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#1a2233;line-height:1.1;">${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">EUR/МВтч</span></div>
+        <div style="font-size:0.82rem;color:#5a7090;margin-top:2px;">
+          = <strong style="color:#1a2233;">${isFinite(currentFreeLv)?currentFreeLv.toFixed(4):'—'}</strong> лв/кВтч
+          <span style="font-size:0.68rem;color:#8a9bb5;">(вкл. мрежа + ДДС)</span>
+        </div>
+      </div>
+
+      <!-- vs Regulated block -->
+      <div style="flex:1;padding:12px 16px;border-right:1px solid #edf2f8;">
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:4px;">Регулирана тарифа (КЕВР)</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#004494;line-height:1.1;">${fmtV(regNowLv)} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">лв/кВтч</span></div>
+        <div style="font-size:0.82rem;color:#5a7090;margin-top:2px;">
+          тарифа: <strong>${regNowLabel}</strong> &nbsp;|&nbsp;
+          ден ${fmtV(regDayVat)} / нощ ${fmtV(regNightVat)} лв/кВтч
+        </div>
+      </div>
+
+      <!-- Delta + arrow -->
+      <div style="padding:12px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:90px;">
+        <div style="font-size:1.35rem;font-weight:700;${pctSty(nowPct)}">${fmtP(nowPct)}</div>
+        <div style="font-size:0.7rem;color:#8a9bb5;">${nowCheaper?'пазарът е по-евтин':'пазарът е по-скъп'}</div>
+        <div id="tariff-arrow" style="font-size:0.75rem;color:#aab8cc;margin-top:2px;">${tariffExpanded?'▲':'▼'}</div>
+      </div>
     </div>
 
-    <table class="flows-table" style="margin-bottom:16px;">
-      <thead>
-        <tr>
-          <th>Компонент</th>
-          <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
-          <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
-          <th style="text-align:right;">Δ%</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${compHTML}
-        ${totHTML}
-      </tbody>
-    </table>
+    <!-- ── COLLAPSIBLE DETAILS ── -->
+    <div id="tariff-details" style="display:${tariffExpanded?'block':'none'};">
+      <div class="panel-body">
+        <div style="font-size:0.72rem;color:#8a9bb5;margin-bottom:10px;">
+          Референтни стойности по решение <strong style="color:#5a7090;">Ц-25 КЕВР, юли 2025</strong> (Енерго-Про / Електросевер).
+          Мрежовите компоненти (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара.
+          Дневна тарифа: 07:00–23:00 ч. &nbsp;|&nbsp; Нощна: 23:00–07:00 ч.
+        </div>
 
-    <div style="border-top:2px solid #edf2f8;padding-top:12px;">
-      <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-        Консуматор с ${T.monthlyBudgetEur} EUR/месец &nbsp;≈&nbsp; ${Math.round(monthlyKwh)} кВтч/м &nbsp;•&nbsp; ${dailyKwh.toFixed(1)} кВтч/ден
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
-        <div class="balance-item">
-          <div class="balance-label">Регулирана</div>
-          <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
-          <div class="stat-unit">${regDailyCost.toFixed(2)} лв/ден</div>
-        </div>
-        <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
-          <div class="balance-label">Свободен пазар</div>
-          <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
-          <div class="stat-unit">${freeDailyCost.toFixed(2)} лв/ден</div>
-        </div>
-        <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
-          <div class="balance-label">Разлика</div>
-          <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${freeIsCheaper?'−':'+'}${fmtEd(Math.abs(savingEur))} EUR</div>
-          <div class="stat-unit">${isFinite(savingPct)?(freeIsCheaper?'−':'+')+(Math.abs(savingPct)).toFixed(1)+'%':''}</div>
-        </div>
-      </div>
+        <table class="flows-table" style="margin-bottom:16px;">
+          <thead>
+            <tr>
+              <th>Компонент</th>
+              <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
+              <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(лв/кВтч)</span></th>
+              <th style="text-align:right;">Δ%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${compHTML}
+            ${totHTML}
+          </tbody>
+        </table>
 
-      <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-        По-евтини часове на свободния пазар
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
-          <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Дневна тарифа (07–23ч)</div>
-          <strong>${dayCheap.length}</strong> от 16 часа
-          <div style="font-size:0.68rem;margin-top:3px;${dayCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
-            ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+        <div style="border-top:2px solid #edf2f8;padding-top:12px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+            Консуматор с ${T.monthlyBudgetEur} EUR/месец &nbsp;≈&nbsp; ${Math.round(monthlyKwh)} кВтч/м &nbsp;•&nbsp; ${dailyKwh.toFixed(1)} кВтч/ден
           </div>
-        </div>
-        <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
-          <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Нощна тарифа (23–07ч)</div>
-          <strong>${nightCheap.length}</strong> от 8 часа
-          <div style="font-size:0.68rem;margin-top:3px;${nightCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
-            ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+            <div class="balance-item">
+              <div class="balance-label">Регулирана</div>
+              <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
+              <div class="stat-unit">${regDailyCost.toFixed(2)} лв/ден</div>
+            </div>
+            <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+              <div class="balance-label">Свободен пазар</div>
+              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
+              <div class="stat-unit">${freeDailyCost.toFixed(2)} лв/ден</div>
+            </div>
+            <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+              <div class="balance-label">Разлика</div>
+              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${freeIsCheaper?'−':'+'}${fmtEd(Math.abs(savingEur))} EUR</div>
+              <div class="stat-unit">${isFinite(savingPct)?(freeIsCheaper?'−':'+')+(Math.abs(savingPct)).toFixed(1)+'%':''}</div>
+            </div>
           </div>
+
+          <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+            По-евтини часове на свободния пазар
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Дневна тарифа (07–23ч)</div>
+              <strong>${dayCheap.length}</strong> от 16 часа
+              <div style="font-size:0.68rem;margin-top:3px;${dayCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+                ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+              </div>
+            </div>
+            <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Нощна тарифа (23–07ч)</div>
+              <strong>${nightCheap.length}</strong> от 8 часа
+              <div style="font-size:0.68rem;margin-top:3px;${nightCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+                ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+              </div>
+            </div>
+          </div>
+
+          ${allCheap.length > 0 ? `
+          <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
+            ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
+            При потребление само в тези часове по-изгоден е свободният пазар.
+          </div>` : `
+          <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
+            ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
+          </div>`}
         </div>
       </div>
-
-      ${allCheap.length > 0 ? `
-      <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
-        ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
-        При потребление само в тези часове по-изгоден е свободният пазар.
-      </div>` : `
-      <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
-        ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
-      </div>`}
     </div>
   `;
 }
