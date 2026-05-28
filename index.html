@@ -1180,28 +1180,34 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
 
   // ── derived tariff values ──
   const network = T.transmission + T.distribution + T.renewables + T.excise;
-  const freeSupplyAvg = isFinite(avgSpotEur) ? (avgSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : NaN;
   const regDayExVat   = T.supply.day   + network;
   const regNightExVat = T.supply.night + network;
-  const freeExVatAvg  = isFinite(freeSupplyAvg) ? freeSupplyAvg + network : NaN;
   const regDayVat     = regDayExVat   * (1 + T.VAT);
   const regNightVat   = regNightExVat * (1 + T.VAT);
-  const freeVatAvg    = isFinite(freeExVatAvg) ? freeExVatAvg * (1 + T.VAT) : NaN;
 
   const pct = (a, b) => isFinite(a) && isFinite(b) && a !== 0 ? (b - a) / a * 100 : NaN;
   const fmtV = v => isFinite(v) ? v.toFixed(4) : '—';
   const fmtP = v => !isFinite(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const pctSty = v => !isFinite(v) ? '' : v < -1 ? 'color:#1a8a1a;font-weight:700' : v > 1 ? 'color:#cc2200;font-weight:700' : 'color:#8a9bb5';
 
-  // ── component table rows ──
+  // ── Resolve snapshot price first so details table reflects slider position ──
+  const nowMs = snapMs !== null ? snapMs : Date.now();
+  let currentSpotEur = getPriceAt(pd, nowMs);
+  if (!isFinite(currentSpotEur)) currentSpotEur = avgSpotEur;
+
+  // free-market supply component at snapshot price (used in hero + details table)
+  const freeSupplyCur = isFinite(currentSpotEur) ? (currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : NaN;
+  const freeExVatCur  = isFinite(freeSupplyCur) ? freeSupplyCur + network : NaN;
+  const freeVatCur    = isFinite(freeExVatCur)  ? freeExVatCur  * (1 + T.VAT) : NaN;
+
+  // ── component table rows (use snapshot price for supply, daily avg shown in label) ──
   const compRows = [
-    { label: `Снабдяване (ден)<br><span style="font-size:0.6rem;color:#8a9bb5;">avg борса: ${isFinite(avgSpotEur)?avgSpotEur.toFixed(0):'—'} €/МВтч</span>`,
-      reg: T.supply.day, free: freeSupplyAvg },
-    { label: 'Снабдяване (нощ)', reg: T.supply.night, free: freeSupplyAvg },
-    { label: 'Пренос НЕК',       reg: T.transmission, free: T.transmission, fixed: true },
-    { label: 'Разпределение',    reg: T.distribution, free: T.distribution, fixed: true },
-    { label: 'ОЗЕ надбавка',     reg: T.renewables,   free: T.renewables,   fixed: true },
-    { label: 'Акциз',            reg: T.excise,        free: T.excise,       fixed: true },
+    { label: `Снабдяване<br><span style="font-size:0.6rem;color:#8a9bb5;">борса: ${isFinite(currentSpotEur)?currentSpotEur.toFixed(0):'—'} €/МВтч</span>`,
+      reg: T.supply.day, free: freeSupplyCur },
+    { label: 'Пренос НЕК',    reg: T.transmission, free: T.transmission, fixed: true },
+    { label: 'Разпределение', reg: T.distribution, free: T.distribution, fixed: true },
+    { label: 'ОЗЕ надбавка',  reg: T.renewables,   free: T.renewables,   fixed: true },
+    { label: 'Акциз',         reg: T.excise,        free: T.excise,       fixed: true },
   ];
 
   const compHTML = compRows.map(r => {
@@ -1217,20 +1223,20 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
     </tr>`;
   }).join('');
 
-  const totDayPct   = pct(regDayVat, freeVatAvg);
-  const totNightPct = pct(regNightVat, freeVatAvg);
+  const totDayPct   = pct(regDayVat, freeVatCur);
+  const totNightPct = pct(regNightVat, freeVatCur);
 
   const totHTML = `
     <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
       <td>Без ДДС &nbsp;(ден / нощ)</td>
       <td style="text-align:right;font-family:monospace;">${fmtV(regDayExVat)} / ${fmtV(regNightExVat)}</td>
-      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatAvg)?fmtV(freeExVatAvg):'—'}</td>
-      <td style="text-align:right;${pctSty(pct(regDayExVat,freeExVatAvg))}">${fmtP(pct(regDayExVat,freeExVatAvg))}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatCur)?fmtV(freeExVatCur):'—'}</td>
+      <td style="text-align:right;${pctSty(pct(regDayExVat,freeExVatCur))}">${fmtP(pct(regDayExVat,freeExVatCur))}</td>
     </tr>
     <tr style="font-weight:700;background:#f0f6ff;">
       <td>ОБЩО с ДДС &nbsp;(ден / нощ)</td>
       <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(regDayVat)} / ${fmtV(regNightVat)}</td>
-      <td style="text-align:right;font-family:monospace;${isFinite(freeVatAvg)?(freeVatAvg<regDayVat?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatAvg)?fmtV(freeVatAvg):'—'}</td>
+      <td style="text-align:right;font-family:monospace;${isFinite(freeVatCur)?(freeVatCur<regDayVat?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatCur)?fmtV(freeVatCur):'—'}</td>
       <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totDayPct)}">${fmtP(totDayPct)}</span> / <span style="${pctSty(totNightPct)}">${fmtP(totNightPct)}</span></td>
     </tr>`;
 
@@ -1270,7 +1276,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
     const kwhH     = dailyKwh * loadWeights[h];
     const regRateH = isSofiaDay(h) ? regDayVat : regNightVat;
     const spotH    = isFinite(avgSpotByH[h]) ? avgSpotByH[h] : avgSpotEur;
-    const freeSupH = isFinite(spotH) ? (spotH + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : freeSupplyAvg;
+    const freeSupH = isFinite(spotH) ? (spotH + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : freeSupplyCur;
     const freeRateH = isFinite(freeSupH) ? (freeSupH + network) * (1 + T.VAT) : NaN;
     regDailyCost  += kwhH * regRateH;
     if (isFinite(freeRateH)) freeDailyCost += kwhH * freeRateH;
@@ -1305,10 +1311,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
 
   const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
 
-  // ── Current spot price — use slider time if scrubbing, else current clock ──
-  const nowMs = snapMs || Date.now();
-  let currentSpotEur = getPriceAt(pd, nowMs);
-  if (!isFinite(currentSpotEur)) currentSpotEur = avgSpotEur; // historical day
+  // (nowMs / currentSpotEur resolved earlier, before the details table)
   const currentFreeLv  = isFinite(currentSpotEur)
     ? ((currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR + network) * (1 + T.VAT)
     : NaN;
