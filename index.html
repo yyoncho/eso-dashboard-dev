@@ -553,6 +553,7 @@ const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', '
 let _dayRecords = [];
 let _dayPriceData = null;
 let _dayDateStr = null;
+let _loadProfile = null;  // 24-weight array from load_profile.json
 let _pendingSnapTs = null;
 let tariffExpanded = false;
 
@@ -1152,7 +1153,7 @@ function updateDayBalance(binned, pd, dateStr) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  TARIFF CALCULATOR PANEL
 // ══════════════════════════════════════════════════════════════════════════════
-function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
+function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null) {
   const el = document.getElementById('tariff-body');
   if (!el) return;
   const T = TARIFF;
@@ -1246,25 +1247,17 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
   const monthlyKwh     = budgetBgn / blendedReg;
   const dailyKwh       = monthlyKwh / 30;
 
-  // Load profile weights (use today's binned if enough data, else typical profile)
-  let loadWeights;
-  if (binned && binned.length > 20) {
-    const bkts = Array.from({length:24}, () => []);
-    for (const b of binned) {
-      const lv = b['load_mw'];
-      if (!isFinite(lv) || lv <= 0) continue;
-      const h = parseInt(toSofiaStr(b.ts).slice(11, 13));
-      bkts[h].push(lv);
-    }
-    const raw = bkts.map(b => b.length ? b.reduce((s,v)=>s+v,0)/b.length : null);
-    for (let i = 0; i < 24; i++) if (raw[i] === null) raw[i] = raw[(i+23)%24] ?? raw[(i+1)%24] ?? 100;
-    const tot = raw.reduce((s,v)=>s+v,0);
-    loadWeights = raw.map(v => v/tot);
+  // Load profile weights — prefer pre-computed 7-day profile, else hardcoded typical
+  let loadWeights, loadProfileLabel;
+  if (loadProfile && loadProfile.weights && loadProfile.weights.length === 24) {
+    loadWeights = loadProfile.weights;
+    loadProfileLabel = `последните ${loadProfile.days} дни (${loadProfile.computed})`;
   } else {
     const typ = [0.45,0.38,0.34,0.33,0.33,0.38,0.52,0.72,0.82,0.82,0.77,0.72,
                  0.68,0.63,0.63,0.68,0.78,0.88,0.93,0.98,0.93,0.83,0.68,0.53];
     const ts = typ.reduce((s,v)=>s+v,0);
     loadWeights = typ.map(v => v/ts);
+    loadProfileLabel = 'типичен профил';
   }
 
   const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
@@ -1454,7 +1447,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
             return `<div style="margin-top:8px;font-size:0.75rem;padding:8px 10px;background:${bg};border:1px solid ${border};border-radius:4px;line-height:1.7;">
               <strong>Праг за изгода на свободния пазар:</strong>
               минимум <strong>${breakEvenPct.toFixed(0)}%</strong> от потреблението в евтините часове
-              &nbsp;·&nbsp; по профил на натоварване сега: <strong style="${ok?'color:#1a8a1a':'color:#cc2200'}">${currentCheapPct.toFixed(0)}%</strong>
+              &nbsp;·&nbsp; по национален профил на натоварване (${loadProfileLabel}): <strong style="${ok?'color:#1a8a1a':'color:#cc2200'}">${currentCheapPct.toFixed(0)}%</strong>
               &nbsp;${ok ? '✓ изгоден' : '✗ не е достатъчно'}
             </div>`;
           })() : ''}
@@ -1717,7 +1710,7 @@ function onSnapSlider(val) {
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
   updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
   const snapMs = toUtcMs(snap);
-  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs);
+  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
   writeHash(currentDay, ts);
 }
@@ -1751,6 +1744,14 @@ async function refresh() {
     const binned  = bin15min(allRecords);
     const pd      = await loadPrices(dateStr);
 
+    // Load profile — fetch once, reuse until next day
+    if (!_loadProfile) {
+      try {
+        const lp = await getJSON(`${BASE}/load_profile.json`);
+        if (lp && lp.weights && lp.weights.length === 24) _loadProfile = lp;
+      } catch (_) {}
+    }
+
     _dayRecords   = allRecords;
     _dayPriceData = pd;
     _dayDateStr   = dateStr;
@@ -1782,7 +1783,7 @@ async function refresh() {
     drawTimeline(displayBinned, pd, dateStr);
     drawFlowsTimeline(displayBinned);
     updateTotalStats(displayBinned, pd, dateStr);
-    drawTariffPanel(pd, displayBinned, dateStr);
+    drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
     loadRecords();
 
   } catch(e) {
