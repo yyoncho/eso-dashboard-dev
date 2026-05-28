@@ -1152,7 +1152,7 @@ function updateDayBalance(binned, pd, dateStr) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  TARIFF CALCULATOR PANEL
 // ══════════════════════════════════════════════════════════════════════════════
-function drawTariffPanel(pd, binned, dateStr) {
+function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
   const el = document.getElementById('tariff-body');
   if (!el) return;
   const T = TARIFF;
@@ -1305,14 +1305,14 @@ function drawTariffPanel(pd, binned, dateStr) {
 
   const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
 
-  // ── Current spot price — use current clock time; fall back to avg for historical days ──
-  const nowMs = Date.now();
+  // ── Current spot price — use slider time if scrubbing, else current clock ──
+  const nowMs = snapMs || Date.now();
   let currentSpotEur = getPriceAt(pd, nowMs);
   if (!isFinite(currentSpotEur)) currentSpotEur = avgSpotEur; // historical day
   const currentFreeLv  = isFinite(currentSpotEur)
     ? ((currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR + network) * (1 + T.VAT)
     : NaN;
-  // Which regulated tier applies now (Sofia local hour)?
+  // Which regulated tier applies at the selected time (Sofia local hour)?
   const nowH = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
   const regNowLv = isSofiaDay(nowH) ? regDayVat : regNightVat;
   const regNowLabel = isSofiaDay(nowH) ? 'ден' : 'нощ';
@@ -1688,6 +1688,8 @@ function onSnapSlider(val) {
   drawPie(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
   updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
+  const snapMs = toUtcMs(snap);
+  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
   writeHash(currentDay, ts);
 }
