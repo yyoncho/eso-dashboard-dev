@@ -530,7 +530,6 @@ const TARIFF = {
   renewables:       0.0250,   // ОЗЕ надбавка
   excise:           0.00205,  // Акциз (фиксиран по закон: 2,05 лв/МВтч)
   VAT:              0.20,     // ДДС
-  monthlyBudgetEur: 100,      // Бюджет за калкулатора
   dayShare:         0.70,     // Дял дневно потребление (за изчисляване на кВтч от бюджет)
   freeMarketMarkup: 5,        // Надбавка свободен пазар (EUR/МВтч) — балансираща отговорност
 };
@@ -1224,8 +1223,8 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
     </tr>`;
   }).join('');
 
-  // ── 100 EUR/month calculator ──
-  const budgetBgn = T.monthlyBudgetEur * T.BGN_PER_EUR;
+  // ── Daily consumption basis ──
+  const dailyKwh = 30;
 
   // Load profile weights — prefer pre-computed 7-day profile, else hardcoded typical
   let loadWeights, loadProfileLabel;
@@ -1265,8 +1264,6 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   // Blend regulated tariff using actual load profile day/night split
   const dayShareActual = loadWeights.reduce((s, w, h) => s + (isSofiaDay(h) ? w : 0), 0);
   const blendedReg     = dayShareActual * regDayVat + (1 - dayShareActual) * regNightVat;
-  const monthlyKwh     = budgetBgn / blendedReg;
-  const dailyKwh       = monthlyKwh / 30;
 
   // Per-hour cost comparison
   let regDailyCost = 0, freeDailyCost = 0;
@@ -1401,7 +1398,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
         <div style="border-top:2px solid #edf2f8;padding-top:12px;">
           <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-            Консуматор с ${T.monthlyBudgetEur} EUR/месец &nbsp;≈&nbsp; ${Math.round(monthlyKwh)} кВтч/м &nbsp;•&nbsp; ${dailyKwh.toFixed(1)} кВтч/ден
+            Консуматор с ${dailyKwh} кВтч/ден
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
             <div class="balance-item">
