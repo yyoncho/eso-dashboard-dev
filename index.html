@@ -1144,7 +1144,7 @@ function updateDayBalance(binned, pd, dateStr) {
   const battBox = document.getElementById('batt-daily-box');
   battBox.style.display = (battChgMwh > 0 || battDisMwh > 0) ? '' : 'none';
 
-  const curP = getPriceAt(pd, Date.now());
+  const curP = getPriceAt(pd, latest ? toUtcMs(latest) : Date.now());
   document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
   document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
   document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
