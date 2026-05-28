@@ -1306,20 +1306,27 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   const allCheap   = hourlyAna.filter(a => a.cheaper);
   const allExp     = hourlyAna.filter(a => !a.cheaper && isFinite(a.freeRate));
 
-  // Break-even: minimum % of consumption in cheap hours so free market wins overall
-  // avgSav = weighted avg savings/kWh in cheap hours; avgCost = weighted avg extra cost/kWh in expensive hours
-  let breakEvenPct = null, currentCheapPct = null;
-  if (allCheap.length > 0 && allExp.length > 0) {
-    const wSum = (arr, fn) => arr.reduce((s, a) => s + fn(a) * loadWeights[a.h], 0);
-    const cheapW  = wSum(allCheap, () => 1);
-    const expW    = wSum(allExp,   () => 1);
-    const avgSav  = cheapW  > 0 ? wSum(allCheap, a => a.regRate  - a.freeRate) / cheapW  : 0;
-    const avgCost = expW    > 0 ? wSum(allExp,   a => a.freeRate - a.regRate)  / expW    : 0;
-    breakEvenPct    = avgSav + avgCost > 0 ? (avgCost / (avgSav + avgCost)) * 100 : 0;
-    currentCheapPct = wSum(allCheap, () => 1) * 100;
-  } else if (allCheap.length === 24) {
-    breakEvenPct = 0; currentCheapPct = 100;
-  }
+  // Break-even per tariff period: what % of that period's consumption must shift to cheap hours?
+  // Formula: breakEven = avgCost / (avgSav + avgCost) where sav/cost are load-weighted within period.
+  // "shift needed" = max(0, breakEven - currentCheapPct_within_period)
+  const periodBreakEven = (cheapHrs, expHrs, allPeriodHrs) => {
+    const periodW = allPeriodHrs.reduce((s, a) => s + loadWeights[a.h], 0);
+    if (periodW === 0) return null;
+    const w = (arr, fn) => arr.reduce((s, a) => s + fn(a) * loadWeights[a.h], 0);
+    const cheapW = w(cheapHrs, () => 1);
+    const expW   = w(expHrs,   () => 1);
+    const currentPct = cheapW / periodW * 100;
+    if (cheapHrs.length === 0) return { breakEvenPct: 100, currentPct, shift: 100 - currentPct };
+    if (expHrs.length   === 0) return { breakEvenPct: 0,   currentPct, shift: 0 };
+    const avgSav  = cheapW > 0 ? w(cheapHrs, a => a.regRate - a.freeRate) / cheapW : 0;
+    const avgCost = expW   > 0 ? w(expHrs,   a => a.freeRate - a.regRate) / expW   : 0;
+    const breakEvenPct = avgSav + avgCost > 0 ? (avgCost / (avgSav + avgCost)) * 100 : 0;
+    return { breakEvenPct, currentPct, shift: Math.max(0, breakEvenPct - currentPct) };
+  };
+  const dayExp   = dayHours.filter(a => !a.cheaper && isFinite(a.freeRate));
+  const nightExp = nightHours.filter(a => !a.cheaper && isFinite(a.freeRate));
+  const dayBE    = periodBreakEven(dayCheap,   dayExp,   dayHours);
+  const nightBE  = periodBreakEven(nightCheap, nightExp, nightHours);
 
   const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
 
@@ -1443,20 +1450,21 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
             ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
           </div>`}
 
-          ${breakEvenPct !== null ? (() => {
-            const ok = currentCheapPct >= breakEvenPct;
-            const needShift = Math.max(0, breakEvenPct - currentCheapPct);
-            const cheapRanges = hoursToRanges(allCheap.map(a => a.h));
-            const bg = ok ? '#f0fff5' : '#fff8f0';
-            const border = ok ? '#a5d5b5' : '#f5c5a5';
-            const msg = ok
-              ? `✓ Свободният пазар е изгоден при текущия профил на потребление (${currentCheapPct.toFixed(0)}% в евтините часове).`
-              : `Трябва да преместите ~<strong>${needShift.toFixed(0)}%</strong> от потреблението в евтините часове (${cheapRanges}), за да е свободният пазар по-изгоден от регулираната тарифа. Сега: <strong>${currentCheapPct.toFixed(0)}%</strong>, нужно: <strong>${breakEvenPct.toFixed(0)}%</strong>.`;
-            return `<div style="margin-top:8px;font-size:0.75rem;padding:8px 10px;background:${bg};border:1px solid ${border};border-radius:4px;line-height:1.7;">
-              ${msg}
-              <span style="color:#aab8cc;font-size:0.68rem;">&nbsp;(профил: ${loadProfileLabel})</span>
-            </div>`;
-          })() : ''}
+          ${(() => {
+            const beRow = (label, be, cheapHrs) => {
+              if (!be) return '';
+              const cheapRanges = cheapHrs.length > 0 ? hoursToRanges(cheapHrs.map(a => a.h)) : '—';
+              const ok = be.shift < 1;
+              const bg = ok ? '#f0fff5' : '#fff8f0';
+              const border = ok ? '#a5d5b5' : '#f5c5a5';
+              const msg = ok
+                ? `✓ ${label}: свободният пазар е изгоден при текущия профил (${be.currentPct.toFixed(0)}% в евтини часове).`
+                : `${label}: трябва да преместите ~<strong>${be.shift.toFixed(0)}%</strong> от потреблението в периода към евтините часове (${cheapRanges}). Сега: <strong>${be.currentPct.toFixed(0)}%</strong>, нужно: <strong>${be.breakEvenPct.toFixed(0)}%</strong>.`;
+              return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:${bg};border:1px solid ${border};border-radius:4px;line-height:1.6;">${msg}</div>`;
+            };
+            const rows = beRow('Ден (07–23ч)', dayBE, dayCheap) + beRow('Нощ (23–07ч)', nightBE, nightCheap);
+            return rows ? `<div style="margin-top:8px;">${rows}<div style="margin-top:4px;color:#aab8cc;font-size:0.68rem;padding-left:2px;">профил: ${loadProfileLabel}</div></div>` : '';
+          })()}
         </div>
       </div>
     </div>
