@@ -1242,10 +1242,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
     </tr>`;
 
   // ── 100 EUR/month calculator ──
-  const budgetBgn      = T.monthlyBudgetEur * T.BGN_PER_EUR;
-  const blendedReg     = T.dayShare * regDayVat + (1 - T.dayShare) * regNightVat;
-  const monthlyKwh     = budgetBgn / blendedReg;
-  const dailyKwh       = monthlyKwh / 30;
+  const budgetBgn = T.monthlyBudgetEur * T.BGN_PER_EUR;
 
   // Load profile weights — prefer pre-computed 7-day profile, else hardcoded typical
   let loadWeights, loadProfileLabel;
@@ -1261,6 +1258,12 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   }
 
   const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
+
+  // Blend regulated tariff using actual load profile day/night split
+  const dayShareActual = loadWeights.reduce((s, w, h) => s + (isSofiaDay(h) ? w : 0), 0);
+  const blendedReg     = dayShareActual * regDayVat + (1 - dayShareActual) * regNightVat;
+  const monthlyKwh     = budgetBgn / blendedReg;
+  const dailyKwh       = monthlyKwh / 30;
 
   // Per-hour cost comparison
   let regDailyCost = 0, freeDailyCost = 0;
@@ -1442,13 +1445,16 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
           ${breakEvenPct !== null ? (() => {
             const ok = currentCheapPct >= breakEvenPct;
+            const needShift = Math.max(0, breakEvenPct - currentCheapPct);
+            const cheapRanges = hoursToRanges(allCheap.map(a => a.h));
             const bg = ok ? '#f0fff5' : '#fff8f0';
             const border = ok ? '#a5d5b5' : '#f5c5a5';
+            const msg = ok
+              ? `✓ Свободният пазар е изгоден при текущия профил на потребление (${currentCheapPct.toFixed(0)}% в евтините часове).`
+              : `Трябва да преместите ~<strong>${needShift.toFixed(0)}%</strong> от потреблението в евтините часове (${cheapRanges}), за да е свободният пазар по-изгоден от регулираната тарифа. Сега: <strong>${currentCheapPct.toFixed(0)}%</strong>, нужно: <strong>${breakEvenPct.toFixed(0)}%</strong>.`;
             return `<div style="margin-top:8px;font-size:0.75rem;padding:8px 10px;background:${bg};border:1px solid ${border};border-radius:4px;line-height:1.7;">
-              <strong>Праг за изгода на свободния пазар:</strong>
-              минимум <strong>${breakEvenPct.toFixed(0)}%</strong> от потреблението в евтините часове
-              &nbsp;·&nbsp; по национален профил на натоварване (${loadProfileLabel}): <strong style="${ok?'color:#1a8a1a':'color:#cc2200'}">${currentCheapPct.toFixed(0)}%</strong>
-              &nbsp;${ok ? '✓ изгоден' : '✗ не е достатъчно'}
+              ${msg}
+              <span style="color:#aab8cc;font-size:0.68rem;">&nbsp;(профил: ${loadProfileLabel})</span>
             </div>`;
           })() : ''}
         </div>
