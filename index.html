@@ -1224,23 +1224,6 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
     </tr>`;
   }).join('');
 
-  const totDayPct   = pct(regDayVat, freeVatCur);
-  const totNightPct = pct(regNightVat, freeVatCur);
-
-  const totHTML = `
-    <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
-      <td>Без ДДС &nbsp;(ден / нощ)</td>
-      <td style="text-align:right;font-family:monospace;">${fmtV(regDayExVat)} / ${fmtV(regNightExVat)}</td>
-      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatCur)?fmtV(freeExVatCur):'—'}</td>
-      <td style="text-align:right;${pctSty(pct(regDayExVat,freeExVatCur))}">${fmtP(pct(regDayExVat,freeExVatCur))}</td>
-    </tr>
-    <tr style="font-weight:700;background:#f0f6ff;">
-      <td>ОБЩО с ДДС &nbsp;(ден / нощ)</td>
-      <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(regDayVat)} / ${fmtV(regNightVat)}</td>
-      <td style="text-align:right;font-family:monospace;${isFinite(freeVatCur)?(freeVatCur<regDayVat?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatCur)?fmtV(freeVatCur):'—'}</td>
-      <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totDayPct)}">${fmtP(totDayPct)}</span> / <span style="${pctSty(totNightPct)}">${fmtP(totNightPct)}</span></td>
-    </tr>`;
-
   // ── 100 EUR/month calculator ──
   const budgetBgn = T.monthlyBudgetEur * T.BGN_PER_EUR;
 
@@ -1258,6 +1241,26 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   }
 
   const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
+
+  const _nowH2      = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const regNowExVat = isSofiaDay(_nowH2) ? regDayExVat : regNightExVat;
+  const _regNowLv2  = isSofiaDay(_nowH2) ? regDayVat : regNightVat;
+  const _regNowLbl2 = isSofiaDay(_nowH2) ? 'ден' : 'нощ';
+  const totNowPct   = pct(_regNowLv2, freeVatCur);
+
+  const totHTML = `
+    <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
+      <td>Без ДДС &nbsp;(${_regNowLbl2})</td>
+      <td style="text-align:right;font-family:monospace;">${fmtV(regNowExVat)}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatCur)?fmtV(freeExVatCur):'—'}</td>
+      <td style="text-align:right;${pctSty(pct(regNowExVat,freeExVatCur))}">${fmtP(pct(regNowExVat,freeExVatCur))}</td>
+    </tr>
+    <tr style="font-weight:700;background:#f0f6ff;">
+      <td>ОБЩО с ДДС &nbsp;(${_regNowLbl2})</td>
+      <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(_regNowLv2)}</td>
+      <td style="text-align:right;font-family:monospace;${isFinite(freeVatCur)?(freeVatCur<_regNowLv2?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatCur)?fmtV(freeVatCur):'—'}</td>
+      <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totNowPct)}">${fmtP(totNowPct)}</span></td>
+    </tr>`;
 
   // Blend regulated tariff using actual load profile day/night split
   const dayShareActual = loadWeights.reduce((s, w, h) => s + (isSofiaDay(h) ? w : 0), 0);
