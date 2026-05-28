@@ -1108,7 +1108,7 @@ function updateGenTable(latest) {
   }
 }
 
-function updateDayBalance(binned, pd, dateStr) {
+function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr);
   const pByBin = {};
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
@@ -1144,7 +1144,7 @@ function updateDayBalance(binned, pd, dateStr) {
   const battBox = document.getElementById('batt-daily-box');
   battBox.style.display = (battChgMwh > 0 || battDisMwh > 0) ? '' : 'none';
 
-  const curP = getPriceAt(pd, latest ? toUtcMs(latest) : Date.now());
+  const curP = getPriceAt(pd, snapMs !== null ? snapMs : Date.now());
   document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
   document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
   document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
@@ -1708,7 +1708,7 @@ function onSnapSlider(val) {
   updateGenTable(snap);
   drawPie(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
-  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
+  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs);
   const snapMs = toUtcMs(snap);
   drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
