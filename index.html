@@ -1319,6 +1319,15 @@ function drawTariffPanel(pd, binned, dateStr) {
   const nowPct = pct(regNowLv, currentFreeLv);
   const nowCheaper = isFinite(currentFreeLv) && currentFreeLv < regNowLv;
 
+  // EUR/MWh breakdown for free-market price
+  const networkEurMwh   = network / T.BGN_PER_EUR * 1000;
+  const supplyEurMwh    = isFinite(currentSpotEur) ? currentSpotEur + T.freeMarketMarkup : NaN;
+  const subTotalEurMwh  = isFinite(supplyEurMwh) ? supplyEurMwh + networkEurMwh : NaN;
+  const vatEurMwh       = isFinite(subTotalEurMwh) ? subTotalEurMwh * T.VAT : NaN;
+  const freeEurMwh      = isFinite(subTotalEurMwh) ? subTotalEurMwh * (1 + T.VAT) : NaN;
+  const regNowEurMwh    = regNowLv / T.BGN_PER_EUR * 1000;
+  const fmtEm = v => isFinite(v) ? v.toFixed(1) : '—';
+
   el.innerHTML = `
     <!-- ── HERO SUMMARY ── -->
     <div onclick="toggleTariffDetails()"
@@ -1327,20 +1336,22 @@ function drawTariffPanel(pd, binned, dateStr) {
       <!-- Current market price block -->
       <div style="flex:1;padding:12px 16px;border-right:1px solid #edf2f8;">
         <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:4px;">Борсова цена сега (IBEX)</div>
-        <div style="font-size:1.7rem;font-weight:700;color:#1a2233;line-height:1.1;">${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">EUR/МВтч</span></div>
-        <div style="font-size:0.82rem;color:#5a7090;margin-top:2px;">
-          = <strong style="color:#1a2233;">${isFinite(currentFreeLv)?currentFreeLv.toFixed(4):'—'}</strong> лв/кВтч
-          <span style="font-size:0.68rem;color:#8a9bb5;">(вкл. мрежа + ДДС)</span>
+        <div style="font-size:1.7rem;font-weight:700;color:#1a2233;line-height:1.1;">${fmtEm(currentSpotEur)} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">EUR/МВтч</span></div>
+        <div style="font-size:0.82rem;font-weight:700;color:#1a2233;margin-top:4px;">
+          → <span style="${nowCheaper?'color:#1a8a1a':'color:#cc2200'}">${fmtEm(freeEurMwh)} EUR/МВтч</span>
+          <span style="font-weight:400;color:#8a9bb5;font-size:0.72rem;">за краен потребител</span>
+        </div>
+        <div style="font-size:0.7rem;color:#8a9bb5;margin-top:3px;line-height:1.6;">
+          борса&nbsp;${fmtEm(supplyEurMwh)} &nbsp;+&nbsp; мрежа&nbsp;${fmtEm(networkEurMwh)} &nbsp;+&nbsp; ДДС&nbsp;${fmtEm(vatEurMwh)} EUR/МВтч
         </div>
       </div>
 
       <!-- vs Regulated block -->
       <div style="flex:1;padding:12px 16px;border-right:1px solid #edf2f8;">
-        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:4px;">Регулирана тарифа (КЕВР)</div>
-        <div style="font-size:1.7rem;font-weight:700;color:#004494;line-height:1.1;">${fmtV(regNowLv)} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">лв/кВтч</span></div>
-        <div style="font-size:0.82rem;color:#5a7090;margin-top:2px;">
-          тарифа: <strong>${regNowLabel}</strong> &nbsp;|&nbsp;
-          ден ${fmtV(regDayVat)} / нощ ${fmtV(regNightVat)} лв/кВтч
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:4px;">Регулирана тарифа (КЕВР) — ${regNowLabel}</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#004494;line-height:1.1;">${fmtEm(regNowEurMwh)} <span style="font-size:0.85rem;font-weight:400;color:#5a7090;">EUR/МВтч</span></div>
+        <div style="font-size:0.82rem;color:#5a7090;margin-top:4px;">
+          ${fmtV(regNowLv)} лв/кВтч &nbsp;|&nbsp; ден ${fmtEm(regDayVat/T.BGN_PER_EUR*1000)} / нощ ${fmtEm(regNightVat/T.BGN_PER_EUR*1000)} EUR/МВтч
         </div>
       </div>
 
