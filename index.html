@@ -1308,6 +1308,22 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
   const dayCheap   = dayHours.filter(a => a.cheaper);
   const nightCheap = nightHours.filter(a => a.cheaper);
   const allCheap   = hourlyAna.filter(a => a.cheaper);
+  const allExp     = hourlyAna.filter(a => !a.cheaper && isFinite(a.freeRate));
+
+  // Break-even: minimum % of consumption in cheap hours so free market wins overall
+  // avgSav = weighted avg savings/kWh in cheap hours; avgCost = weighted avg extra cost/kWh in expensive hours
+  let breakEvenPct = null, currentCheapPct = null;
+  if (allCheap.length > 0 && allExp.length > 0) {
+    const wSum = (arr, fn) => arr.reduce((s, a) => s + fn(a) * loadWeights[a.h], 0);
+    const cheapW  = wSum(allCheap, () => 1);
+    const expW    = wSum(allExp,   () => 1);
+    const avgSav  = cheapW  > 0 ? wSum(allCheap, a => a.regRate  - a.freeRate) / cheapW  : 0;
+    const avgCost = expW    > 0 ? wSum(allExp,   a => a.freeRate - a.regRate)  / expW    : 0;
+    breakEvenPct    = avgSav + avgCost > 0 ? (avgCost / (avgSav + avgCost)) * 100 : 0;
+    currentCheapPct = wSum(allCheap, () => 1) * 100;
+  } else if (allCheap.length === 24) {
+    breakEvenPct = 0; currentCheapPct = 100;
+  }
 
   const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
 
@@ -1428,11 +1444,22 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null) {
           ${allCheap.length > 0 ? `
           <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
             ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
-            При потребление само в тези часове по-изгоден е свободният пазар.
           </div>` : `
           <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
             ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
           </div>`}
+
+          ${breakEvenPct !== null ? (() => {
+            const ok = currentCheapPct >= breakEvenPct;
+            const bg = ok ? '#f0fff5' : '#fff8f0';
+            const border = ok ? '#a5d5b5' : '#f5c5a5';
+            return `<div style="margin-top:8px;font-size:0.75rem;padding:8px 10px;background:${bg};border:1px solid ${border};border-radius:4px;line-height:1.7;">
+              <strong>Праг за изгода на свободния пазар:</strong>
+              минимум <strong>${breakEvenPct.toFixed(0)}%</strong> от потреблението в евтините часове
+              &nbsp;·&nbsp; по профил на натоварване сега: <strong style="${ok?'color:#1a8a1a':'color:#cc2200'}">${currentCheapPct.toFixed(0)}%</strong>
+              &nbsp;${ok ? '✓ изгоден' : '✗ не е достатъчно'}
+            </div>`;
+          })() : ''}
         </div>
       </div>
     </div>
