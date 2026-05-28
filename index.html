@@ -1456,7 +1456,10 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
           ${(() => {
             const beRow = (label, be, cheapHrs) => {
               if (!be) return '';
-              const cheapRanges = cheapHrs.length > 0 ? hoursToRanges(cheapHrs.map(a => a.h)) : '—';
+              if (cheapHrs.length === 0) {
+                return `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;line-height:1.6;">✗ ${label}: регулираната тарифа е по-изгодна през всички часове в периода.</div>`;
+              }
+              const cheapRanges = hoursToRanges(cheapHrs.map(a => a.h));
               const ok = be.shift < 1;
               const bg = ok ? '#f0fff5' : '#fff8f0';
               const border = ok ? '#a5d5b5' : '#f5c5a5';
