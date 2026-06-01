@@ -135,11 +135,51 @@ def _fetch_prices_direct(year: int, month: int) -> dict:
         return json.loads(r.read())
 
 
+def _fetch_prices_ibex_today() -> list[dict]:
+    """Fetch today's day-ahead prices from ibex.bg (CET delivery day).
+
+    ibex.bg delivery times are in CET/CEST (Europe/Berlin). Returns list of
+    {unix_seconds, price} with UTC unix timestamps for all 96 quarter-hours.
+    """
+    from zoneinfo import ZoneInfo
+    CET = ZoneInfo("Europe/Berlin")
+    url = f"https://ibex.bg/Ext/IDM_Homepage/fetch_dam.php?lang=en&num={int(datetime.now(timezone.utc).timestamp())}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://ibex.bg/"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        rows = json.loads(r.read().decode())
+    result = []
+    for row in rows:
+        local_dt = datetime.strptime(row["date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=CET)
+        result.append({"unix_seconds": int(local_dt.timestamp()), "price": row["price"]})
+    return result
+
+
+def _merge_ibex_into(data: dict, ibex_rows: list[dict]) -> dict:
+    """Merge ibex.bg rows into an energy-charts price dict, filling gaps."""
+    existing = set(data.get("unix_seconds", []))
+    new_ts, new_pr = [], []
+    for row in ibex_rows:
+        if row["unix_seconds"] not in existing:
+            new_ts.append(row["unix_seconds"])
+            new_pr.append(row["price"])
+    if not new_ts:
+        return data
+    ts_all = data.get("unix_seconds", []) + new_ts
+    pr_all = data.get("price", [])       + new_pr
+    # sort by timestamp
+    paired = sorted(zip(ts_all, pr_all))
+    data["unix_seconds"] = [p[0] for p in paired]
+    data["price"]        = [p[1] for p in paired]
+    return data
+
+
 def update_prices(year: int, month: int):
-    """Download IBEX/DA prices from energy-charts, refreshing every 4 hours.
+    """Download IBEX/DA prices from energy-charts (+ ibex.bg fallback), refreshing every 4 hours.
 
     energy-charts blends DA and real-time prices and updates throughout the day,
     so a once-per-day fetch produces stale values for past hours.
+    ibex.bg supplements coverage for the CET-midnight boundary hours that
+    energy-charts (UTC-aligned) may miss.
     """
     ym   = f"{year:04d}-{month:02d}"
     path = DATA_DIR / f"prices-{ym}.json"
@@ -157,13 +197,31 @@ def update_prices(year: int, month: int):
             pass
 
     print(f"Fetching IBEX prices for {ym} …", flush=True)
+    data = None
     try:
         data = _fetch_prices_direct(year, month)
-        data["fetched_at"] = now.isoformat()
-        path.write_text(json.dumps(data))
-        print(f"  → {len(data.get('unix_seconds', []))} price points", flush=True)
+        print(f"  energy-charts → {len(data.get('unix_seconds', []))} price points", flush=True)
     except Exception as e:
-        print(f"  WARN: price fetch failed: {e}", flush=True)
+        print(f"  WARN: energy-charts fetch failed: {e}", flush=True)
+        data = {"unix_seconds": [], "price": [], "unit": "EUR/MWh"}
+
+    # Supplement with ibex.bg to fill the CET-midnight boundary gaps.
+    # Energy-charts is UTC-aligned; ibex.bg CET delivery days span ±2h around UTC midnight.
+    # We include all ibex.bg entries so getDayPrices() (Sofia-midnight-aligned) finds prices
+    # for the full Sofia day even when it crosses a UTC month boundary.
+    try:
+        ibex_rows = _fetch_prices_ibex_today()
+        before = len(data.get("unix_seconds", []))
+        data = _merge_ibex_into(data, ibex_rows)
+        added = len(data.get("unix_seconds", [])) - before
+        if added:
+            print(f"  ibex.bg added {added} boundary entries", flush=True)
+    except Exception as e:
+        print(f"  WARN: ibex.bg supplement failed: {e}", flush=True)
+
+    data["fetched_at"] = now.isoformat()
+    path.write_text(json.dumps(data))
+    print(f"  → total {len(data.get('unix_seconds', []))} price points saved", flush=True)
 
 
 def append_day_file(record):

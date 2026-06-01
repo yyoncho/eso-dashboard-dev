@@ -629,7 +629,33 @@ function fmtEur(e) {
 async function loadPrices(dateStr) {
   const ym = dateStr.slice(0, 7);
   if (priceCache[ym]) return priceCache[ym];
-  try { const d = await getJSON(`${BASE}/prices-${ym}.json`); priceCache[ym] = d; return d; }
+  try {
+    const d = await getJSON(`${BASE}/prices-${ym}.json`);
+    // If viewing the 1st of a month, also load prev month to cover Sofia midnight
+    // (Sofia midnight on the 1st is ~21:00 UTC the prev month)
+    if (dateStr.slice(8, 10) === '01') {
+      const prev = new Date(dateStr + 'T12:00:00Z');
+      prev.setUTCMonth(prev.getUTCMonth() - 1);
+      const ymPrev = prev.toISOString().slice(0, 7);
+      try {
+        const dp = await getJSON(`${BASE}/prices-${ymPrev}.json`);
+        if (dp && dp.unix_seconds) {
+          const existing = new Set(d.unix_seconds || []);
+          for (let i = 0; i < dp.unix_seconds.length; i++) {
+            if (!existing.has(dp.unix_seconds[i])) {
+              (d.unix_seconds = d.unix_seconds || []).push(dp.unix_seconds[i]);
+              (d.price = d.price || []).push(dp.price[i]);
+            }
+          }
+          const paired = d.unix_seconds.map((t,i)=>[t,d.price[i]]).sort((a,b)=>a[0]-b[0]);
+          d.unix_seconds = paired.map(p=>p[0]);
+          d.price        = paired.map(p=>p[1]);
+        }
+      } catch(_) {}
+    }
+    priceCache[ym] = d;
+    return d;
+  }
   catch(e) { return null; }
 }
 function getPriceAt(pd, ms) {
