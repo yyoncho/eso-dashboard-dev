@@ -628,12 +628,16 @@ function fmtEur(e) {
 // ══════════════════════════════════════════════════════════════════════════════
 async function loadPrices(dateStr) {
   const ym = dateStr.slice(0, 7);
-  if (priceCache[ym]) return priceCache[ym];
+  // Use a separate cache key when prev-month data is merged in, so that loading
+  // June 2 first doesn't poison the cache for June 1 (which needs May's tail).
+  const isFirst = dateStr.slice(8, 10) === '01';
+  const cacheKey = isFirst ? ym + '+prev' : ym;
+  if (priceCache[cacheKey]) return priceCache[cacheKey];
   try {
     const d = await getJSON(`${BASE}/prices-${ym}.json`);
     // If viewing the 1st of a month, also load prev month to cover Sofia midnight
     // (Sofia midnight on the 1st is ~21:00 UTC the prev month)
-    if (dateStr.slice(8, 10) === '01') {
+    if (isFirst) {
       const prev = new Date(dateStr + 'T12:00:00Z');
       prev.setUTCMonth(prev.getUTCMonth() - 1);
       const ymPrev = prev.toISOString().slice(0, 7);
@@ -653,7 +657,7 @@ async function loadPrices(dateStr) {
         }
       } catch(_) {}
     }
-    priceCache[ym] = d;
+    priceCache[cacheKey] = d;
     return d;
   }
   catch(e) { return null; }
