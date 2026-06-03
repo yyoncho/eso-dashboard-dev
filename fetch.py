@@ -55,19 +55,40 @@ def build_record():
     flows    = fetch_json("https://www.eso.bg/api/scada_live_json_pure.php")
 
     row = {}
+    bess_charge    = 0.0
+    bess_discharge = 0.0
+
     for item in gen_data:
         if item is None:
             continue
         label, value = item[0], item[1]
-        name = re.sub(r"\s+\d+[.,]\d+%$", "", label).strip()
-        if "ССЕЕ" in name:
-            row["ССЕЕ_mw"]    = -float(value) if "зареждане" in label else float(value)
-            row["ССЕЕ_state"] = "charging" if "зареждане" in label else "discharging"
+        # BESS: ESO used ССЕЕ (old) and switched to ССЕБ (~2026-06).
+        # New format has two separate entries for charge and discharge.
+        if "ССЕЕ" in label or "ССЕБ" in label:
+            try:
+                val = float(str(value).replace(",", "."))
+            except (ValueError, TypeError):
+                val = 0.0
+            if "зареждане" in label:
+                bess_charge += val
+            else:
+                bess_discharge += val
+        elif label.strip() == "Помпи":
+            try:
+                row["pumps_mw"] = float(str(value).replace(",", "."))
+            except (ValueError, TypeError):
+                pass
         else:
+            name = re.sub(r"\s+\d+[.,]\d+%$", "", label).strip()
             try:
                 row[name] = float(str(value).replace(",", "."))
             except (ValueError, TypeError):
                 pass
+
+    # Net BESS: positive = discharging into grid, negative = charging from grid
+    net_bess = bess_discharge - bess_charge
+    row["ССЕЕ_mw"]    = round(net_bess, 2)
+    row["ССЕЕ_state"] = "discharging" if net_bess >= 0 else "charging"
 
     for c in FLOW_COUNTRIES:
         row[f"{c}_mw"] = flows.get(f"{c}_data", 0) or 0
@@ -80,30 +101,9 @@ def build_record():
     row["net_import_mw"] = round(net_import, 1)
     row["load_mw"]       = round(load, 1)
 
-    ssee  = abs(row.get("ССЕЕ_mw", 0) or 0)
-    state = row.get("ССЕЕ_state", "")
-    row["batt_charge_mw"] = round(ssee if state == "charging" else 0.0, 1)
-
-    # Discharge: ESO bakes it into the % denominator — back-calculate implied total
-    implied = []
-    for item in gen_data:
-        if item is None: continue
-        label, value = item[0], item[1]
-        if "ССЕЕ" in label: continue
-        m = re.search(r'(\d+[.,]\d+)%', label)
-        if not m: continue
-        pct = float(m.group(1).replace(',', '.'))
-        try: val = float(str(value).replace(',', '.'))
-        except: continue
-        if pct > 0 and val > 0:
-            implied.append(val / (pct / 100))
-    # Percentage precision is 0.01% → ~50 MW noise at typical load; suppress below that
-    if implied:
-        api_total = sum(implied) / len(implied)
-        raw = max(0.0, api_total - gen_sum)
-    else:
-        raw = max(0.0, load - gen_sum - net_import)
-    row["batt_discharge_mw"] = round(raw if raw >= 50.0 else 0.0, 1)
+    # Direct values from API — no implied calculation needed with new ССЕБ format
+    row["batt_charge_mw"]    = round(bess_charge, 1)
+    row["batt_discharge_mw"] = round(bess_discharge, 1)
 
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
