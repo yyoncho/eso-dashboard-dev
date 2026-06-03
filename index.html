@@ -279,46 +279,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-unit">MW</div>
       <div class="stat-sub" id="s-import-eur">—</div>
     </div>
-    <div class="stat-card teal">
-      <div class="stat-label">АЕЦ</div>
-      <div class="stat-val" id="s-nuc">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">ВЕЦ</div>
-      <div class="stat-val" id="s-vec">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">М.ВЕЦ</div>
-      <div class="stat-val" id="s-mvec">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">ВяЕЦ</div>
-      <div class="stat-val" id="s-wind">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">ФЕЦ</div>
-      <div class="stat-val" id="s-solar">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card purple">
-      <div class="stat-label">ССЕЕ</div>
-      <div class="stat-val" id="s-batt">—</div>
-      <div class="stat-unit" id="s-batt-state">MW</div>
-    </div>
-    <div class="stat-card" id="s-discharge-card" style="border-top-color:#f59f00;">
-      <div class="stat-label">ССЕЕ разреждане</div>
-      <div class="stat-val" id="s-discharge">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card" id="s-pumps-card" style="border-top-color:#0369a1;display:none;">
-      <div class="stat-label">Помпи зар.</div>
-      <div class="stat-val" id="s-pumps">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
+    <div id="s-dyn" style="display:contents;"></div>
   </div>
 
   <!-- two-column -->
@@ -410,6 +371,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
                   <div class="balance-label">Разреждане</div>
                   <div class="balance-val revenue" id="b-batt-dis-eur">—</div>
                   <div class="stat-unit" id="b-batt-dis-sub">—</div>
+                </div>
+              </div>
+              <div id="b-pumps-row" style="display:none;margin-top:6px;">
+                <div class="balance-item expense">
+                  <div class="balance-label">Зареждане помпи</div>
+                  <div class="balance-val expense" id="b-pumps-eur">—</div>
+                  <div class="stat-unit" id="b-pumps-sub">—</div>
                 </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
@@ -1088,26 +1056,6 @@ function updateStatusCards(latest, pd) {
   const nImp = latest['net_import_mw'] || 0;
   document.getElementById('s-load').textContent = fmt0(load);
   document.getElementById('s-gen').textContent  = fmt0(gen);
-  document.getElementById('s-nuc').textContent  = fmt0(latest['АЕЦ']);
-  document.getElementById('s-vec').textContent   = fmt0(latest['ВЕЦ']);
-  document.getElementById('s-mvec').textContent  = fmt0(latest['Малки ВЕЦ']);
-  document.getElementById('s-wind').textContent  = fmt0(latest['ВяЕЦ']);
-  document.getElementById('s-solar').textContent = fmt0(latest['ФЕЦ']);
-  const bMw  = latest['ССЕЕ_mw'];
-  const bSt  = battState(bMw);
-  document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
-  document.getElementById('s-batt-state').textContent =
-    bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
-
-  const discharge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
-  document.getElementById('s-discharge').textContent = fmt0(discharge);
-  document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
-
-  const pumpsNow = latest['pumps_mw'] || 0;
-  const pumpsCard = document.getElementById('s-pumps-card');
-  if (pumpsCard) { pumpsCard.style.display = pumpsNow > 0 ? '' : 'none'; }
-  const pumpsEl = document.getElementById('s-pumps');
-  if (pumpsEl) pumpsEl.textContent = fmt0(pumpsNow);
 
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
@@ -1116,6 +1064,37 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
   document.getElementById('s-import-eur').textContent = isFinite(price)
     ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
+
+  // Dynamic source cards sorted by descending MW
+  const tsMs = toUtcMs(latest);
+  const bMw  = latest['ССЕЕ_mw'] || 0;
+  const bSt  = battState(bMw);
+  const pumpsNow  = latest['pumps_mw'] || 0;
+
+  const cards = [
+    { label: 'ФЕЦ',        color: '#fa4b42', v: latest['ФЕЦ']||0,
+      unit: 'MW' },
+    { label: 'АЕЦ',        color: '#2caffe', v: latest['АЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ВЕЦ',        color: '#6b8abc', v: latest['ВЕЦ']||0,
+      unit: 'MW' },
+    { label: 'М.ВЕЦ',      color: '#d568fb', v: latest['Малки ВЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ВяЕЦ',       color: '#2ee0ca', v: latest['ВяЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ССЕЕ',       color: '#7b3fa0', v: Math.abs(bMw),
+      unit: bSt==='charging' ? 'MW — зар.' : bSt==='discharging' ? 'MW — разр.' : 'MW' },
+  ];
+  if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: pumpsNow, unit: 'MW' });
+
+  cards.sort((a, b) => b.v - a.v);
+
+  document.getElementById('s-dyn').innerHTML = cards.map(c => `
+    <div class="stat-card" style="border-top-color:${c.color};${c.dim ? 'opacity:0.4;' : ''}">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-val">${fmt0(c.v)}</div>
+      <div class="stat-unit">${c.unit}</div>
+    </div>`).join('');
 }
 
 function updateFlowsTable(latest, pd) {
@@ -1163,12 +1142,15 @@ function updateFlowsTable(latest, pd) {
 function updateGenTable(latest) {
   if (!latest) return;
   const battDischarge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
+  const netImp = latest['net_import_mw'] || 0;
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
   if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
+  if (netImp > 0) rows.push({ label: 'Внос', color: '#9e9e9e', mw: netImp });
   const pumpsNow = latest['pumps_mw'] || 0;
   if (pumpsNow > 0) rows.push({ label: 'Помпи (товар)', color: '#0369a1', mw: -pumpsNow });
+  if (netImp < 0) rows.push({ label: 'Износ', color: '#1a8a1a', mw: netImp });
   rows.sort((a,b) => b.mw - a.mw);
-  const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
+  const total = rows.filter(r => r.mw > 0).reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
   tbody.innerHTML = '';
   for (const s of rows) {
@@ -1176,10 +1158,10 @@ function updateGenTable(latest) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.label}</td>
-      <td style="text-align:right;">${fmt0(s.mw)}</td>
-      <td style="text-align:right;">${pct.toFixed(1)}%</td>
+      <td style="text-align:right;${s.mw < 0 ? 'color:#cc2200;' : ''}">${s.mw < 0 ? '−' : ''}${fmt0(Math.abs(s.mw))}</td>
+      <td style="text-align:right;">${s.mw > 0 ? pct.toFixed(1)+'%' : ''}</td>
       <td><div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
-        <div style="width:${Math.min(100,pct)}%;height:100%;background:${s.color};border-radius:3px;"></div>
+        <div style="width:${Math.min(100,Math.abs(pct))}%;height:100%;background:${s.color};border-radius:3px;"></div>
       </div></td>`;
     tbody.appendChild(tr);
   }
@@ -1211,7 +1193,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
       if (isFinite(p)) pumpsChgEur += pumps * (15/60) * p;
     }
   }
-  const net = expEur - impEur;
+  const net = expEur - impEur - pumpsChgEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
   const avgExpPrice = expMwh > 0 ? expEur / expMwh : NaN;
   document.getElementById('b-import-eur').textContent = fmtEur(impEur);
@@ -1226,26 +1208,17 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const battBox = document.getElementById('batt-daily-box');
   battBox.style.display = (battChgMwh > 0 || battDisMwh > 0 || pumpsChgMwh > 0) ? '' : 'none';
 
-  // Pumps daily section
-  let pumpsDailyEl = document.getElementById('pumps-daily-box');
-  if (!pumpsDailyEl) {
-    pumpsDailyEl = document.createElement('div');
-    pumpsDailyEl.id = 'pumps-daily-box';
-    pumpsDailyEl.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;';
-    battBox.parentNode.appendChild(pumpsDailyEl);
-  }
-  if (pumpsChgMwh > 0) {
-    const avgPr = pumpsChgMwh > 0 ? pumpsChgEur / pumpsChgMwh : NaN;
-    pumpsDailyEl.innerHTML = `
-      <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Помпи — дневен разход</div>
-      <div class="balance-item expense">
-        <div class="balance-label">Зареждане помпи</div>
-        <div class="balance-val expense">${fmtEur(pumpsChgEur)}</div>
-        <div class="stat-unit">${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}</div>
-      </div>`;
-    pumpsDailyEl.style.display = '';
-  } else {
-    pumpsDailyEl.style.display = 'none';
+  // Pumps row inside battery box
+  const pumpsRow = document.getElementById('b-pumps-row');
+  if (pumpsRow) {
+    if (pumpsChgMwh > 0) {
+      const avgPr = pumpsChgEur / pumpsChgMwh;
+      document.getElementById('b-pumps-eur').textContent = fmtEur(pumpsChgEur);
+      document.getElementById('b-pumps-sub').textContent = `${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}`;
+      pumpsRow.style.display = '';
+    } else {
+      pumpsRow.style.display = 'none';
+    }
   }
 
   const curP = getPriceAt(pd, snapMs !== null ? snapMs : Date.now());
@@ -1595,12 +1568,15 @@ function drawPie(latest) {
   const chgMw = explicitChg != null && explicitChg > 0
     ? explicitChg
     : (loadMw > 0 ? Math.max(0, total - loadMw - exportMw) : 0);
+  const pumpsNowPie = latest['pumps_mw'] || 0;
   const subParts = [];
-  if (loadMw > 0) subParts.push(`${fmt0(loadMw)} т`);
-  if (exportMw > 50) subParts.push(`${fmt0(exportMw)} износ`);
-  if (chgMw > 50) subParts.push(`${fmt0(chgMw)} зар.`);
+  if (loadMw > 0) subParts.push({ v: loadMw, s: `${fmt0(loadMw)} т`, pin: 0 });
+  if (exportMw > 50) subParts.push({ v: exportMw, s: `${fmt0(exportMw)} износ`, pin: 1 });
+  if (chgMw > 50) subParts.push({ v: chgMw, s: `${fmt0(chgMw)} зар.`, pin: 99 });
+  if (pumpsNowPie > 0) subParts.push({ v: pumpsNowPie, s: `${fmt0(pumpsNowPie)} помпи`, pin: 99 });
+  subParts.sort((a, b) => a.pin !== b.pin ? a.pin - b.pin : b.v - a.v);
   const centerSub = subParts.length
-    ? `<span style="font-size:9px;color:#5a7090">${subParts.join(' / ')}</span>`
+    ? `<span style="font-size:9px;color:#5a7090">${subParts.map(p=>p.s).join(' / ')}</span>`
     : '';
   const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span><br>${centerSub}`;
   const traceData = [{
