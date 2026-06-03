@@ -313,6 +313,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-val" id="s-discharge">—</div>
       <div class="stat-unit">MW</div>
     </div>
+    <div class="stat-card" id="s-pumps-card" style="border-top-color:#0369a1;display:none;">
+      <div class="stat-label">Помпи зар.</div>
+      <div class="stat-val" id="s-pumps">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
   </div>
 
   <!-- two-column -->
@@ -333,8 +338,9 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         </div>
         <div id="pie-info" class="info-dropdown">Данните за производство по източници са в реално време от ЕСО ЕАД. Вносът и износът се показват директно от ЕСО без допълнителна обработка. ССЕЕ (батерия) се връща от API-то на ЕСО, но не е включено в процентното разпределение на диаграмата — това обяснява „липсващите" проценти до 100%. Зареждането се изчислява като разлика между общото потребление и сумата от всички останали източници; разреждането се отчита директно от API-то. Верификация: производство + внос − износ ≈ потребление.</div>
         <div style="padding:4px;">
-          <div id="chart-pie" style="height:500px;"></div>
+          <div id="chart-pie" style="height:400px;"></div>
         </div>
+        <div id="chart-pie-profile" style="height:190px;border-top:1px solid #edf2f8;padding:2px 4px 0;"></div>
       </div>
 
       <div class="panel" id="flows-live">
@@ -689,7 +695,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw','pumps_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -1077,6 +1083,12 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-discharge').textContent = fmt0(discharge);
   document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
 
+  const pumpsNow = latest['pumps_mw'] || 0;
+  const pumpsCard = document.getElementById('s-pumps-card');
+  if (pumpsCard) { pumpsCard.style.display = pumpsNow > 0 ? '' : 'none'; }
+  const pumpsEl = document.getElementById('s-pumps');
+  if (pumpsEl) pumpsEl.textContent = fmt0(pumpsNow);
+
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
   document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
@@ -1159,7 +1171,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
   let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
-  let battChgMwh=0, battDisMwh=0;
+  let battChgMwh=0, battDisMwh=0, pumpsChgMwh=0, pumpsChgEur=0;
   for (const b of binned) {
     const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
     const mwh = mw*(15/60);
@@ -1173,6 +1185,11 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
     const dis = battDis(b['batt_discharge_mw']);
     if (isFinite(chg) && chg > 0) battChgMwh += chg * (15/60);
     if (dis > 0) battDisMwh += dis * (15/60);
+    const pumps = Math.max(0, b['pumps_mw'] || 0);
+    if (pumps > 0) {
+      pumpsChgMwh += pumps * (15/60);
+      if (isFinite(p)) pumpsChgEur += pumps * (15/60) * p;
+    }
   }
   const net = expEur - impEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
@@ -1187,7 +1204,29 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
 
   const battBox = document.getElementById('batt-daily-box');
-  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0) ? '' : 'none';
+  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0 || pumpsChgMwh > 0) ? '' : 'none';
+
+  // Pumps daily section
+  let pumpsDailyEl = document.getElementById('pumps-daily-box');
+  if (!pumpsDailyEl) {
+    pumpsDailyEl = document.createElement('div');
+    pumpsDailyEl.id = 'pumps-daily-box';
+    pumpsDailyEl.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;';
+    battBox.parentNode.appendChild(pumpsDailyEl);
+  }
+  if (pumpsChgMwh > 0) {
+    const avgPr = pumpsChgMwh > 0 ? pumpsChgEur / pumpsChgMwh : NaN;
+    pumpsDailyEl.innerHTML = `
+      <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Помпи — дневен разход</div>
+      <div class="balance-item expense">
+        <div class="balance-label">Зареждане помпи</div>
+        <div class="balance-val expense">${fmtEur(pumpsChgEur)}</div>
+        <div class="stat-unit">${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}</div>
+      </div>`;
+    pumpsDailyEl.style.display = '';
+  } else {
+    pumpsDailyEl.style.display = 'none';
+  }
 
   const curP = getPriceAt(pd, snapMs !== null ? snapMs : Date.now());
   document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
@@ -1584,6 +1623,64 @@ function drawPie(latest) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  MINI DAILY PROFILE (inside pie panel)
+// ══════════════════════════════════════════════════════════════════════════════
+let _pieProfileInit = false;
+function drawPieProfile(binned, pd, dateStr) {
+  if (!binned || !binned.length) return;
+  const pts = rotatePts(binned, dateStr);
+  const xs  = pts.map(p => toSofiaStr(p.ts));
+  const RE_FILL = ['ФЕЦ','ВяЕЦ','ВЕЦ','Малки ВЕЦ','Био ЕЦ'];
+  const RE_COLORS = { 'ФЕЦ':'#fa4b42','ВяЕЦ':'#2ee0ca','ВЕЦ':'#6b8abc','Малки ВЕЦ':'#d568fb','Био ЕЦ':'#feb56a' };
+  const reSeries = RE_FILL.map(k => ({
+    x: xs, y: pts.map(p => Math.max(0, p[k] || 0)),
+    name: k, stackgroup: 're',
+    fillcolor: RE_COLORS[k]+'99', line: { width: 0, color: RE_COLORS[k] },
+    hovertemplate: `${k}: %{y:.0f} MW<extra></extra>`,
+    showlegend: false,
+  }));
+  const battDisY = pts.map(p => battDis(p['batt_discharge_mw']));
+  const battTr = {
+    x: xs, y: battDisY, name: 'ССЕЕ разр.', stackgroup: 're',
+    fillcolor: '#f59f0099', line: { width: 0, color: '#f59f00' },
+    hovertemplate: 'ССЕЕ: %{y:.0f} MW<extra></extra>', showlegend: false,
+  };
+  const loadTr = {
+    x: xs, y: pts.map(p => p['load_mw'] || 0),
+    name: 'Товар', line: { color: '#e53935', width: 1.5, shape: 'spline' },
+    hovertemplate: 'Товар: %{y:.0f} MW<extra></extra>', showlegend: false,
+  };
+  const traces = [...reSeries, battTr, loadTr];
+
+  const hasPumpsP = pts.some(p => (p['pumps_mw'] || 0) > 0);
+  if (hasPumpsP) {
+    traces.push({
+      x: xs, y: pts.map(p => -(p['pumps_mw'] || 0)),
+      name: 'Помпи', line: { color: '#0369a1', width: 1.5, dash: 'dot', shape: 'spline' },
+      hovertemplate: 'Помпи: %{y:.0f} MW<extra></extra>', showlegend: false,
+    });
+  }
+
+  const layout = {
+    paper_bgcolor: '#fff', plot_bgcolor: '#fafcff',
+    font: { family: 'Arial', color: '#2a3a5a', size: 9 },
+    xaxis: { type: 'date', gridcolor: '#dde8f5', tickfont: { size: 8 }, showticklabels: true },
+    yaxis: { gridcolor: '#dde8f5', tickfont: { size: 8 }, title: { text: 'МВт', font: { size: 9 } } },
+    hovermode: 'x unified',
+    margin: { t: 4, b: 30, l: 44, r: 8 },
+    uirevision: 'pie-profile',
+    showlegend: false,
+  };
+
+  if (!_pieProfileInit) {
+    Plotly.newPlot('chart-pie-profile', traces, layout, { responsive: true, displayModeBar: false });
+    _pieProfileInit = true;
+  } else {
+    Plotly.react('chart-pie-profile', traces, layout, { responsive: true, displayModeBar: false });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  TIMELINE CHART
 // ══════════════════════════════════════════════════════════════════════════════
 const LO = {
@@ -1774,6 +1871,7 @@ function onSnapSlider(val) {
   updateFlowsTable(snap, _dayPriceData);
   updateGenTable(snap);
   drawPie(snap);
+  drawPieProfile(_dayRecords.length > 1 ? bin15min(_dayRecords) : [], _dayPriceData, _dayDateStr);
   const snapMs = toUtcMs(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
   updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs);
@@ -1846,6 +1944,7 @@ async function refresh() {
     updateDayBalance(displayBinned, pd, dateStr);
 
     drawPie(displaySnap);
+    drawPieProfile(displayBinned, pd, dateStr);
     updateDayStartLabel();
     drawTimeline(displayBinned, pd, dateStr);
     drawFlowsTimeline(displayBinned);
