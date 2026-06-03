@@ -105,6 +105,8 @@ def build_record():
     row["batt_charge_mw"]    = round(bess_charge, 1)
     row["batt_discharge_mw"] = round(bess_discharge, 1)
 
+    row["raw_gen_api"] = gen_data
+
     now_utc = datetime.now(timezone.utc)
     row["timestamp_utc"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     row["date_bg"]       = now_utc.astimezone(BG_TZ).strftime("%Y-%m-%d")
