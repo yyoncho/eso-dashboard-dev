@@ -313,6 +313,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-val" id="s-discharge">—</div>
       <div class="stat-unit">MW</div>
     </div>
+    <div class="stat-card" id="s-pumps-card" style="border-top-color:#0369a1;display:none;">
+      <div class="stat-label">Помпи зар.</div>
+      <div class="stat-val" id="s-pumps">—</div>
+      <div class="stat-unit">MW</div>
+    </div>
   </div>
 
   <!-- two-column -->
@@ -607,8 +612,13 @@ function toUtcMs(r) {
   if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
   return Date.parse((r.timestamp || '').replace(' ', 'T') + '+03:00');
 }
-// Percentage rounding in ESO API causes ~50 MW noise in implied discharge — suppress below threshold
-function battDis(v) { return (v != null && v >= 50) ? v : 0; }
+// Pre-Jun-3 implied discharge had ~50 MW rounding noise; new explicit ССЕБ format needs no floor.
+const NEW_BESS_MS = Date.parse('2026-06-03T00:00:00Z');
+function battDis(v, tsMs) {
+  if (v == null || !isFinite(v)) return 0;
+  if (tsMs != null && tsMs >= NEW_BESS_MS) return Math.max(0, v);
+  return v >= 50 ? v : 0;
+}
 function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
 function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
 function fmtHMin(h) { const m = Math.round(h*60); return `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`; }
@@ -689,7 +699,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw','pumps_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -880,6 +890,7 @@ function updateTotalStats(binned, pd, dateStr) {
   for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; eurTotals[s.key] = 0; }
   totals['_batt'] = 0; mwhTotals['_batt'] = 0; eurTotals['_batt'] = 0;
   let battChgCost = 0, battChgMwh = 0;
+  let pumpsChgCost = 0, pumpsChgMwh = 0;
   for (const b of binned) {
     const mwhScale = (15/60) / 1000;
     const pr = priceByBin[b.ts] ?? NaN;
@@ -890,6 +901,9 @@ function updateTotalStats(binned, pd, dateStr) {
       const chg = Math.max(0, b['batt_charge_mw'] || 0);
       battChgCost += chg * eurScale;
       battChgMwh  += chg * mwhScale;
+      const pumps = Math.max(0, b['pumps_mw'] || 0);
+      pumpsChgCost += pumps * eurScale;
+      pumpsChgMwh  += pumps * mwhScale;
     }
     for (const s of GEN_SERIES) {
       const v = Math.max(0, b[s.key]||0);
@@ -897,7 +911,7 @@ function updateTotalStats(binned, pd, dateStr) {
       mwhTotals[s.key] += v * mwhScale;
       if (eurScale !== null) eurTotals[s.key] += v * eurScale;
     }
-    const bd = battDis(b['batt_discharge_mw']);
+    const bd = battDis(b['batt_discharge_mw'], b.ts);
     totals['_batt'] += bd * scale;
     mwhTotals['_batt'] += bd * mwhScale;
     if (eurScale !== null) eurTotals['_batt'] += bd * eurScale;
@@ -952,6 +966,17 @@ function updateTotalStats(binned, pd, dateStr) {
     if (eurMode) {
       const chgSub = battChgMwh > 0 ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
       html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgCost).toFixed(dec), unit, chgSub);
+      if (pumpsChgMwh > 0) {
+        const pumpsSub = `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(pumpsChgCost*1e6/(pumpsChgMwh*1000)).toFixed(0)} €/MWh</div>`;
+        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgCost).toFixed(dec), unit, pumpsSub);
+      }
+    } else {
+      if (battChgMwh > 0) {
+        html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgMwh).toFixed(dec), unit);
+      }
+      if (pumpsChgMwh > 0) {
+        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgMwh).toFixed(dec), unit);
+      }
     }
   }
   if (reMode) {
@@ -981,7 +1006,7 @@ function drawColChart(binned, pd, dateStr) {
       scale = (15/60) / 1000;
     }
     for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
-    totals['_batt'] += battDis(b['batt_discharge_mw']) * scale;
+    totals['_batt'] += battDis(b['batt_discharge_mw'], b.ts) * scale;
   }
   const unit = eurMode ? 'млн.€' : 'GWh';
   const dec  = eurMode ? 3 : 3;
@@ -1014,7 +1039,7 @@ function calcReStats(binned, priceByBin) {
     const load = b['load_mw'] || 0; if (!load) continue;
     const solar = b['ФЕЦ'] || 0, wind = b['ВяЕЦ'] || 0, vec = b['ВЕЦ'] || 0;
     const mvec  = b['Малки ВЕЦ'] || 0, bio = b['Био ЕЦ'] || 0;
-    const batt  = battDis(b['batt_discharge_mw']);
+    const batt  = battDis(b['batt_discharge_mw'], b.ts);
     const re = solar + wind + vec + mvec + bio + batt;
     const rfl = Math.min(re, load);
     const pr = eurMode ? (priceByBin[b.ts] ?? NaN) : 1;
@@ -1063,9 +1088,15 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-batt-state').textContent =
     bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
 
-  const discharge = battDis(latest['batt_discharge_mw']);
+  const discharge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
   document.getElementById('s-discharge').textContent = fmt0(discharge);
   document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
+
+  const pumpsNow = latest['pumps_mw'] || 0;
+  const pumpsCard = document.getElementById('s-pumps-card');
+  if (pumpsCard) { pumpsCard.style.display = pumpsNow > 0 ? '' : 'none'; }
+  const pumpsEl = document.getElementById('s-pumps');
+  if (pumpsEl) pumpsEl.textContent = fmt0(pumpsNow);
 
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
@@ -1120,9 +1151,11 @@ function updateFlowsTable(latest, pd) {
 
 function updateGenTable(latest) {
   if (!latest) return;
-  const battDischarge = battDis(latest['batt_discharge_mw']);
+  const battDischarge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
   if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
+  const pumpsNow = latest['pumps_mw'] || 0;
+  if (pumpsNow > 0) rows.push({ label: 'Помпи (товар)', color: '#0369a1', mw: -pumpsNow });
   rows.sort((a,b) => b.mw - a.mw);
   const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
@@ -1147,7 +1180,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
   let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
-  let battChgMwh=0, battDisMwh=0;
+  let battChgMwh=0, battDisMwh=0, pumpsChgMwh=0, pumpsChgEur=0;
   for (const b of binned) {
     const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
     const mwh = mw*(15/60);
@@ -1158,9 +1191,14 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
       pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
     }
     const chg = b['batt_charge_mw'];
-    const dis = battDis(b['batt_discharge_mw']);
+    const dis = battDis(b['batt_discharge_mw'], b.ts);
     if (isFinite(chg) && chg > 0) battChgMwh += chg * (15/60);
     if (dis > 0) battDisMwh += dis * (15/60);
+    const pumps = Math.max(0, b['pumps_mw'] || 0);
+    if (pumps > 0) {
+      pumpsChgMwh += pumps * (15/60);
+      if (isFinite(p)) pumpsChgEur += pumps * (15/60) * p;
+    }
   }
   const net = expEur - impEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
@@ -1175,7 +1213,29 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
 
   const battBox = document.getElementById('batt-daily-box');
-  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0) ? '' : 'none';
+  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0 || pumpsChgMwh > 0) ? '' : 'none';
+
+  // Pumps daily section
+  let pumpsDailyEl = document.getElementById('pumps-daily-box');
+  if (!pumpsDailyEl) {
+    pumpsDailyEl = document.createElement('div');
+    pumpsDailyEl.id = 'pumps-daily-box';
+    pumpsDailyEl.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;';
+    battBox.parentNode.appendChild(pumpsDailyEl);
+  }
+  if (pumpsChgMwh > 0) {
+    const avgPr = pumpsChgMwh > 0 ? pumpsChgEur / pumpsChgMwh : NaN;
+    pumpsDailyEl.innerHTML = `
+      <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Помпи — дневен разход</div>
+      <div class="balance-item expense">
+        <div class="balance-label">Зареждане помпи</div>
+        <div class="balance-val expense">${fmtEur(pumpsChgEur)}</div>
+        <div class="stat-unit">${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}</div>
+      </div>`;
+    pumpsDailyEl.style.display = '';
+  } else {
+    pumpsDailyEl.style.display = 'none';
+  }
 
   const curP = getPriceAt(pd, snapMs !== null ? snapMs : Date.now());
   document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
@@ -1512,7 +1572,7 @@ function drawPie(latest) {
   window._lastPieSnap = latest;
   // Always include every source (even at 0) so label count never changes → no resize
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }));
-  const vals   = [...rows.map(r=>r.v),   battDis(latest['batt_discharge_mw']), Math.max(0, latest['net_import_mw']||0)];
+  const vals   = [...rows.map(r=>r.v),   battDis(latest['batt_discharge_mw'], toUtcMs(latest)), Math.max(0, latest['net_import_mw']||0)];
   const labels = [...rows.map(r=>r.label), 'ССЕЕ разреждане',              'Внос'];
   const colors = [...rows.map(r=>r.color), '#f59f00',                       '#9e9e9e'];
 
@@ -1617,7 +1677,7 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: htFmt('Товар'),
   };
   const battDischargeTrace = {
-    x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw']); return eur(v,p)??v; }),
+    x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw'], p.ts); return eur(v,p)??v; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
     fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'linear' },
     visible: hiddenGenKeys.has('_batt') ? 'legendonly' : true,
@@ -1630,6 +1690,14 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: htFmt('ССЕЕ зареждане'),
   };
 
+  const hasPumps = pts.some(p => (p['pumps_mw'] || 0) > 0);
+  const pumpsTrace = hasPumps ? {
+    x: xs, y: pts.map(p => { const v = p['pumps_mw'] || 0; const mw = v > 0 ? -v : 0; return eur(mw,p)??mw; }),
+    name: 'Помпи', line: { color: '#0369a1', width: 1.5, dash: 'dot', shape: 'spline' },
+    visible: reMode ? 'legendonly' : true,
+    hovertemplate: htFmt('Помпи'),
+  } : null;
+
   const rotatedPrices = rotatePts(dayPrices, dateStr);
   const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = (!eurMode && rotatedPrices.length) ? {
@@ -1641,6 +1709,7 @@ function drawTimeline(binned, pd, dateStr) {
   } : null;
 
   const traces = [...genTraces, battDischargeTrace, loadTrace, battChargeTrace];
+  if (pumpsTrace) traces.push(pumpsTrace);
   if (priceTrace) traces.push(priceTrace);
 
   Plotly.react('chart-timeline', traces, {
