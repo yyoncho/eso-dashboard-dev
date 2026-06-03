@@ -12,22 +12,7 @@ RE     = ['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']
 
 
 def batt_discharge(r):
-    gen_sum = sum(r.get(k) or 0 for k in non_RE + RE)
-    implied = []
-    for item in (r.get('raw_gen_api') or []):
-        if not item: continue
-        label, value = item[0], item[1]
-        if not isinstance(label, str) or 'ССЕЕ' in label: continue
-        m = re_mod.search(r'(\d+[.,]\d+)%', label)
-        if not m: continue
-        pct = float(m.group(1).replace(',', '.'))
-        try: val = float(str(value).replace(',', '.'))
-        except: continue
-        if pct > 0 and val > 0:
-            implied.append(val / (pct / 100))
-    if implied:
-        return max(0.0, sum(implied) / len(implied) - gen_sum)
-    return max(0.0, (r.get('Товар на РБ') or 0) - gen_sum - (r.get('net_import_mw') or 0))
+    return max(0.0, r.get('batt_discharge_mw') or 0)
 
 
 def main():
