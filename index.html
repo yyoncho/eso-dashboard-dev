@@ -114,6 +114,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   .stat-card { padding: 6px 7px 5px; }
   .stat-val { font-size: 1.1rem; }
   .stat-label { font-size: 0.58rem; }
+  #snap-scrubber { position: relative !important; top: auto !important; }
 }
 .panel-body { padding: 10px 12px; }
 .info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
@@ -481,8 +482,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     </div>
   </div>
 
-  <!-- tariff calculator -->
-  <div class="panel" id="tariff">
+  <!-- tariff calculator — hidden by default, shown with #tariff=1 -->
+  <div class="panel" id="tariff" style="display:none;">
     <div class="panel-header">
       <span>Борсова цена — Свободен пазар vs Регулирана тарифа</span>
       <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Информация">?</button>
@@ -563,7 +564,7 @@ let _dayPriceData = null;
 let _dayDateStr = null;
 let _loadProfile = null;  // 24-weight array from load_profile.json
 let _pendingSnapTs = null;
-let tariffExpanded = false;
+let tariffExpanded = true;
 
 function toggleTariffDetails() {
   tariffExpanded = !tariffExpanded;
@@ -572,6 +573,15 @@ function toggleTariffDetails() {
   if (det) det.style.display = tariffExpanded ? 'block' : 'none';
   if (arr) arr.textContent = tariffExpanded ? '▲' : '▼';
 }
+
+// Show tariff panel only when URL hash contains tariff=1
+(function() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get('tariff') === '1') {
+    const el = document.getElementById('tariff');
+    if (el) el.style.display = '';
+  }
+})();
 
 // Init state from URL hash
 const _initHash = readHash();
@@ -840,6 +850,7 @@ function setColMode(on) {
   if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
   writeHash(currentDay, null);
 }
+
 function setPieMwhMode(on) {
   pieMwhMode = on;
   document.getElementById('tog-pie-mwh').classList.toggle('active', on);
