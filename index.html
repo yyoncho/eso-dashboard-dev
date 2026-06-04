@@ -1082,10 +1082,11 @@ function updateStatusCards(latest, pd) {
       unit: 'MW' },
     { label: 'ВяЕЦ',       color: '#2ee0ca', v: latest['ВяЕЦ']||0,
       unit: 'MW' },
-    { label: 'ССЕЕ',       color: '#7b3fa0', v: Math.abs(bMw),
+    { label: 'ССЕЕ',       color: '#7b3fa0',
+      v: bSt==='charging' ? -Math.abs(bMw) : Math.abs(bMw),
       unit: bSt==='charging' ? 'MW — зар.' : bSt==='discharging' ? 'MW — разр.' : 'MW' },
   ];
-  if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: pumpsNow, unit: 'MW' });
+  if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: -pumpsNow, unit: 'MW' });
 
   cards.sort((a, b) => b.v - a.v);
 
