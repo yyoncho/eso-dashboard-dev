@@ -1789,7 +1789,7 @@ function drawFlowsTimeline(binned, pd) {
 
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
-    uirevision: 'flows-' + flowsEurMode,
+    uirevision: 'flows',
     xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
     yaxis: { ...LO.yaxis, title: `${unit} (+ внос / − износ)` },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
@@ -1803,37 +1803,39 @@ function drawFlowsTimeline(binned, pd) {
 //  TIMESTAMP
 // ══════════════════════════════════════════════════════════════════════════════
 function toggleFullscreen(panelId, chartId) {
-  const panel  = document.getElementById(panelId);
+  const panel   = document.getElementById(panelId);
   const chartEl = document.getElementById(chartId);
-  const active = panel.classList.toggle('fs-active');
+  const active  = panel.classList.toggle('fs-active');
   document.body.style.overflow = active ? 'hidden' : '';
 
-  function applySize() {
-    if (active) {
-      const headerH = panel.querySelector('.panel-header').offsetHeight;
-      const extraH  = panel.offsetHeight - chartEl.offsetHeight; // any extra rows
-      chartEl.style.height = (window.innerHeight - headerH) + 'px';
-    } else {
-      chartEl.style.height = '';  // restore CSS default
-    }
-    Plotly.relayout(chartId, { autosize: true });
+  function exitFs(savedH) {
+    panel.classList.remove('fs-active');
+    document.body.style.overflow = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      chartEl.style.height = savedH;
+      Plotly.relayout(chartId, { autosize: true });
+    }));
   }
 
-  // wait one frame so fixed positioning takes effect first
-  requestAnimationFrame(() => requestAnimationFrame(applySize));
-
   if (active) {
-    const onKey = e => {
-      if (e.key !== 'Escape') return;
-      panel.classList.remove('fs-active');
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', onKey);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        chartEl.style.height = '';
-        Plotly.relayout(chartId, { autosize: true });
-      }));
-    };
+    const savedH = chartEl.style.height;  // save before overwriting
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const headerH = panel.querySelector('.panel-header').offsetHeight;
+      chartEl.style.height = (window.innerHeight - headerH) + 'px';
+      Plotly.relayout(chartId, { autosize: true });
+    }));
+    const onKey = e => { if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); exitFs(savedH); } };
     document.addEventListener('keydown', onKey);
+    // also handle clicking the button again while in fullscreen
+    panel.dataset.fsRestoreH = savedH;
+  } else {
+    // button clicked again to exit
+    const savedH = panel.dataset.fsRestoreH || '';
+    delete panel.dataset.fsRestoreH;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      chartEl.style.height = savedH;
+      Plotly.relayout(chartId, { autosize: true });
+    }));
   }
 }
 
