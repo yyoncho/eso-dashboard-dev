@@ -68,25 +68,28 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
 /* ── stat cards ── */
 .stat-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px; margin-bottom: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px; margin-bottom: 14px;
+}
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .stat-card {
   background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
-  border-radius: 4px; padding: 12px 14px 10px;
+  border-radius: 4px; padding: 8px 10px 7px; min-width: 0;
 }
 .stat-card.green  { border-top-color: #1a8a1a; }
 .stat-card.orange { border-top-color: #e07000; }
 .stat-card.purple { border-top-color: #7b3fa0; }
 .stat-card.red    { border-top-color: #cc2200; }
 .stat-card.teal   { border-top-color: #0088aa; }
-.stat-label { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; }
-.stat-val   { font-size: 1.6rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
+.stat-label { font-size: 0.62rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-val   { font-size: 1.35rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
 .stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
 .stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
 
 /* ── two-column layout ── */
-.main-cols { display: grid; grid-template-columns: 460px 1fr; gap: 12px; margin-bottom: 12px; }
+.main-cols { display: grid; grid-template-columns: 660px 1fr; gap: 12px; margin-bottom: 12px; }
 
 /* ── panels ── */
 .panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
@@ -94,8 +97,30 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   background: #004494; color: #fff; font-size: 0.75rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em; padding: 7px 12px;
   display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 4px;
+}
+.anchor-link {
+  color: inherit; text-decoration: none;
+}
+.anchor-link:hover { text-decoration: underline; opacity: 0.85; }
+@media (max-width: 600px) {
+  .panel-header { font-size: 0.68rem; letter-spacing: 0.03em; padding: 6px 8px; }
+  .tog-btn { padding: 2px 6px; font-size: 0.62rem; }
+  .re-stat { padding: 3px 8px 3px 6px; min-width: 64px; }
+  .re-stat-val { font-size: 0.9rem; }
+  .re-stat-label { font-size: 0.55rem; letter-spacing: 0.02em; }
+  .re-stat-unit { font-size: 0.6rem; }
+  .stat-grid { gap: 5px; }
+  .stat-card { padding: 6px 7px 5px; }
+  .stat-val { font-size: 1.1rem; }
+  .stat-label { font-size: 0.58rem; }
+  #snap-scrubber { position: relative !important; top: auto !important; }
 }
 .panel-body { padding: 10px 12px; }
+.info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
+.info-btn:hover { background:rgba(255,255,255,0.2); }
+.info-dropdown { display:none;font-size:0.72rem;color:#4a5a7a;background:#eef3fb;border:1px solid #c5d8ee;border-top:none;padding:8px 12px;line-height:1.5; }
+.info-dropdown.open { display:block; }
 
 /* ── toggle ── */
 .toggle-group { display: flex; gap: 4px; }
@@ -185,7 +210,9 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .re-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #3a7050; }
 .re-stat-val   { font-size: 1.25rem; font-weight: 700; color: #1a6030; line-height: 1.15; }
 .re-stat-val.re-stat-gap { color: #cc2200; }
-.re-stat-unit  { font-size: 0.68rem; color: #5a9070; }
+.re-stat-unit   { font-size: 0.68rem; color: #5a9070; }
+.re-stat-valrow { display: flex; align-items: baseline; gap: 3px; margin-top: 1px; }
+.re-stat-avgpr  { font-size: 0.6rem; color: #8a9ab0; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -226,7 +253,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 <div class="past-banner" id="past-banner">
   📅 Исторически данни — показват се архивни записи, не актуална информация
 </div>
-<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;">
+<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;">
   <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
   <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
   <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
@@ -252,36 +279,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-unit">MW</div>
       <div class="stat-sub" id="s-import-eur">—</div>
     </div>
-    <div class="stat-card teal">
-      <div class="stat-label">АЕЦ</div>
-      <div class="stat-val" id="s-nuc">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">ВЕЦ</div>
-      <div class="stat-val" id="s-hydro">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">ВяЕЦ</div>
-      <div class="stat-val" id="s-wind">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">ФЕЦ</div>
-      <div class="stat-val" id="s-solar">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
-    <div class="stat-card purple">
-      <div class="stat-label">ССЕЕ</div>
-      <div class="stat-val" id="s-batt">—</div>
-      <div class="stat-unit" id="s-batt-state">MW</div>
-    </div>
-    <div class="stat-card" id="s-discharge-card" style="border-top-color:#f59f00;">
-      <div class="stat-label">ССЕЕ разреждане</div>
-      <div class="stat-val" id="s-discharge">—</div>
-      <div class="stat-unit">MW</div>
-    </div>
+    <div id="s-dyn" style="display:contents;"></div>
   </div>
 
   <!-- two-column -->
@@ -290,18 +288,25 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <!-- LEFT: pie + flows -->
     <div style="display:flex;flex-direction:column;gap:12px;">
 
-      <div class="panel">
+      <div class="panel" id="gen-live">
         <div class="panel-header">
-          <span>Структура на производство — живо</span>
+          <span><a href="#gen-live" class="anchor-link">Структура на производство — живо</a></span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="toggle-group">
+              <button class="tog-btn" id="tog-pie-mwh" onclick="setPieMwhMode(!pieMwhMode)">МВт</button>
+            </div>
+            <button class="info-btn" onclick="document.getElementById('pie-info').classList.toggle('open')" title="Информация">?</button>
+          </div>
         </div>
+        <div id="pie-info" class="info-dropdown">Данните за производство по източници са в реално време от ЕСО ЕАД. Вносът и износът се показват директно от ЕСО без допълнителна обработка. ССЕЕ (батерия) се връща от API-то на ЕСО, но не е включено в процентното разпределение на диаграмата — това обяснява „липсващите" проценти до 100%. Зареждането се изчислява като разлика между общото потребление и сумата от всички останали източници; разреждането се отчита директно от API-то. Верификация: производство + внос − износ ≈ потребление.</div>
         <div style="padding:4px;">
           <div id="chart-pie" style="height:500px;"></div>
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="flows-live">
         <div class="panel-header">
-          Трансгранични потоци
+          <a href="#flows-live" class="anchor-link">Трансгранични потоци</a>
           <span id="flows-price-note" style="font-weight:400;font-size:0.68rem;opacity:0.8;"></span>
         </div>
         <div class="panel-body" style="padding:6px 12px 10px;">
@@ -324,17 +329,18 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <!-- RIGHT: balance + gen table -->
     <div style="display:flex;flex-direction:column;gap:12px;">
 
-      <div class="panel">
-        <div class="panel-header">Дневен баланс</div>
+      <div class="panel" id="balance">
+        <div class="panel-header"><a href="#balance" class="anchor-link">Дневен баланс</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
+        <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности. Печалбата от арбитраж на ССЕЕ (Δ) е изчислена като разлика между приход от разреждане и разход за зареждане по борсова цена — реалният финансов резултат зависи от договорните условия на оператора.</div>
         <div class="panel-body">
           <div class="balance-grid">
             <div class="balance-item expense">
-              <div class="balance-label">Разходи за внос</div>
+              <div class="balance-label">Внос</div>
               <div class="balance-val expense" id="b-import-eur">—</div>
               <div class="stat-unit" id="b-import-mwh">—</div>
             </div>
             <div class="balance-item revenue">
-              <div class="balance-label">Приходи от износ</div>
+              <div class="balance-label">Износ</div>
               <div class="balance-val revenue" id="b-export-eur">—</div>
               <div class="stat-unit" id="b-export-mwh">—</div>
             </div>
@@ -352,11 +358,46 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
             <div><div class="price-label">Мин / Макс</div>
               <span class="price-val" id="p-minmax">—</span> <span class="price-unit">EUR/MWh</span></div>
           </div>
+          <div id="batt-daily-box" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;">
+            <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">ССЕЕ — дневен баланс</div>
+            <div id="b-batt-eur-row" style="display:none;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div class="balance-item expense">
+                  <div class="balance-label">Зареждане</div>
+                  <div class="balance-val expense" id="b-batt-chg-eur">—</div>
+                  <div class="stat-unit" id="b-batt-chg-sub">—</div>
+                </div>
+                <div class="balance-item revenue">
+                  <div class="balance-label">Разреждане</div>
+                  <div class="balance-val revenue" id="b-batt-dis-eur">—</div>
+                  <div class="stat-unit" id="b-batt-dis-sub">—</div>
+                </div>
+              </div>
+              <div id="b-pumps-row" style="display:none;margin-top:6px;">
+                <div class="balance-item expense">
+                  <div class="balance-label">Зареждане помпи</div>
+                  <div class="balance-val expense" id="b-pumps-eur">—</div>
+                  <div class="stat-unit" id="b-pumps-sub">—</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                <div class="balance-item">
+                  <div class="balance-label">Разр./Зар.</div>
+                  <div><span class="balance-val neutral" id="b-batt-eff">—</span> <span class="stat-unit">%</span></div>
+                </div>
+                <div class="balance-item">
+                  <div class="balance-label">Δ Арбитраж</div>
+                  <div class="balance-val neutral" id="b-batt-arb">—</div>
+                  <div class="stat-unit" id="b-batt-arb-prices"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-header">Производство по източници — живо</div>
+      <div class="panel" id="gen-table-panel">
+        <div class="panel-header"><a href="#gen-table-panel" class="anchor-link">Производство по източници — живо</a></div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table" id="gen-table">
             <thead>
@@ -376,32 +417,50 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   </div><!-- /main-cols -->
 
   <!-- timeline chart -->
-  <div class="panel" style="margin-bottom:12px;">
+  <div class="panel" id="day-profile" style="margin-bottom:12px;">
     <div class="panel-header">
-      <span>Дневен профил</span>
-      <div class="toggle-group">
-        <button class="tog-btn active" id="tog-instant" onclick="setChartMode('instant')">15 мин.</button>
-        <button class="tog-btn" id="tog-hourly"  onclick="setChartMode('hourly')">По часове</button>
-        <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
+      <span><a href="#day-profile" class="anchor-link">Дневен профил</a></span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="toggle-group">
+          <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
+          <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
+          <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
+        </div>
+        <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Информация">?</button>
       </div>
     </div>
-    <div id="re-stats-bar" style="display:none;padding:8px 12px;background:#f0fff4;border-bottom:1px solid #a5d5b5;display:none;gap:0;flex-wrap:wrap;">
-      <div class="re-stat"><div class="re-stat-label">ВЕИ покритие</div><div class="re-stat-val" id="rs-pct">—</div></div>
-      <div class="re-stat"><div class="re-stat-label">ВЕИ енергия</div><div class="re-stat-val" id="rs-re">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Непокрито</div><div class="re-stat-val re-stat-gap" id="rs-gap">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">Излишък</div><div class="re-stat-val" id="rs-exc">—</div><div class="re-stat-unit">GWh</div></div>
-      <div class="re-stat"><div class="re-stat-label">100% покритие</div><div class="re-stat-val" id="rs-full">—</div><div class="re-stat-unit">ч.</div></div>
-    </div>
+    <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
+    <div id="re-stats-bar" style="display:none;"></div>
+    <div id="total-stats-bar" class="stat-grid" style="padding:8px 12px;margin-bottom:0;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" style="height:520px;"></div>
+    </div>
+    <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 0 6px;border-top:1px solid #eef2f8;">
+      <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Предишен час">◄</button>
+      <span id="day-start-label" style="font-size:0.68rem;color:#8a9bb5;min-width:120px;text-align:center;">00:00</span>
+      <button onclick="shiftDayStart(1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Следващ час">►</button>
     </div>
   </div>
 
   <!-- flows timeline -->
-  <div class="panel">
-    <div class="panel-header">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</div>
+  <div class="panel" id="flows-profile" style="margin-bottom:12px;">
+    <div class="panel-header"><a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-flows-ts" style="height:480px;"></div>
+    </div>
+  </div>
+
+  <!-- tariff calculator — hidden by default, shown with #tariff=1 -->
+  <div class="panel" id="tariff" style="display:none;">
+    <div class="panel-header">
+      <span>Борсова цена — Свободен пазар vs Регулирана тарифа</span>
+      <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Информация">?</button>
+    </div>
+    <div id="tariff-info" class="info-dropdown">
+      Сравнение на регулираната тарифа (КЕВР) с текущата борсова цена (IBEX). Мрежовите такси (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара. Стойностите са ориентировъчни — реалните договорни условия на свободния пазар може да се различават.
+    </div>
+    <div id="tariff-body">
+      <div style="color:#8a9bb5;font-size:0.78rem;padding:10px 12px;">Зареждане…</div>
     </div>
   </div>
 
@@ -436,23 +495,75 @@ const FLOW_CFG = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  TARIFF CONFIG — КЕВР Ц-25, юли 2025 (референтни стойности, Енерго-Про)
+//  Всички стойности в лв/кВтч без ДДС, освен ако е отбелязано друго.
+// ══════════════════════════════════════════════════════════════════════════════
+const TARIFF = {
+  BGN_PER_EUR:      1.95583,
+  DAY_START:        7,       // 07:00 Sofia — начало на дневна тарифа
+  DAY_END:          23,      // 23:00 Sofia — край на дневна тарифа
+  supply:           { day: 0.1540, night: 0.0544 },  // Снабдяване
+  transmission:     0.0145,   // Пренос НЕК
+  distribution:     0.0511,   // Разпределение
+  renewables:       0.0250,   // ОЗЕ надбавка
+  excise:           0.00205,  // Акциз (фиксиран по закон: 2,05 лв/МВтч)
+  VAT:              0.20,     // ДДС
+  dayShare:         0.70,     // Дял дневно потребление (за изчисляване на кВтч от бюджет)
+  freeMarketMarkup: 5,        // Надбавка свободен пазар (EUR/МВтч) — балансираща отговорност
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════════════════════════
 let allDates   = [];
 let priceCache = {};
-let chartMode  = 'instant';   // 'instant' | 'hourly'
-let reMode     = false;
+const chartMode = 'instant';
+let reMode            = false;
+let eurMode           = false;
+const totalStatsVisible = true;
+let colMode           = false;
+let pieMwhMode        = false;
+let dayStartHour      = 0;
+let hiddenGenKeys     = new Set();
 
 const RE_KEYS  = new Set(['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']);
 let _dayRecords = [];
 let _dayPriceData = null;
 let _dayDateStr = null;
+let _loadProfile = null;  // 24-weight array from load_profile.json
 let _pendingSnapTs = null;
+let tariffExpanded = true;
+
+function toggleTariffDetails() {
+  tariffExpanded = !tariffExpanded;
+  const det = document.getElementById('tariff-details');
+  const arr = document.getElementById('tariff-arrow');
+  if (det) det.style.display = tariffExpanded ? 'block' : 'none';
+  if (arr) arr.textContent = tariffExpanded ? '▲' : '▼';
+}
+
+// Show tariff panel only when URL hash contains tariff=1
+(function() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get('tariff') === '1') {
+    const el = document.getElementById('tariff');
+    if (el) el.style.display = '';
+  }
+})();
 
 // Init state from URL hash
 const _initHash = readHash();
 let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
 _pendingSnapTs = _initHash.snap || null;
+if (_initHash.flags) {
+  const f = _initHash.flags.split(',');
+  reMode            = f.includes('re');
+  eurMode           = f.includes('eur');
+  colMode           = f.includes('col');
+}
+if (_initHash.hidden) {
+  for (const k of _initHash.hidden.split('\t')) if (k) hiddenGenKeys.add(k);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -479,8 +590,19 @@ function toUtcMs(r) {
   if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
   return Date.parse((r.timestamp || '').replace(' ', 'T') + '+03:00');
 }
+// Pre-Jun-3 implied discharge had ~50 MW rounding noise; new explicit ССЕБ format needs no floor.
+const NEW_BESS_MS = Date.parse('2026-06-03T00:00:00Z');
+function battDis(v, tsMs) {
+  if (v == null || !isFinite(v)) return 0;
+  if (tsMs != null && tsMs >= NEW_BESS_MS) return Math.max(0, v);
+  return v >= 50 ? v : 0;
+}
 function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
 function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
+function fmtHMin(h) { const m = Math.round(h*60); return `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`; }
+// Convert UTC ms → Sofia local datetime string ("YYYY-MM-DD HH:MM") for Plotly axis
+// Plotly treats strings without timezone as-is, so this pins display to Sofia time.
+function toSofiaStr(ms) { return new Date(ms).toLocaleString('sv',{timeZone:'Europe/Sofia'}).substring(0,16); }
 function fmtEur(e) {
   if (!isFinite(e)) return '—';
   const a = Math.abs(e), s = e < 0 ? '−' : '';
@@ -494,8 +616,38 @@ function fmtEur(e) {
 // ══════════════════════════════════════════════════════════════════════════════
 async function loadPrices(dateStr) {
   const ym = dateStr.slice(0, 7);
-  if (priceCache[ym]) return priceCache[ym];
-  try { const d = await getJSON(`${BASE}/prices-${ym}.json`); priceCache[ym] = d; return d; }
+  // Use a separate cache key when prev-month data is merged in, so that loading
+  // June 2 first doesn't poison the cache for June 1 (which needs May's tail).
+  const isFirst = dateStr.slice(8, 10) === '01';
+  const cacheKey = isFirst ? ym + '+prev' : ym;
+  if (priceCache[cacheKey]) return priceCache[cacheKey];
+  try {
+    const d = await getJSON(`${BASE}/prices-${ym}.json`);
+    // If viewing the 1st of a month, also load prev month to cover Sofia midnight
+    // (Sofia midnight on the 1st is ~21:00 UTC the prev month)
+    if (isFirst) {
+      const prev = new Date(dateStr + 'T12:00:00Z');
+      prev.setUTCMonth(prev.getUTCMonth() - 1);
+      const ymPrev = prev.toISOString().slice(0, 7);
+      try {
+        const dp = await getJSON(`${BASE}/prices-${ymPrev}.json`);
+        if (dp && dp.unix_seconds) {
+          const existing = new Set(d.unix_seconds || []);
+          for (let i = 0; i < dp.unix_seconds.length; i++) {
+            if (!existing.has(dp.unix_seconds[i])) {
+              (d.unix_seconds = d.unix_seconds || []).push(dp.unix_seconds[i]);
+              (d.price = d.price || []).push(dp.price[i]);
+            }
+          }
+          const paired = d.unix_seconds.map((t,i)=>[t,d.price[i]]).sort((a,b)=>a[0]-b[0]);
+          d.unix_seconds = paired.map(p=>p[0]);
+          d.price        = paired.map(p=>p[1]);
+        }
+      } catch(_) {}
+    }
+    priceCache[cacheKey] = d;
+    return d;
+  }
   catch(e) { return null; }
 }
 function getPriceAt(pd, ms) {
@@ -525,7 +677,7 @@ function getDayPrices(pd, dateStr) {
 //  AGGREGATION
 // ══════════════════════════════════════════════════════════════════════════════
 const ALL_KEYS = [...GEN_SERIES.map(s=>s.key), ...FLOW_CFG.map(f=>f.key),
-                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw'];
+                  'gen_total_mw','load_mw','net_import_mw','ССЕЕ_mw','batt_discharge_mw','batt_charge_mw','pumps_mw'];
 
 function avgOf(arr, key) {
   const vals = arr.map(r => r[key]).filter(v => v !== undefined && v !== null && isFinite(v));
@@ -576,17 +728,25 @@ function computeDayAvg(binned) {
 //  NAV
 // ══════════════════════════════════════════════════════════════════════════════
 function todayStr() {
-  return new Date(Date.now() + 2*3600*1000).toISOString().slice(0,10);
+  return new Date().toLocaleString('sv', {timeZone: 'Europe/Sofia'}).slice(0, 10);
 }
-// ── URL hash state: #day=YYYY-MM-DD&snap=YYYY-MM-DDTHH:MM:SSZ ────────────────
+// ── URL hash state ────────────────────────────────────────────────────────────
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  return { day: p.get('day'), snap: p.get('snap') };
+  return {
+    day:    p.get('day'),
+    snap:   p.get('snap'),
+    flags:  p.get('flags'),  // e.g. 're,eur,tot,col'
+    hidden: p.get('hidden'), // e.g. 'АЕЦ,ВЕЦ'
+  };
 }
 function writeHash(day, snapTs) {
   const p = new URLSearchParams();
   if (day) p.set('day', day);
   if (snapTs) p.set('snap', snapTs);
+  const flags = [reMode && 're', eurMode && 'eur', colMode && 'col'].filter(Boolean);
+  if (flags.length) p.set('flags', flags.join(','));
+  if (hiddenGenKeys.size) p.set('hidden', [...hiddenGenKeys].join('\t'));
   const h = p.toString() ? '#' + p.toString() : '#';
   history.replaceState(null, '', h);
 }
@@ -632,14 +792,6 @@ function updateNav() {
   banner.classList.toggle('show', currentDay !== null);
 }
 
-function setChartMode(mode) {
-  chartMode = mode;
-  document.getElementById('tog-instant').classList.toggle('active', mode==='instant');
-  document.getElementById('tog-hourly').classList.toggle('active',  mode==='hourly');
-  if (window._lastBinned) {
-    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-  }
-}
 
 function setReMode(on) {
   reMode = on;
@@ -647,30 +799,246 @@ function setReMode(on) {
   document.getElementById('re-stats-bar').classList.toggle('show', on);
   if (window._lastBinned) {
     drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-    updateReStats(window._lastBinned);
+    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
+  writeHash(currentDay, null);
+}
+function setEurMode(on) {
+  eurMode = on;
+  document.getElementById('tog-eur').classList.toggle('active', on);
+  if (window._lastBinned) {
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  }
+  writeHash(currentDay, null);
+}
+function setColMode(on) {
+  colMode = on;
+  document.getElementById('tog-col').classList.toggle('active', on);
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  writeHash(currentDay, null);
 }
 
-function updateReStats(binned) {
-  if (!binned || !binned.length) return;
-  const ih = 15 / 60;  // each bin = 15 min
-  let loadGwh = 0, reGwh = 0, excessGwh = 0, fullH = 0;
+function setPieMwhMode(on) {
+  pieMwhMode = on;
+  document.getElementById('tog-pie-mwh').classList.toggle('active', on);
+  if (window._lastPieSnap) drawPie(window._lastPieSnap);
+}
+function shiftDayStart(delta) {
+  dayStartHour = (dayStartHour + delta + 24) % 24;
+  updateDayStartLabel();
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+}
+function updateDayStartLabel() {
+  const lbl = document.getElementById('day-start-label');
+  if (!lbl) return;
+  const dateStr = window._lastDateStr;
+  const hStr = String(dayStartHour).padStart(2,'0') + ':00';
+  if (!dateStr || dayStartHour === 0) { lbl.textContent = hStr; return; }
+  // Compute end date (dateStr + 1 day)
+  const start = new Date(dateStr + 'T12:00:00Z');
+  const end = new Date(start.getTime() + 24*3600*1000);
+  const fmt = d => `${String(d.getUTCDate()).padStart(2,'0')}.${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+  lbl.textContent = `${fmt(start)} ${hStr} – ${fmt(end)} ${hStr}`;
+}
+function rotatePts(pts, dateStr) {
+  if (dayStartHour === 0 || !pts.length) return pts;
+  // Compute Sofia midnight UTC for this date
+  const noon = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const midnightUtcMs = new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000;
+  const cutMs = midnightUtcMs + dayStartHour * 3600000;
+  const DAY_MS = 24 * 3600 * 1000;
+  // Bins before cutoff get +24h so Plotly sees a continuous date range (e.g. 06:00 May17 → 05:45 May18)
+  const after  = pts.filter(p => p.ts >= cutMs);
+  const before = pts.filter(p => p.ts <  cutMs).map(p => ({ ...p, ts: p.ts + DAY_MS }));
+  // Sort and deduplicate (prevRecs + main file can produce duplicate bins at midnight)
+  const merged = [...after, ...before].sort((a, b) => a.ts - b.ts);
+  return merged.filter((p, i) => i === 0 || p.ts !== merged[i - 1].ts);
+}
+function _buildPriceByBin(pd, dateStr) {
+  const m = {};
+  for (const p of getDayPrices(pd, dateStr))
+    m[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
+  return m;
+}
+function updateTotalStats(binned, pd, dateStr) {
+  if (!totalStatsVisible || !binned || !binned.length) return;
+  const priceByBin = _buildPriceByBin(pd, dateStr);
+  const totals = {}, mwhTotals = {}, eurTotals = {};
+  for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; eurTotals[s.key] = 0; }
+  totals['_batt'] = 0; mwhTotals['_batt'] = 0; eurTotals['_batt'] = 0;
+  let battChgCost = 0, battChgMwh = 0;
+  let pumpsChgCost = 0, pumpsChgMwh = 0;
+  for (const b of binned) {
+    const mwhScale = (15/60) / 1000;
+    const pr = priceByBin[b.ts] ?? NaN;
+    const eurScale = isFinite(pr) ? pr * (15/60) / 1e6 : null;
+    const scale = eurMode && eurScale !== null ? eurScale : mwhScale;
+    if (eurMode && eurScale === null) continue;
+    const chg = Math.max(0, b['batt_charge_mw'] || 0);
+    battChgMwh += chg * mwhScale;  // always accumulate (pumps_mw excluded — separate field)
+    if (isFinite(pr) && eurScale !== null) {
+      battChgCost += chg * eurScale;
+      const pumps = Math.max(0, b['pumps_mw'] || 0);
+      pumpsChgCost += pumps * eurScale;
+      pumpsChgMwh  += pumps * mwhScale;
+    }
+    for (const s of GEN_SERIES) {
+      const v = Math.max(0, b[s.key]||0);
+      totals[s.key] += v * scale;
+      mwhTotals[s.key] += v * mwhScale;
+      if (eurScale !== null) eurTotals[s.key] += v * eurScale;
+    }
+    const bd = battDis(b['batt_discharge_mw'], b.ts);
+    totals['_batt'] += bd * scale;
+    mwhTotals['_batt'] += bd * mwhScale;
+    if (eurScale !== null) eurTotals['_batt'] += bd * eurScale;
+  }
+  const unit = eurMode ? 'млн.€' : 'GWh';
+  const dec  = eurMode ? 2 : 3;
+  const avgPr = (key) => {
+    const mwh = mwhTotals[key] * 1000;
+    const eur = eurTotals[key] * 1e6;
+    return mwh > 0 ? eur / mwh : NaN;
+  };
+  const priceTag = (key) => {
+    if (!eurMode) return '';
+    const p = avgPr(key);
+    return isFinite(p) ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${p.toFixed(0)} €/MWh</div>` : '';
+  };
+  const statItem = (color, label, val, unitStr, sub) =>
+    `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-val">${val}</div><div class="stat-unit">${unitStr}</div>${sub||''}</div>`;
+  const keyItem = (color, label, key) => statItem(color, label, totals[key].toFixed(dec), unit, priceTag(key));
+
+  const sources = (reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES)
+    .filter(s => !hiddenGenKeys.has(s.key))
+    .sort((a, b) => totals[b.key] - totals[a.key]);
+  const battEurDis = eurTotals['_batt'];
+  const battDelta  = battEurDis - battChgCost;
+  const disMwh = mwhTotals['_batt'] * 1000, chgMwh = battChgMwh * 1000;
+  const avgDis = disMwh > 0 ? battEurDis * 1e6 / disMwh : NaN;
+  const avgChg = chgMwh > 0 ? battChgCost * 1e6 / chgMwh : NaN;
+
+  // EUR money row in ССЕЕ section — always show when battery has data
+  const eurRow = document.getElementById('b-batt-eur-row');
+  if (chgMwh > 0 && disMwh > 0) {
+    eurRow.style.display = 'block';
+    document.getElementById('b-batt-chg-eur').textContent = fmtEur(battChgCost * 1e6);
+    document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh зар.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
+    document.getElementById('b-batt-dis-eur').textContent = fmtEur(battEurDis * 1e6);
+    document.getElementById('b-batt-dis-sub').textContent = `${fmt0(disMwh)} MWh разр.` + (isFinite(avgDis) ? ` @ ${avgDis.toFixed(1)} EUR/MWh` : '');
+    const arbEl = document.getElementById('b-batt-arb');
+    arbEl.className = 'balance-val ' + (battDelta >= 0 ? 'revenue' : 'expense');
+    arbEl.textContent = fmtEur(battDelta * 1e6);
+    document.getElementById('b-batt-arb-prices').textContent = isFinite(avgDis) && isFinite(avgChg) ? `разр. ${avgDis.toFixed(0)} vs зар. ${avgChg.toFixed(0)} €/MWh` : '';
+    const eff = chgMwh > 0 ? disMwh / chgMwh * 100 : 0;
+    document.getElementById('b-batt-eff').textContent = eff > 0 ? fmt1(eff) : '—';
+  } else {
+    eurRow.style.display = 'none';
+  }
+
+  let html = '';
+  for (const s of sources) html += keyItem(s.color, s.label, s.key);
+  if (!reMode && !hiddenGenKeys.has('_batt')) {
+    html += keyItem('#f59f00', 'ССЕЕ разр.', '_batt');
+    if (eurMode) {
+      const chgSub = battChgMwh > 0 ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
+      html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgCost).toFixed(dec), unit, chgSub);
+      if (pumpsChgMwh > 0) {
+        const pumpsSub = `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(pumpsChgCost*1e6/(pumpsChgMwh*1000)).toFixed(0)} €/MWh</div>`;
+        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgCost).toFixed(dec), unit, pumpsSub);
+      }
+    } else {
+      if (battChgMwh > 0) {
+        html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgMwh).toFixed(dec), unit);
+      }
+      if (pumpsChgMwh > 0) {
+        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgMwh).toFixed(dec), unit);
+      }
+    }
+  }
+  if (reMode) {
+    const rs = calcReStats(binned, priceByBin);
+    const u  = eurMode ? 'хил.€' : 'GWh';
+    const d  = eurMode ? 1 : 1;
+    const pct = rs.loadAcc > 0 ? rs.reAcc / rs.loadAcc * 100 : 0;
+    html += `<div class="stat-card" style="border-top-color:#2ee0ca"><div class="stat-label">ВЕИ покритие</div><div class="stat-val">${pct.toFixed(1)}</div><div class="stat-unit">%</div></div>`;
+    html += statItem('#2ee0ca', 'ВЕИ енергия',  rs.reAcc.toFixed(d),    u);
+    html += statItem('#cc2200', 'Непокрито',     rs.gapAcc.toFixed(d),   u);
+    html += statItem('#feb56a', 'Излишък',       rs.excessAcc.toFixed(2),u);
+    html += statItem('#aaa',    '100% покр.',    fmtHMin(rs.fullH),     'ч:мин');
+  }
+  document.getElementById('total-stats-bar').innerHTML = html;
+}
+function drawColChart(binned, pd, dateStr) {
+  const priceByBin = eurMode ? _buildPriceByBin(pd, dateStr) : {};
+  const totals = {};
+  for (const s of GEN_SERIES) totals[s.key] = 0;
+  totals['_batt'] = 0;
+  for (const b of binned) {
+    let scale;
+    if (eurMode) {
+      const pr = priceByBin[b.ts] ?? NaN; if (!isFinite(pr)) continue;
+      scale = pr * (15/60) / 1e6;
+    } else {
+      scale = (15/60) / 1000;
+    }
+    for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
+    totals['_batt'] += battDis(b['batt_discharge_mw'], b.ts) * scale;
+  }
+  const unit = eurMode ? 'млн.€' : 'GWh';
+  const dec  = eurMode ? 3 : 3;
+  const srcBase = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
+  const colItems = srcBase.map(s => ({ label: s.label, value: totals[s.key], color: s.color }));
+  if (!reMode) colItems.push({ label: 'ССЕЕ разр.', value: totals['_batt'], color: '#f59f00' });
+  colItems.sort((a, b) => b.value - a.value);
+  const labels = colItems.map(c => c.label);
+  const values = colItems.map(c => c.value);
+  const colors = colItems.map(c => c.color);
+  Plotly.react('chart-timeline', [{
+    type: 'bar', x: labels, y: values,
+    marker: { color: colors, line: { color: '#fff', width: 0.5 } },
+    hovertemplate: `%{x}: %{y:.${dec}f} ${unit}<extra></extra>`,
+    text: values.map(v => v.toFixed(dec)), textposition: 'outside', textfont: { size: 10 },
+  }], {
+    ...LO, uirevision: `col-${reMode}-${eurMode}`,
+    xaxis: { ...LO.xaxis, type: 'category' },
+    yaxis: { ...LO.yaxis, title: unit },
+    margin: { t: 20, b: 60, l: 58, r: 10 },
+    showlegend: false,
+  }, { responsive: true, displayModeBar: false });
+}
+
+function calcReStats(binned, priceByBin) {
+  const ih = 15 / 60;
+  let loadAcc = 0, reAcc = 0, excessAcc = 0, fullH = 0;
+  let solarAcc = 0, windAcc = 0, vecAcc = 0, mvecAcc = 0, bioAcc = 0, battAcc = 0;
   for (const b of binned) {
     const load = b['load_mw'] || 0; if (!load) continue;
-    const re   = [...RE_KEYS].reduce((s,k) => s + (b[k]||0), 0) + (b['batt_discharge_mw']||0);
-    const rfl  = Math.min(re, load);
-    loadGwh   += load * ih / 1000;
-    reGwh     += rfl  * ih / 1000;
-    excessGwh += Math.max(0, re - load) * ih / 1000;
+    const solar = b['ФЕЦ'] || 0, wind = b['ВяЕЦ'] || 0, vec = b['ВЕЦ'] || 0;
+    const mvec  = b['Малки ВЕЦ'] || 0, bio = b['Био ЕЦ'] || 0;
+    const batt  = battDis(b['batt_discharge_mw'], b.ts);
+    const re = solar + wind + vec + mvec + bio + batt;
+    const rfl = Math.min(re, load);
+    const pr = eurMode ? (priceByBin[b.ts] ?? NaN) : 1;
+    if (eurMode && !isFinite(pr)) continue;
+    const scale = eurMode ? pr * ih / 1000 : ih / 1000;
+    loadAcc   += load  * scale;
+    reAcc     += rfl   * scale;
+    excessAcc += Math.max(0, re - load) * scale;
+    solarAcc  += solar * scale;
+    windAcc   += wind  * scale;
+    vecAcc    += vec   * scale;
+    mvecAcc   += mvec  * scale;
+    bioAcc    += bio   * scale;
+    battAcc   += batt  * scale;
     if (rfl >= load) fullH += ih;
   }
-  const gapGwh = loadGwh - reGwh;
-  const pct    = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
-  document.getElementById('rs-pct').textContent  = pct.toFixed(1) + '%';
-  document.getElementById('rs-re').textContent   = reGwh.toFixed(1);
-  document.getElementById('rs-gap').textContent  = gapGwh.toFixed(1);
-  document.getElementById('rs-exc').textContent  = excessGwh.toFixed(2);
-  document.getElementById('rs-full').textContent = fullH.toFixed(1);
+  return { loadAcc, reAcc, gapAcc: loadAcc - reAcc, excessAcc, fullH, solarAcc, windAcc, vecAcc, mvecAcc, bioAcc, battAcc };
+}
+function updateReStats(binned) {
+  // kept for compatibility — values now rendered inside updateTotalStats
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -688,19 +1056,6 @@ function updateStatusCards(latest, pd) {
   const nImp = latest['net_import_mw'] || 0;
   document.getElementById('s-load').textContent = fmt0(load);
   document.getElementById('s-gen').textContent  = fmt0(gen);
-  document.getElementById('s-nuc').textContent  = fmt0(latest['АЕЦ']);
-  document.getElementById('s-hydro').textContent = fmt0((latest['ВЕЦ']||0)+(latest['Малки ВЕЦ']||0));
-  document.getElementById('s-wind').textContent  = fmt0(latest['ВяЕЦ']);
-  document.getElementById('s-solar').textContent = fmt0(latest['ФЕЦ']);
-  const bMw  = latest['ССЕЕ_mw'];
-  const bSt  = battState(bMw);
-  document.getElementById('s-batt').textContent       = fmt0(Math.abs(bMw||0));
-  document.getElementById('s-batt-state').textContent =
-    bSt==='charging' ? 'MW — зареждане' : bSt==='discharging' ? 'MW — разреждане' : 'MW';
-
-  const discharge = latest['batt_discharge_mw'] || 0;
-  document.getElementById('s-discharge').textContent = fmt0(discharge);
-  document.getElementById('s-discharge-card').style.opacity = discharge > 0 ? '1' : '0.4';
 
   const price = getPriceAt(pd, toUtcMs(latest));
   const isImp = nImp > 0;
@@ -709,6 +1064,38 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
   document.getElementById('s-import-eur').textContent = isFinite(price)
     ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
+
+  // Dynamic source cards sorted by descending MW
+  const tsMs = toUtcMs(latest);
+  const bMw  = latest['ССЕЕ_mw'] || 0;
+  const bSt  = battState(bMw);
+  const pumpsNow  = latest['pumps_mw'] || 0;
+
+  const cards = [
+    { label: 'ФЕЦ',        color: '#fa4b42', v: latest['ФЕЦ']||0,
+      unit: 'MW' },
+    { label: 'АЕЦ',        color: '#2caffe', v: latest['АЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ВЕЦ',        color: '#6b8abc', v: latest['ВЕЦ']||0,
+      unit: 'MW' },
+    { label: 'М.ВЕЦ',      color: '#d568fb', v: latest['Малки ВЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ВяЕЦ',       color: '#2ee0ca', v: latest['ВяЕЦ']||0,
+      unit: 'MW' },
+    { label: 'ССЕЕ',       color: '#7b3fa0',
+      v: bSt==='charging' ? -Math.abs(bMw) : Math.abs(bMw),
+      unit: bSt==='charging' ? 'MW — зар.' : bSt==='discharging' ? 'MW — разр.' : 'MW' },
+  ];
+  if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: -pumpsNow, unit: 'MW' });
+
+  cards.sort((a, b) => b.v - a.v);
+
+  document.getElementById('s-dyn').innerHTML = cards.map(c => `
+    <div class="stat-card" style="border-top-color:${c.color};${c.dim ? 'opacity:0.4;' : ''}">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-val">${fmt0(c.v)}</div>
+      <div class="stat-unit">${c.unit}</div>
+    </div>`).join('');
 }
 
 function updateFlowsTable(latest, pd) {
@@ -755,11 +1142,16 @@ function updateFlowsTable(latest, pd) {
 
 function updateGenTable(latest) {
   if (!latest) return;
-  const battDischarge = latest['batt_discharge_mw'] || 0;
+  const battDischarge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
+  const netImp = latest['net_import_mw'] || 0;
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
   if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
+  if (netImp > 0) rows.push({ label: 'Внос', color: '#9e9e9e', mw: netImp });
+  const pumpsNow = latest['pumps_mw'] || 0;
+  if (pumpsNow > 0) rows.push({ label: 'Помпи (товар)', color: '#0369a1', mw: -pumpsNow });
+  if (netImp < 0) rows.push({ label: 'Износ', color: '#1a8a1a', mw: netImp });
   rows.sort((a,b) => b.mw - a.mw);
-  const total = rows.reduce((s,r) => s + r.mw, 0) || 1;
+  const total = rows.filter(r => r.mw > 0).reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
   tbody.innerHTML = '';
   for (const s of rows) {
@@ -767,21 +1159,22 @@ function updateGenTable(latest) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.label}</td>
-      <td style="text-align:right;">${fmt0(s.mw)}</td>
-      <td style="text-align:right;">${pct.toFixed(1)}%</td>
+      <td style="text-align:right;${s.mw < 0 ? 'color:#cc2200;' : ''}">${s.mw < 0 ? '−' : ''}${fmt0(Math.abs(s.mw))}</td>
+      <td style="text-align:right;">${s.mw > 0 ? pct.toFixed(1)+'%' : ''}</td>
       <td><div style="height:10px;background:#edf2f8;border-radius:3px;overflow:hidden;">
-        <div style="width:${Math.min(100,pct)}%;height:100%;background:${s.color};border-radius:3px;"></div>
+        <div style="width:${Math.min(100,Math.abs(pct))}%;height:100%;background:${s.color};border-radius:3px;"></div>
       </div></td>`;
     tbody.appendChild(tr);
   }
 }
 
-function updateDayBalance(binned, pd, dateStr) {
+function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr);
   const pByBin = {};
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
   let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
+  let battChgMwh=0, battDisMwh=0, pumpsChgMwh=0, pumpsChgEur=0;
   for (const b of binned) {
     const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
     const mwh = mw*(15/60);
@@ -791,22 +1184,368 @@ function updateDayBalance(binned, pd, dateStr) {
       if (mwh>0) impEur+=mwh*p; else expEur+=Math.abs(mwh)*p;
       pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
     }
+    const chg = b['batt_charge_mw'];
+    const dis = battDis(b['batt_discharge_mw'], b.ts);
+    if (isFinite(chg) && chg > 0) battChgMwh += chg * (15/60);
+    if (dis > 0) battDisMwh += dis * (15/60);
+    const pumps = Math.max(0, b['pumps_mw'] || 0);
+    if (pumps > 0) {
+      pumpsChgMwh += pumps * (15/60);
+      if (isFinite(p)) pumpsChgEur += pumps * (15/60) * p;
+    }
   }
-  const net = expEur - impEur;
+  const net = expEur - impEur - pumpsChgEur;
+  const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
+  const avgExpPrice = expMwh > 0 ? expEur / expMwh : NaN;
   document.getElementById('b-import-eur').textContent = fmtEur(impEur);
-  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос';
+  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос'+(isFinite(avgImpPrice)?` @ ${fmt1(avgImpPrice)} EUR/MWh`:'');
   document.getElementById('b-export-eur').textContent = fmtEur(expEur);
-  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ';
+  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ'+(isFinite(avgExpPrice)?` @ ${fmt1(avgExpPrice)} EUR/MWh`:'');
   const netEl = document.getElementById('b-net-eur');
   netEl.textContent = fmtEur(net);
   netEl.className   = 'balance-val '+(net>=0?'revenue':'expense');
   document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
 
-  const dayPts = getDayPrices(pd, dateStr);
-  const lastP  = dayPts.length ? dayPts[dayPts.length-1].price : NaN;
-  document.getElementById('p-current').textContent = isFinite(lastP)?fmt1(lastP):'—';
+  const battBox = document.getElementById('batt-daily-box');
+  battBox.style.display = (battChgMwh > 0 || battDisMwh > 0 || pumpsChgMwh > 0) ? '' : 'none';
+
+  // Pumps row inside battery box
+  const pumpsRow = document.getElementById('b-pumps-row');
+  if (pumpsRow) {
+    if (pumpsChgMwh > 0) {
+      const avgPr = pumpsChgEur / pumpsChgMwh;
+      document.getElementById('b-pumps-eur').textContent = fmtEur(pumpsChgEur);
+      document.getElementById('b-pumps-sub').textContent = `${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}`;
+      pumpsRow.style.display = '';
+    } else {
+      pumpsRow.style.display = 'none';
+    }
+  }
+
+  const curP = getPriceAt(pd, snapMs !== null ? snapMs : Date.now());
+  document.getElementById('p-current').textContent = isFinite(curP)?fmt1(curP):'—';
   document.getElementById('p-avg').textContent     = pN?fmt1(pSum/pN):'—';
   document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TARIFF CALCULATOR PANEL
+// ══════════════════════════════════════════════════════════════════════════════
+function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null) {
+  const el = document.getElementById('tariff-body');
+  if (!el) return;
+  const T = TARIFF;
+  const dayPrices = getDayPrices(pd, dateStr);
+  if (!dayPrices.length) {
+    el.innerHTML = '<div style="color:#8a9bb5;font-size:0.78rem;padding:6px 0;">Няма борсови данни за избрания ден.</div>';
+    return;
+  }
+
+  // ── spot price aggregation ──
+  const spotBySofiaH = {};
+  for (const p of dayPrices) {
+    if (!isFinite(p.price)) continue;
+    const h = parseInt(toSofiaStr(p.ts).slice(11, 13));
+    if (!spotBySofiaH[h]) spotBySofiaH[h] = [];
+    spotBySofiaH[h].push(p.price);
+  }
+  const avgSpotByH = {};
+  for (let h = 0; h < 24; h++) {
+    const arr = spotBySofiaH[h];
+    avgSpotByH[h] = arr && arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : NaN;
+  }
+  const validSpots = Object.values(avgSpotByH).filter(isFinite);
+  const avgSpotEur = validSpots.length ? validSpots.reduce((s, v) => s + v, 0) / validSpots.length : NaN;
+
+  // ── derived tariff values ──
+  const network = T.transmission + T.distribution + T.renewables + T.excise;
+  const regDayExVat   = T.supply.day   + network;
+  const regNightExVat = T.supply.night + network;
+  const regDayVat     = regDayExVat   * (1 + T.VAT);
+  const regNightVat   = regNightExVat * (1 + T.VAT);
+
+  const pct = (a, b) => isFinite(a) && isFinite(b) && a !== 0 ? (b - a) / a * 100 : NaN;
+  const fmtV = v => isFinite(v) ? (v / T.BGN_PER_EUR).toFixed(4) : '—';
+  const fmtP = v => !isFinite(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const pctSty = v => !isFinite(v) ? '' : v < -1 ? 'color:#1a8a1a;font-weight:700' : v > 1 ? 'color:#cc2200;font-weight:700' : 'color:#8a9bb5';
+
+  // ── Resolve snapshot price first so details table reflects slider position ──
+  const nowMs = snapMs !== null ? snapMs : Date.now();
+  let currentSpotEur = getPriceAt(pd, nowMs);
+  if (!isFinite(currentSpotEur)) currentSpotEur = avgSpotEur;
+
+  // free-market supply component at snapshot price (used in hero + details table)
+  const freeSupplyCur = isFinite(currentSpotEur) ? (currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : NaN;
+  const freeExVatCur  = isFinite(freeSupplyCur) ? freeSupplyCur + network : NaN;
+  const freeVatCur    = isFinite(freeExVatCur)  ? freeExVatCur  * (1 + T.VAT) : NaN;
+
+  // ── component table rows (use snapshot price for supply, daily avg shown in label) ──
+  const compRows = [
+    { label: `Снабдяване<br><span style="font-size:0.6rem;color:#8a9bb5;">борса: ${isFinite(currentSpotEur)?currentSpotEur.toFixed(0):'—'} €/МВтч</span>`,
+      reg: T.supply.day, free: freeSupplyCur },
+    { label: 'Пренос НЕК',    reg: T.transmission, free: T.transmission, fixed: true },
+    { label: 'Разпределение', reg: T.distribution, free: T.distribution, fixed: true },
+    { label: 'ОЗЕ надбавка',  reg: T.renewables,   free: T.renewables,   fixed: true },
+    { label: 'Акциз',         reg: T.excise,        free: T.excise,       fixed: true },
+  ];
+
+  const compHTML = compRows.map(r => {
+    const d = pct(r.reg, r.free);
+    const dCell = r.fixed
+      ? `<td style="text-align:center;color:#c5d8ee;">—</td>`
+      : `<td style="text-align:right;${pctSty(d)}">${fmtP(d)}</td>`;
+    return `<tr>
+      <td>${r.label}</td>
+      <td style="text-align:right;font-family:monospace;">${fmtV(r.reg)}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(r.free) ? fmtV(r.free) : '—'}</td>
+      ${dCell}
+    </tr>`;
+  }).join('');
+
+  // ── Daily consumption basis ──
+  const dailyKwh = 30;
+
+  // Load profile weights — prefer pre-computed 7-day profile, else hardcoded typical
+  let loadWeights, loadProfileLabel;
+  if (loadProfile && loadProfile.weights && loadProfile.weights.length === 24) {
+    loadWeights = loadProfile.weights;
+    loadProfileLabel = `последните ${loadProfile.days} дни (${loadProfile.computed})`;
+  } else {
+    const typ = [0.45,0.38,0.34,0.33,0.33,0.38,0.52,0.72,0.82,0.82,0.77,0.72,
+                 0.68,0.63,0.63,0.68,0.78,0.88,0.93,0.98,0.93,0.83,0.68,0.53];
+    const ts = typ.reduce((s,v)=>s+v,0);
+    loadWeights = typ.map(v => v/ts);
+    loadProfileLabel = 'типичен профил';
+  }
+
+  const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
+
+  const _nowH2      = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const regNowExVat = isSofiaDay(_nowH2) ? regDayExVat : regNightExVat;
+  const _regNowLv2  = isSofiaDay(_nowH2) ? regDayVat : regNightVat;
+  const _regNowLbl2 = isSofiaDay(_nowH2) ? 'ден' : 'нощ';
+  const totNowPct   = pct(_regNowLv2, freeVatCur);
+
+  const totHTML = `
+    <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
+      <td>Без ДДС &nbsp;(${_regNowLbl2})</td>
+      <td style="text-align:right;font-family:monospace;">${fmtV(regNowExVat)}</td>
+      <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatCur)?fmtV(freeExVatCur):'—'}</td>
+      <td style="text-align:right;${pctSty(pct(regNowExVat,freeExVatCur))}">${fmtP(pct(regNowExVat,freeExVatCur))}</td>
+    </tr>
+    <tr style="font-weight:700;background:#f0f6ff;">
+      <td>ОБЩО с ДДС &nbsp;(${_regNowLbl2})</td>
+      <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(_regNowLv2)}</td>
+      <td style="text-align:right;font-family:monospace;${isFinite(freeVatCur)?(freeVatCur<_regNowLv2?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatCur)?fmtV(freeVatCur):'—'}</td>
+      <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totNowPct)}">${fmtP(totNowPct)}</span></td>
+    </tr>`;
+
+  // Blend regulated tariff using actual load profile day/night split
+  const dayShareActual = loadWeights.reduce((s, w, h) => s + (isSofiaDay(h) ? w : 0), 0);
+  const blendedReg     = dayShareActual * regDayVat + (1 - dayShareActual) * regNightVat;
+
+  // Per-hour cost comparison
+  let regDailyCost = 0, freeDailyCost = 0;
+  const hourlyAna = [];
+  for (let h = 0; h < 24; h++) {
+    const kwhH     = dailyKwh * loadWeights[h];
+    const regRateH = isSofiaDay(h) ? regDayVat : regNightVat;
+    const spotH    = isFinite(avgSpotByH[h]) ? avgSpotByH[h] : avgSpotEur;
+    const freeSupH = isFinite(spotH) ? (spotH + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR : freeSupplyCur;
+    const freeRateH = isFinite(freeSupH) ? (freeSupH + network) * (1 + T.VAT) : NaN;
+    regDailyCost  += kwhH * regRateH;
+    if (isFinite(freeRateH)) freeDailyCost += kwhH * freeRateH;
+    hourlyAna.push({ h, regRate: regRateH, freeRate: freeRateH, cheaper: isFinite(freeRateH) && freeRateH < regRateH });
+  }
+
+  const regDailyEur  = regDailyCost / T.BGN_PER_EUR;
+  const freeDailyEur = freeDailyCost / T.BGN_PER_EUR;
+  const savingEur    = regDailyEur - freeDailyEur;
+  const savingPct    = (savingEur / regDailyEur) * 100;
+  const freeIsCheaper = isFinite(freeDailyCost) && freeDailyCost < regDailyCost;
+
+  // Ranges helper
+  function hoursToRanges(hs) {
+    if (!hs.length) return 'никои';
+    const sorted = [...hs].sort((a,b)=>a-b);
+    const ranges = [];
+    let s = sorted[0], e = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === e+1) e = sorted[i];
+      else { ranges.push([s,e]); s = e = sorted[i]; }
+    }
+    ranges.push([s,e]);
+    return ranges.map(([a,b])=>a===b?`${String(a).padStart(2,'0')}:00`:`${String(a).padStart(2,'0')}:00–${String(b+1).padStart(2,'0')}:00`).join(', ');
+  }
+
+  const dayHours   = hourlyAna.filter(a =>  isSofiaDay(a.h));
+  const nightHours = hourlyAna.filter(a => !isSofiaDay(a.h));
+  const dayCheap   = dayHours.filter(a => a.cheaper);
+  const nightCheap = nightHours.filter(a => a.cheaper);
+  const allCheap   = hourlyAna.filter(a => a.cheaper);
+  const allExp     = hourlyAna.filter(a => !a.cheaper && isFinite(a.freeRate));
+
+  // Whole-day break-even: how much total consumption must shift from expensive → cheap hours?
+  // freeDailyAvg + S*(avgFreeCheap - avgFreeExp) = regDailyAvg  →  solve for S.
+  const w = (arr, fn) => arr.reduce((s, a) => s + fn(a) * loadWeights[a.h], 0);
+  let breakEven = null;
+  if (allCheap.length > 0 && allExp.length > 0 && !freeIsCheaper) {
+    const cheapW       = w(allCheap, () => 1);
+    const expW         = w(allExp,   () => 1);
+    const freeAvg      = w(hourlyAna.filter(a => isFinite(a.freeRate)), a => a.freeRate);  // weighted sum (weights already sum to ~1)
+    const regAvg       = w(hourlyAna, a => a.regRate);
+    const avgFreeCheap = w(allCheap, a => a.freeRate) / cheapW;
+    const avgFreeExp   = w(allExp,   a => a.freeRate) / expW;
+    const shiftPct     = (freeAvg - regAvg) / (avgFreeExp - avgFreeCheap) * 100;
+    const shiftKwh     = Math.min(100, Math.max(0, shiftPct)) / 100 * dailyKwh;
+    breakEven = { shiftPct: Math.min(100, Math.max(0, shiftPct)), shiftKwh, cheapHours: hoursToRanges(allCheap.map(a => a.h)) };
+  }
+
+  const fmtEd = v => isFinite(v) ? v.toFixed(2) : '—';
+
+  // (nowMs / currentSpotEur resolved earlier, before the details table)
+  const currentFreeLv  = isFinite(currentSpotEur)
+    ? ((currentSpotEur + T.freeMarketMarkup) / 1000 * T.BGN_PER_EUR + network) * (1 + T.VAT)
+    : NaN;
+  // Which regulated tier applies at the selected time (Sofia local hour)?
+  const nowH = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const regNowLv = isSofiaDay(nowH) ? regDayVat : regNightVat;
+  const regNowLabel = isSofiaDay(nowH) ? 'ден' : 'нощ';
+  const nowPct = pct(regNowLv, currentFreeLv);
+  const nowCheaper = isFinite(currentFreeLv) && currentFreeLv < regNowLv;
+
+  // EUR/kWh breakdown for free-market price
+  const networkEurKwh   = network / T.BGN_PER_EUR;
+  const supplyEurKwh    = isFinite(currentSpotEur) ? (currentSpotEur + T.freeMarketMarkup) / 1000 : NaN;
+  const subTotalEurKwh  = isFinite(supplyEurKwh) ? supplyEurKwh + networkEurKwh : NaN;
+  const vatEurKwh       = isFinite(subTotalEurKwh) ? subTotalEurKwh * T.VAT : NaN;
+  const freeEurKwh      = isFinite(subTotalEurKwh) ? subTotalEurKwh * (1 + T.VAT) : NaN;
+  const regNowEurKwh    = regNowLv / T.BGN_PER_EUR;
+  const fmtEk = v => isFinite(v) ? v.toFixed(4) : '—';
+
+  el.innerHTML = `
+    <!-- ── HERO SUMMARY ── -->
+    <div onclick="toggleTariffDetails()"
+         style="display:flex;align-items:center;gap:0;cursor:pointer;border-bottom:1px solid #edf2f8;user-select:none;">
+
+      <!-- Dominant: free-market end price -->
+      <div style="flex:1;padding:14px 18px;">
+        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:5px;">Цена за краен потребител (свободен пазар)</div>
+        <div style="font-size:2.1rem;font-weight:800;${nowCheaper?'color:#1a8a1a':'color:#cc2200'};line-height:1.05;">${fmtEk(freeEurKwh)} <span style="font-size:0.95rem;font-weight:500;color:#5a7090;">EUR/кВтч</span></div>
+        <div style="font-size:0.7rem;color:#8a9bb5;margin-top:6px;line-height:1.6;">
+          борса&nbsp;${fmtEk(supplyEurKwh)} &nbsp;+&nbsp; мрежа&nbsp;${fmtEk(networkEurKwh)} &nbsp;+&nbsp; ДДС&nbsp;${fmtEk(vatEurKwh)} EUR/кВтч
+        </div>
+        <div style="font-size:0.65rem;color:#aab8cc;margin-top:2px;">
+          борсова цена (IBEX)&nbsp;${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'}&nbsp;EUR/МВтч
+        </div>
+      </div>
+
+      <!-- Delta + regulated reference + arrow -->
+      <div style="padding:14px 18px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:130px;border-left:1px solid #edf2f8;">
+        <div style="font-size:1.7rem;font-weight:800;${pctSty(nowPct)};line-height:1.05;">${fmtP(nowPct)}</div>
+        <div style="font-size:0.68rem;color:#8a9bb5;">${nowCheaper?'по-евтин от регулирана':'по-скъп от регулирана'}</div>
+        <div style="font-size:0.72rem;color:#8a9bb5;margin-top:2px;">
+          vs рег. <span style="color:#5a7090;font-weight:600;">${fmtEk(regNowEurKwh)}</span> EUR/кВтч
+        </div>
+        <div id="tariff-arrow" style="font-size:0.75rem;color:#aab8cc;margin-top:3px;">${tariffExpanded?'▲':'▼'}</div>
+      </div>
+    </div>
+
+    <!-- ── COLLAPSIBLE DETAILS ── -->
+    <div id="tariff-details" style="display:${tariffExpanded?'block':'none'};">
+      <div class="panel-body">
+        <div style="font-size:0.72rem;color:#8a9bb5;margin-bottom:10px;">
+          Референтни стойности по решение <strong style="color:#5a7090;">Ц-25 КЕВР, юли 2025</strong> (Енерго-Про / Електросевер).
+          Мрежовите компоненти (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара.
+          Дневна тарифа: 07:00–23:00 ч. &nbsp;|&nbsp; Нощна: 23:00–07:00 ч.
+        </div>
+
+        <table class="flows-table" style="margin-bottom:16px;">
+          <thead>
+            <tr>
+              <th>Компонент</th>
+              <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
+              <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
+              <th style="text-align:right;">Δ%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${compHTML}
+            ${totHTML}
+          </tbody>
+        </table>
+
+        <div style="border-top:2px solid #edf2f8;padding-top:12px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+            Консуматор с ${dailyKwh} кВтч/ден
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+            <div class="balance-item">
+              <div class="balance-label">Регулирана</div>
+              <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
+            </div>
+            <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+              <div class="balance-label">Свободен пазар</div>
+              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
+            </div>
+            <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
+              <div class="balance-label">Разлика</div>
+              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${freeIsCheaper?'−':'+'}${fmtEd(Math.abs(savingEur))} EUR</div>
+              <div class="stat-unit">${isFinite(savingPct)?(freeIsCheaper?'−':'+')+(Math.abs(savingPct)).toFixed(1)+'%':''}</div>
+            </div>
+          </div>
+
+          <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+            По-евтини часове на свободния пазар
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Дневна тарифа (07–23ч)</div>
+              <strong>${dayCheap.length}</strong> от 16 часа
+              <div style="font-size:0.68rem;margin-top:3px;${dayCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+                ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+              </div>
+            </div>
+            <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Нощна тарифа (23–07ч)</div>
+              <strong>${nightCheap.length}</strong> от 8 часа
+              <div style="font-size:0.68rem;margin-top:3px;${nightCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
+                ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+              </div>
+            </div>
+          </div>
+
+          ${allCheap.length > 0 ? `
+          <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
+            ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
+          </div>` : `
+          <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
+            ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
+          </div>`}
+
+          ${(() => {
+            const fmtEur = v => (v / T.BGN_PER_EUR).toFixed(2);
+            const lines = [
+              `<div style="display:flex;gap:16px;font-size:0.75rem;margin-top:8px;padding:7px 10px;background:#f5f8ff;border:1px solid #c5d8ee;border-radius:4px;">`,
+              `<span>Свободен пазар: <strong>${fmtEur(freeDailyCost)} EUR/ден</strong></span>`,
+              `<span>Регулиран: <strong>${fmtEur(regDailyCost)} EUR/ден</strong></span>`,
+              `</div>`,
+            ].join('');
+            let action = '';
+            if (freeIsCheaper) {
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;">✓ Свободният пазар е по-изгоден — спестявате <strong>${fmtEur(regDailyCost - freeDailyCost)} EUR/ден</strong>.</div>`;
+            } else if (allCheap.length === 0) {
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">✗ Няма евтини часове — регулираната тарифа е по-изгодна.</div>`;
+            } else if (breakEven) {
+              const diff = fmtEur(freeDailyCost - regDailyCost);
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff8f0;border:1px solid #f5c5a5;border-radius:4px;line-height:1.7;">Трябва да спестите <strong>${diff} EUR/ден</strong> — преместете ~<strong>${breakEven.shiftPct.toFixed(0)}%</strong> (${breakEven.shiftKwh.toFixed(1)} кВтч) от потреблението към евтините часове (${breakEven.cheapHours}).</div>`;
+            }
+            return `<div style="margin-top:8px;">${lines}${action}<div style="margin-top:4px;color:#aab8cc;font-size:0.68rem;padding-left:2px;">профил: ${loadProfileLabel}</div></div>`;
+          })()}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -815,20 +1554,40 @@ function updateDayBalance(binned, pd, dateStr) {
 let _pieInitialized = false;
 function drawPie(latest) {
   if (!latest) return;
+  window._lastPieSnap = latest;
   // Always include every source (even at 0) so label count never changes → no resize
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }));
-  const vals   = [...rows.map(r=>r.v),   latest['batt_discharge_mw']||0, Math.max(0, latest['net_import_mw']||0)];
+  const vals   = [...rows.map(r=>r.v),   battDis(latest['batt_discharge_mw'], toUtcMs(latest)), Math.max(0, latest['net_import_mw']||0)];
   const labels = [...rows.map(r=>r.label), 'ССЕЕ разреждане',              'Внос'];
   const colors = [...rows.map(r=>r.color), '#f59f00',                       '#9e9e9e'];
 
   const total = vals.reduce((a,b)=>a+b,0);
+  const loadMw = latest['load_mw'] || 0;
+  const netImp = latest['net_import_mw'] || 0;
+  const exportMw = netImp < 0 ? Math.abs(netImp) : 0;
+  const explicitChg = latest['batt_charge_mw'];
+  const chgMw = explicitChg != null && explicitChg > 0
+    ? explicitChg
+    : (loadMw > 0 ? Math.max(0, total - loadMw - exportMw) : 0);
+  const pumpsNowPie = latest['pumps_mw'] || 0;
+  const subParts = [];
+  if (loadMw > 0) subParts.push({ v: loadMw, s: `${fmt0(loadMw)} т`, pin: 0 });
+  if (exportMw > 50) subParts.push({ v: exportMw, s: `${fmt0(exportMw)} износ`, pin: 1 });
+  if (chgMw > 50) subParts.push({ v: chgMw, s: `${fmt0(chgMw)} зар.`, pin: 99 });
+  if (pumpsNowPie > 0) subParts.push({ v: pumpsNowPie, s: `${fmt0(pumpsNowPie)} помпи`, pin: 99 });
+  subParts.sort((a, b) => a.pin !== b.pin ? a.pin - b.pin : b.v - a.v);
+  const centerSub = subParts.length
+    ? `<span style="font-size:9px;color:#5a7090">${subParts.map(p=>p.s).join(' / ')}</span>`
+    : '';
+  const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span><br>${centerSub}`;
   const traceData = [{
     type: 'pie', values: vals, labels: labels,
     marker: { colors, line: { color: '#fff', width: 1.5 } },
     hole: 0.44, sort: false,
-    textinfo: 'label+percent',
+    textinfo: pieMwhMode ? 'none' : 'label+percent',
+    texttemplate: pieMwhMode ? '%{label}<br>%{value:.0f} МВт' : undefined,
     textfont: { size: 10, family: 'Arial' },
-    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
+    hovertemplate: '<b>%{label}</b><br>%{value:.0f} МВт<br>%{percent}<extra></extra>',
     insidetextorientation: 'radial',
   }];
   const layout = {
@@ -839,7 +1598,7 @@ function drawPie(latest) {
     margin: { t: 10, b: 60, l: 10, r: 10 },
     uirevision: 'pie',
     annotations: [{
-      text: `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>`,
+      text: centerText(),
       x: 0.5, y: 0.5, showarrow: false,
       font: { size: 15, color: '#004494', family: 'Arial' },
     }],
@@ -849,8 +1608,10 @@ function drawPie(latest) {
     _pieInitialized = true;
   } else {
     Plotly.update('chart-pie',
-      { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false] },
-      { 'annotations[0].text': `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span>` },
+      { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false],
+        textinfo: [pieMwhMode ? 'none' : 'label+percent'],
+        texttemplate: [pieMwhMode ? '%{label}<br>%{value:.0f} МВт' : ''] },
+      { 'annotations[0].text': centerText() },
       [0]);
     // suppress animation
     const gd = document.getElementById('chart-pie');
@@ -872,43 +1633,63 @@ const LO = {
 
 function drawTimeline(binned, pd, dateStr) {
   window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
+  if (colMode) { drawColChart(binned, pd, dateStr); return; }
 
-  const pts    = chartMode === 'hourly' ? binByHour(binned) : binned;
-  const isHour = chartMode === 'hourly';
-  const xs     = isHour ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+  const pts = rotatePts(binned, dateStr);
+  const xs  = pts.map(p => toSofiaStr(p.ts));
+
+  // Build price lookup for EUR mode
+  const dayPrices = getDayPrices(pd, dateStr);
+  const priceByBin = {};
+  for (const p of dayPrices)
+    priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
+  function pAt(p) { return priceByBin[p.ts] ?? NaN; }
+  function eur(mw, p) { // MW → хил.€/h
+    if (!eurMode || mw == null || isNaN(mw)) return mw;
+    const pr = pAt(p); return isFinite(pr) ? mw * pr / 1000 : null;
+  }
+  const yUnit = eurMode ? 'хил.€/h' : 'MW';
+  const htFmt = eurMode ? (lbl => `${lbl}: %{y:.1f} хил.€/h<extra></extra>`) : (lbl => `${lbl}: %{y:.0f} MW<extra></extra>`);
 
   const genTraces = GEN_SERIES.map(s => ({
-    x: xs, y: pts.map(p=>isNaN(p[s.key])?null:Math.max(0,p[s.key]||0)),
+    x: xs, y: pts.map(p => { const v = isNaN(p[s.key])?null:Math.max(0,p[s.key]||0); return eur(v,p)??v; }),
     name: s.label, stackgroup: 'gen',
-    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color },
-    visible: (reMode && !RE_KEYS.has(s.key)) ? 'legendonly' : true,
-    hovertemplate: `${s.label}: %{y:.0f} MW<extra></extra>`,
+    fillcolor: s.color+'cc', line: { width: 0.5, color: s.color, shape: 'linear' },
+    visible: (hiddenGenKeys.has(s.key) || (reMode && !RE_KEYS.has(s.key))) ? 'legendonly' : true,
+    hovertemplate: htFmt(s.label),
   }));
 
   const loadTrace = {
-    x: xs, y: pts.map(p=>isNaN(p['load_mw'])?null:p['load_mw']||0),
-    name: 'Товар', line: { color: '#e53935', width: 2.5 },
-    hovertemplate: 'Товар: %{y:.0f} MW<extra></extra>',
+    x: xs, y: pts.map(p => { const v = isNaN(p['load_mw'])?null:p['load_mw']||0; return eur(v,p)??v; }),
+    name: 'Товар', line: { color: '#e53935', width: 2.5, shape: 'spline' },
+    hovertemplate: htFmt('Товар'),
   };
   const battDischargeTrace = {
-    x: xs, y: pts.map(p => { const v = p['batt_discharge_mw']; return (v != null && v > 0) ? v : 0; }),
+    x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw'], p.ts); return eur(v,p)??v; }),
     name: 'ССЕЕ разреждане', stackgroup: 'gen',
-    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00' },
-    hovertemplate: 'ССЕЕ разреждане: %{y:.0f} MW<extra></extra>',
+    fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'linear' },
+    visible: hiddenGenKeys.has('_batt') ? 'legendonly' : true,
+    hovertemplate: htFmt('ССЕЕ разреждане'),
   };
   const battChargeTrace = {
-    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; return (v != null && v > 0) ? -v : 0; }),
-    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot' },
+    x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; const mw = (v != null && v > 0) ? -v : 0; return eur(mw,p)??mw; }),
+    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot', shape: 'spline' },
     visible: reMode ? 'legendonly' : true,
-    hovertemplate: 'ССЕЕ зареждане: %{y:.0f} MW<extra></extra>',
+    hovertemplate: htFmt('ССЕЕ зареждане'),
   };
 
-  const dayPrices = getDayPrices(pd, dateStr);
-  const priceXs   = isHour
-    ? dayPrices.map(p=>{ const h=new Date(p.ts).getUTCHours(); return `${String(h).padStart(2,'0')}:00`; })
-    : dayPrices.map(p=>new Date(p.ts));
-  const priceTrace = dayPrices.length ? {
-    x: priceXs, y: dayPrices.map(p=>p.price),
+  const hasPumps = pts.some(p => (p['pumps_mw'] || 0) > 0);
+  const pumpsTrace = hasPumps ? {
+    x: xs, y: pts.map(p => { const v = p['pumps_mw'] || 0; const mw = v > 0 ? -v : 0; return eur(mw,p)??mw; }),
+    name: 'Помпи', line: { color: '#0369a1', width: 1.5, dash: 'dot', shape: 'spline' },
+    visible: reMode ? 'legendonly' : true,
+    hovertemplate: htFmt('Помпи'),
+  } : null;
+
+  const rotatedPrices = rotatePts(dayPrices, dateStr);
+  const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
+  const priceTrace = (!eurMode && rotatedPrices.length) ? {
+    x: priceXs, y: rotatedPrices.map(p=>p.price),
     name: 'IBEX цена', yaxis: 'y2',
     visible: reMode ? 'legendonly' : true,
     line: { color: '#e07000', width: 1.5 },
@@ -916,26 +1697,49 @@ function drawTimeline(binned, pd, dateStr) {
   } : null;
 
   const traces = [...genTraces, battDischargeTrace, loadTrace, battChargeTrace];
+  if (pumpsTrace) traces.push(pumpsTrace);
   if (priceTrace) traces.push(priceTrace);
 
   Plotly.react('chart-timeline', traces, {
     ...LO,
-    uirevision: reMode ? 'timeline-re' : 'timeline',
-    xaxis: { ...LO.xaxis, type: isHour ? 'category' : 'date', title: isHour ? 'Час (UTC)' : 'Час' },
-    yaxis:  { ...LO.yaxis, title: 'MW' },
+    uirevision: `timeline-${reMode}-${eurMode}`,
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
+    yaxis:  { ...LO.yaxis, title: yUnit },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
               gridcolor: 'transparent', linecolor: '#e07000',
               tickfont: { size: 9, color: '#e07000' }, titlefont: { size: 10, color: '#e07000' } },
     legend: { ...LO.legend, orientation: 'h', y: -0.15 },
     margin: { t: 8, b: 90, l: 58, r: 58 },
   }, { responsive: true, displayModeBar: false });
+
+  // Attach legend click listener once
+  const el = document.getElementById('chart-timeline');
+  if (!el._legendListenerAttached) {
+    el._legendListenerAttached = true;
+    el.on('plotly_legendclick', function(data) {
+      const idx = data.curveNumber;
+      const t = (el.data || [])[idx];
+      if (!t) return;
+      const willHide = t.visible !== 'legendonly';
+      let key = null;
+      if (idx < GEN_SERIES.length) key = GEN_SERIES[idx].key;
+      else if (idx === GEN_SERIES.length) key = '_batt'; // battDischargeTrace is right after genTraces
+      if (key) {
+        if (willHide) hiddenGenKeys.add(key);
+        else hiddenGenKeys.delete(key);
+        setTimeout(() => {
+          if (totalStatsVisible) updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+          writeHash(currentDay, null);
+        }, 0);
+      }
+    });
+  }
 }
 
 function drawFlowsTimeline(binned) {
   if (!binned.length) return;
-  const pts  = chartMode === 'hourly' ? binByHour(binned) : binned;
-  const isH  = chartMode === 'hourly';
-  const xs   = isH ? pts.map(p=>`${String(p.hour).padStart(2,'0')}:00`) : pts.map(p=>new Date(p.ts));
+  const pts = binned;
+  const xs  = pts.map(p => toSofiaStr(p.ts));
 
   const traces = FLOW_CFG.map(f => ({
     x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
@@ -955,7 +1759,7 @@ function drawFlowsTimeline(binned) {
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
-    xaxis: { ...LO.xaxis, type: isH ? 'category' : 'date', title: isH ? 'Час (UTC)' : 'Час' },
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
     yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
     margin: { t: 8, b: 90, l: 58, r: 10 },
@@ -1006,8 +1810,10 @@ function onSnapSlider(val) {
   updateFlowsTable(snap, _dayPriceData);
   updateGenTable(snap);
   drawPie(snap);
+  const snapMs = toUtcMs(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
-  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr);
+  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs);
+  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
   writeHash(currentDay, ts);
 }
@@ -1024,26 +1830,47 @@ async function refresh() {
     const dateStr = currentDay || todayStr();
     const isToday = currentDay === null;
     const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
-    const latest  = records.length ? records[records.length-1] : null;
-    const binned  = bin15min(records);
+
+    // Also load previous day to pick up 00:00–01:00 Sofia records that landed there
+    // (happens when date_bg was computed with UTC+2 but Sofia is UTC+3 in summer)
+    const prevDate = new Date(dateStr + 'T12:00:00Z');
+    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+    const prevStr  = prevDate.toISOString().slice(0, 10);
+    let prevRecs = [];
+    try {
+      prevRecs = (await getJSONL(`${BASE}/${prevStr}.jsonl`))
+        .filter(r => { const ms = toUtcMs(r); return isFinite(ms) && toSofiaStr(ms).slice(0, 10) === dateStr; });
+    } catch(_) {}
+    const allRecords = prevRecs.length ? [...prevRecs, ...records].sort((a,b)=>toUtcMs(a)-toUtcMs(b)) : records;
+
+    const latest  = allRecords.length ? allRecords[allRecords.length-1] : null;
+    const binned  = bin15min(allRecords);
     const pd      = await loadPrices(dateStr);
 
-    _dayRecords   = records;
+    // Load profile — fetch once, reuse until next day
+    if (!_loadProfile) {
+      try {
+        const lp = await getJSON(`${BASE}/load_profile.json`);
+        if (lp && lp.weights && lp.weights.length === 24) _loadProfile = lp;
+      } catch (_) {}
+    }
+
+    _dayRecords   = allRecords;
     _dayPriceData = pd;
     _dayDateStr   = dateStr;
 
-    updateScrubber(records);
+    updateScrubber(allRecords);
 
     let displaySnap   = latest;
     let displayBinned = binned;
 
     // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
-    if (_pendingSnapTs && records.length) {
-      const idx = records.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
+    if (_pendingSnapTs && allRecords.length) {
+      const idx = allRecords.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
       if (idx >= 0) {
         document.getElementById('snap-slider').value = idx;
-        displaySnap   = records[idx];
-        displayBinned = bin15min(records.slice(0, idx + 1));
+        displaySnap   = allRecords[idx];
+        displayBinned = bin15min(allRecords.slice(0, idx + 1));
         updateSnapLabel(displaySnap);
         _pendingSnapTs = null;
       }
@@ -1055,9 +1882,11 @@ async function refresh() {
     updateDayBalance(displayBinned, pd, dateStr);
 
     drawPie(displaySnap);
+    updateDayStartLabel();
     drawTimeline(displayBinned, pd, dateStr);
     drawFlowsTimeline(displayBinned);
-    updateReStats(displayBinned);
+    updateTotalStats(displayBinned, pd, dateStr);
+    drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
     loadRecords();
 
   } catch(e) {
@@ -1111,8 +1940,23 @@ function navigateRecord(e, el) {
   refresh();
 }
 
+// Apply persisted toggle state to UI before first render
+(function applyInitialUIState() {
+  document.getElementById('tog-re').classList.toggle('active', reMode);
+  document.getElementById('re-stats-bar').classList.toggle('show', reMode);
+  document.getElementById('tog-eur').classList.toggle('active', eurMode);
+  document.getElementById('tog-col').classList.toggle('active', colMode);
+})();
+
 refresh();
 setInterval(refresh, REFRESH_MS);
 </script>
+
+<footer style="text-align:center;padding:16px 20px 24px;font-size:0.72rem;color:#7a8aaa;">
+  Неофициален ресурс &bull; данни от <a href="https://www.eso.bg" target="_blank" rel="noopener" style="color:#004494;">ЕСО ЕАД</a> и <a href="https://ibex.bg" target="_blank" rel="noopener" style="color:#004494;">IBEX</a>
+  &bull; <a href="https://github.com/yyoncho/eso-dashboard/blob/master/README.md" target="_blank" rel="noopener" style="color:#004494;">Документация (README)</a>
+  &bull; <a href="https://github.com/yyoncho/eso-dashboard" target="_blank" rel="noopener" style="color:#004494;">GitHub</a>
+</footer>
+<img src="https://hits.sh/yyoncho.github.io/eso-dashboard.svg" style="display:none" alt="" referrerpolicy="no-referrer-when-downgrade">
 </body>
 </html>
