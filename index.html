@@ -273,11 +273,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-val" id="s-gen">—</div>
       <div class="stat-unit">MW</div>
     </div>
+    <div class="stat-card orange">
+      <div class="stat-label">IBEX цена</div>
+      <div class="stat-val" id="s-ibex-price">—</div>
+      <div class="stat-unit">EUR/MWh</div>
+    </div>
     <div class="stat-card" id="s-import-card">
       <div class="stat-label" id="s-import-label">Внос/Износ</div>
       <div class="stat-val" id="s-import">—</div>
       <div class="stat-unit">MW</div>
-      <div class="stat-sub" id="s-import-eur">—</div>
     </div>
     <div id="s-dyn" style="display:contents;"></div>
   </div>
@@ -1058,12 +1062,11 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-gen').textContent  = fmt0(gen);
 
   const price = getPriceAt(pd, toUtcMs(latest));
+  document.getElementById('s-ibex-price').textContent = isFinite(price) ? fmt1(price) : '—';
   const isImp = nImp > 0;
   document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
   document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
-  document.getElementById('s-import-eur').textContent = isFinite(price)
-    ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
 
   // Dynamic source cards sorted by descending MW
   const tsMs = toUtcMs(latest);
