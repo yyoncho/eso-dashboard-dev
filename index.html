@@ -876,10 +876,10 @@ function updateTotalStats(binned, pd, dateStr) {
     const eurScale = isFinite(pr) ? pr * (15/60) / 1e6 : null;
     const scale = eurMode && eurScale !== null ? eurScale : mwhScale;
     if (eurMode && eurScale === null) continue;
+    const chg = Math.max(0, b['batt_charge_mw'] || 0);
+    battChgMwh += chg * mwhScale;  // always accumulate (pumps_mw excluded — separate field)
     if (isFinite(pr) && eurScale !== null) {
-      const chg = Math.max(0, b['batt_charge_mw'] || 0);
       battChgCost += chg * eurScale;
-      battChgMwh  += chg * mwhScale;
       const pumps = Math.max(0, b['pumps_mw'] || 0);
       pumpsChgCost += pumps * eurScale;
       pumpsChgMwh  += pumps * mwhScale;
