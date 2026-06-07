@@ -1194,7 +1194,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
       if (isFinite(p)) pumpsChgEur += pumps * (15/60) * p;
     }
   }
-  const net = expEur - impEur - pumpsChgEur;
+  const net = expEur - impEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
   const avgExpPrice = expMwh > 0 ? expEur / expMwh : NaN;
   document.getElementById('b-import-eur').textContent = fmtEur(impEur);
