@@ -1994,9 +1994,29 @@ function toggleRecords(e) {
   e.stopPropagation();
   document.getElementById('rec-dropdown-panel').classList.toggle('open');
 }
-document.addEventListener('click', () => {
+document.addEventListener('click', e => {
   document.getElementById('rec-dropdown-panel').classList.remove('open');
+  // Anchor links: offset scroll by sticky header height
+  const a = e.target.closest('a.anchor-link[href^="#"]');
+  if (a) {
+    const id = a.getAttribute('href').slice(1);
+    const target = document.getElementById(id);
+    if (target) {
+      e.preventDefault();
+      const gap = getStickyTop() + 8;
+      const y = target.getBoundingClientRect().top + window.scrollY - gap;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }
 });
+
+function getStickyTop() {
+  const h = document.querySelector('header');
+  let height = h ? h.offsetHeight : 0;
+  const sc = document.getElementById('snap-scrubber');
+  if (sc && sc.offsetHeight > 0 && sc.style.display !== 'none') height += sc.offsetHeight;
+  return height;
+}
 
 function navigateRecord(e, el) {
   e.preventDefault();
