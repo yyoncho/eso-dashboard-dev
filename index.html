@@ -119,6 +119,10 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .panel-body { padding: 10px 12px; }
 .info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
 .info-btn:hover { background:rgba(255,255,255,0.2); }
+.fs-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:3px;width:20px;height:16px;font-size:0.75rem;cursor:pointer;line-height:1;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center; }
+.fs-btn:hover { background:rgba(255,255,255,0.2); }
+.panel.fs-active { position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;margin:0;border-radius:0;overflow:auto; }
+.panel.fs-active .fs-chart { height:calc(100vh - 110px) !important; }
 .info-dropdown { display:none;font-size:0.72rem;color:#4a5a7a;background:#eef3fb;border:1px solid #c5d8ee;border-top:none;padding:8px 12px;line-height:1.5; }
 .info-dropdown.open { display:block; }
 
@@ -431,13 +435,14 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
         </div>
         <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Информация">?</button>
+        <button class="fs-btn" onclick="toggleFullscreen('day-profile','chart-timeline')" title="Цял екран">⛶</button>
       </div>
     </div>
     <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
     <div id="re-stats-bar" style="display:none;"></div>
     <div id="total-stats-bar" class="stat-grid" style="padding:8px 12px;margin-bottom:0;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
-      <div id="chart-timeline" style="height:520px;"></div>
+      <div id="chart-timeline" class="fs-chart" style="height:640px;"></div>
     </div>
     <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 0 6px;border-top:1px solid #eef2f8;">
       <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Предишен час">◄</button>
@@ -448,9 +453,12 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
   <!-- flows timeline -->
   <div class="panel" id="flows-profile" style="margin-bottom:12px;">
-    <div class="panel-header"><a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a></div>
+    <div class="panel-header">
+      <a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a>
+      <button class="fs-btn" onclick="toggleFullscreen('flows-profile','chart-flows-ts')" title="Цял екран">⛶</button>
+    </div>
     <div style="padding:6px 8px 10px;">
-      <div id="chart-flows-ts" style="height:480px;"></div>
+      <div id="chart-flows-ts" class="fs-chart" style="height:480px;"></div>
     </div>
   </div>
 
@@ -1739,7 +1747,7 @@ function drawTimeline(binned, pd, dateStr) {
   }
 }
 
-function drawFlowsTimeline(binned) {
+function drawFlowsTimeline(binned, pd) {
   if (!binned.length) return;
   const pts = binned;
   const xs  = pts.map(p => toSofiaStr(p.ts));
@@ -1750,7 +1758,6 @@ function drawFlowsTimeline(binned) {
     hovertemplate: `${f.label}: %{y:.0f} MW<extra></extra>`,
   }));
   const netY = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
-  // filled area below/above zero for net position
   traces.push({
     x: xs, y: netY,
     name: 'Нетна позиция', fill: 'tozeroy',
@@ -1759,13 +1766,33 @@ function drawFlowsTimeline(binned) {
     hovertemplate: 'Нетна позиция: %{y:.0f} MW<extra></extra>',
   });
 
+  // EUR/h for net position on secondary axis
+  const eurY = pts.map(p => {
+    const mw = isNaN(p['net_import_mw']) ? null : p['net_import_mw'] || 0;
+    if (mw === null) return null;
+    const pr = getPriceAt(pd, p.ts);
+    return isFinite(pr) ? Math.round(mw * pr) : null;
+  });
+  const hasEur = eurY.some(v => v !== null);
+  if (hasEur) {
+    traces.push({
+      x: xs, y: eurY,
+      name: 'Нетна позиция €/h', yaxis: 'y2',
+      line: { color: '#e07000', width: 1.5, dash: 'dot' },
+      hovertemplate: 'Нетна €/h: %{y:,.0f}<extra></extra>',
+    });
+  }
+
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
     xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
     yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
+    yaxis2: { overlaying: 'y', side: 'right', title: '€/h', showgrid: false,
+              tickfont: { size: 10, color: '#e07000' }, titlefont: { size: 10, color: '#e07000' },
+              zeroline: false },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
-    margin: { t: 8, b: 90, l: 58, r: 10 },
+    margin: { t: 8, b: 90, l: 58, r: 58 },
     shapes: [{ type:'line', xref:'paper', x0:0, x1:1, y0:0, y1:0,
                line: { color:'#aaa', width:1, dash:'dash' } }],
   }, { responsive: true, displayModeBar: false });
@@ -1774,6 +1801,18 @@ function drawFlowsTimeline(binned) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  TIMESTAMP
 // ══════════════════════════════════════════════════════════════════════════════
+function toggleFullscreen(panelId, chartId) {
+  const panel = document.getElementById(panelId);
+  const active = panel.classList.toggle('fs-active');
+  document.body.style.overflow = active ? 'hidden' : '';
+  // close on Escape
+  if (active) {
+    const onKey = e => { if (e.key === 'Escape') { panel.classList.remove('fs-active'); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); Plotly.relayout(chartId, {}); } };
+    document.addEventListener('keydown', onKey);
+  }
+  Plotly.relayout(chartId, {});
+}
+
 function updateTimestamp(latest) {
   const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
   if (!latest) { el.textContent = 'Няма данни'; return; }
@@ -1887,7 +1926,7 @@ async function refresh() {
     drawPie(displaySnap);
     updateDayStartLabel();
     drawTimeline(displayBinned, pd, dateStr);
-    drawFlowsTimeline(displayBinned);
+    drawFlowsTimeline(displayBinned, pd);
     updateTotalStats(displayBinned, pd, dateStr);
     drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
     loadRecords();
