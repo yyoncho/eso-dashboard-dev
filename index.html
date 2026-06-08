@@ -1175,24 +1175,13 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
 
   let impMwh=0, expMwh=0, impEur=0, expEur=0, pSum=0, pN=0, pMin=Infinity, pMax=-Infinity;
   let battChgMwh=0, battDisMwh=0, pumpsChgMwh=0, pumpsChgEur=0;
-  // Gross import/export per country — simultaneous flows on different borders
-  // are counted separately, not netted against each other.
-  const FLOW_KEYS = ['RO_mw','SR_mw','MK_mw','GR_mw','TR_mw'];
   for (const b of binned) {
-    let binImpMw = 0, binExpMw = 0, hasFlow = false;
-    for (const k of FLOW_KEYS) {
-      const v = b[k];
-      if (!isFinite(v)) continue;
-      hasFlow = true;
-      if (v > 0) binImpMw += v; else binExpMw += v;
-    }
-    if (!hasFlow) continue;
-    const impMwhBin = binImpMw * (15/60);
-    const expMwhBin = Math.abs(binExpMw) * (15/60);
+    const mw = b['net_import_mw']; if (!isFinite(mw)) continue;
+    const mwh = mw*(15/60);
     const p   = pByBin[b.ts] ?? getPriceAt(pd, b.ts);
-    impMwh += impMwhBin; expMwh += expMwhBin;
+    if (mwh>0) impMwh+=mwh; else expMwh+=Math.abs(mwh);
     if (isFinite(p)) {
-      impEur += impMwhBin * p; expEur += expMwhBin * p;
+      if (mwh>0) impEur+=mwh*p; else expEur+=Math.abs(mwh)*p;
       pSum+=p; pN++; if(p<pMin)pMin=p; if(p>pMax)pMax=p;
     }
     const chg = b['batt_charge_mw'];
