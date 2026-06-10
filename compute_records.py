@@ -3,9 +3,43 @@
 
 import json
 import re as re_mod
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import os
+
+BG_TZ = ZoneInfo('Europe/Sofia')
+
+def snap_ts_to_utc(r):
+    ts = r.get('timestamp_utc') or r.get('timestamp') or ''
+    if not ts:
+        return None
+    try:
+        ts = ts.replace('Z', '+00:00')
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=BG_TZ)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+def intervals_h(records):
+    """Return per-record interval in hours based on actual timestamp gaps.
+    Each record owns the time from its timestamp to the next (or 5 min for the last).
+    Gaps > 30 min are capped at 30 min to avoid inflating totals on long outages."""
+    dts = [snap_ts_to_utc(r) for r in records]
+    result = []
+    for i, dt in enumerate(dts):
+        if dt is None:
+            result.append(5 / 60)
+            continue
+        if i + 1 < len(dts) and dts[i + 1] is not None:
+            gap_h = (dts[i + 1] - dt).total_seconds() / 3600
+        else:
+            gap_h = 5 / 60
+        result.append(min(gap_h, 0.5))  # cap at 30 min
+    return result
 DATA_DIR = Path(os.environ.get('DATA_DIR', Path(__file__).parent / 'data'))
 non_RE = ['АЕЦ', 'Кондензационни ТЕЦ', 'Топлофикационни ТЕЦ', 'Заводски ТЕЦ']
 RE     = ['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']
@@ -37,10 +71,10 @@ def main():
         n = len(records)
         if n == 0:
             continue
-        ih = 5 / 60  # fixed 5-min interval per snapshot
+        ihs = intervals_h(records)
         load_gwh = re_gwh = re_hours = solar_gwh = 0
 
-        for r in records:
+        for r, ih in zip(records, ihs):
             ts    = r.get('timestamp_utc') or r.get('timestamp') or ''
             solar = r.get('ФЕЦ') or 0
             chg   = abs(r.get('ССЕЕ_mw') or 0) if r.get('ССЕЕ_state') == 'charging' else 0
