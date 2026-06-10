@@ -1309,20 +1309,20 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   document.getElementById('p-minmax').textContent  = pN?`${fmt1(pMin)} / ${fmt1(pMax)}`:'—';
 
   // ── per-country consumed GWh cards ──
-  const ctryGwh = {};
-  for (const f of FLOW_CFG) ctryGwh[f.key] = 0;
+  const ctryGwh = {}, ctryEur = {}, ctryMwh = {};
+  for (const f of FLOW_CFG) { ctryGwh[f.key] = 0; ctryEur[f.key] = 0; ctryMwh[f.key] = 0; }
   for (const b of binned) {
     const load  = Math.max(0, b['load_mw'] || 0);
+    const p     = pByBin[b.ts] ?? getPriceAt(pd, b.ts);
     let grossImp = 0;
     for (const f of FLOW_CFG) { const v = b[f.key]; if (isFinite(v) && v > 0) grossImp += v; }
-    // fraction of imports that are consumed (vs re-exported)
-    const grossExp = Math.abs(Math.min(0, b['net_import_mw'] || 0) - Math.max(0, b['net_import_mw'] || 0));
-    const consumedFrac = grossImp > 0 ? Math.min(1, load / (grossImp || 1)) : 1;
+    const consumedFrac = grossImp > 0 ? Math.min(1, load / grossImp) : 1;
     for (const f of FLOW_CFG) {
       const v = b[f.key];
       if (!isFinite(v)) continue;
-      if (v > 0) ctryGwh[f.key] += v * consumedFrac * (15/60) / 1000;   // consumed import
-      else        ctryGwh[f.key] += v * (15/60) / 1000;                  // export always counts
+      const mwh = v > 0 ? v * consumedFrac * (15/60) : v * (15/60);
+      ctryGwh[f.key] += mwh / 1000;
+      if (isFinite(p)) { ctryEur[f.key] += mwh * p; ctryMwh[f.key] += Math.abs(mwh); }
     }
   }
   const bar = document.getElementById('flows-country-bar');
@@ -1338,10 +1338,13 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
         const color = isImp ? '#c62828' : '#2e7d32';
         const arrow = isImp ? '▲' : '▼';
         const label = isImp ? 'внос' : 'износ';
+        const avgP  = ctryMwh[f.key] > 0 ? ctryEur[f.key] / ctryMwh[f.key] : NaN;
+        const priceStr = isFinite(avgP) ? `<div style="font-size:0.62rem;color:#8a9ab0;">@ ${avgP.toFixed(0)} €/MWh</div>` : '';
         return `<div style="background:#fff;border:1px solid #c5d8ee;border-top:3px solid ${f.color};border-radius:6px;padding:6px 10px;min-width:90px;">
           <div style="font-size:0.65rem;color:#5a7090;">${f.label}</div>
           <div style="font-size:1rem;font-weight:700;color:${color};">${arrow} ${Math.abs(gwh).toFixed(1)}</div>
           <div style="font-size:0.62rem;color:#8a9ab0;">GWh ${label}</div>
+          ${priceStr}
         </div>`;
       }).join('')
     + '</div>';
