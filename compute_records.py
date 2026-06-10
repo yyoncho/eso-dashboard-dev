@@ -37,7 +37,7 @@ def main():
         n = len(records)
         if n == 0:
             continue
-        ih = 24 / n
+        ih = 5 / 60  # fixed 5-min interval per snapshot
         load_gwh = re_gwh = re_hours = solar_gwh = 0
 
         for r in records:
