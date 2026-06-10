@@ -198,6 +198,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .rec-date  { font-size: 0.7rem; white-space: nowrap; }
 .rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
 .rec-date a:hover { text-decoration: underline; }
+.rec-since { font-size: 0.6rem; color: #9aabb0; white-space: nowrap; }
 
 /* ── RE stats bar ── */
 #re-stats-bar { display: none; }
@@ -1902,20 +1903,21 @@ async function loadRecords() {
     const rec = await getJSON(`${BASE}/records.json`);
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
-    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
+    const ORDER = ['solar', 'solar_gwh', 'total_chg', 'batt_chg', 'batt_dis', 'daily_re', 're_gwh_day', 're_hours', 'export'];
     for (const key of ORDER) {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
-      const valStr = r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const valStr = r.unit === 'GWh' ? r.val.toFixed(1) : r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
       const dateHtml = r.date
         ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
         : '—';
+      const sinceNote = r.since ? `<div class="rec-since">от ${r.since}</div>` : '';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
         <div class="rec-val">${valStr}</div>
         <div class="rec-unit">${r.unit}</div>
-        <div class="rec-date">${dateHtml}</div>`;
+        <div class="rec-date">${dateHtml}</div>${sinceNote}`;
       inner.appendChild(div);
     }
     _recordsLoaded = true;
