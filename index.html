@@ -861,6 +861,7 @@ function setFlowsEurMode(on) {
   flowsEurMode = on;
   document.getElementById('tog-flows-eur').classList.toggle('active', on);
   if (window._lastFlowsBinned) drawFlowsTimeline(window._lastFlowsBinned, window._lastFlowsPd);
+  if (window._lastBinned) updateDayBalance(window._lastBinned, window._lastPriceData, window._lastDateStr);
 }
 
 function setColMode(on) {
@@ -1328,7 +1329,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const hasAny = FLOW_CFG.some(f => Math.abs(ctryGwh[f.key]) > 0.01);
   if (!hasAny) { bar.style.display = 'none'; return; }
   bar.style.display = '';
-  const useEur = eurMode;
+  const useEur = flowsEurMode;
   const unit = useEur ? 'млн.€' : 'GWh';
   bar.innerHTML = '<div class="stat-label" style="margin-bottom:6px;">Трансгранична енергия за деня</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
