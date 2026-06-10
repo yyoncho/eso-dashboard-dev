@@ -1912,12 +1912,11 @@ async function loadRecords() {
       const dateHtml = r.date
         ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
         : '—';
-      const sinceNote = r.since ? `<div class="rec-since">от ${r.since}</div>` : '';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
         <div class="rec-val">${valStr}</div>
         <div class="rec-unit">${r.unit}</div>
-        <div class="rec-date">${dateHtml}</div>${sinceNote}`;
+        <div class="rec-date">${dateHtml}</div>`;
       inner.appendChild(div);
     }
     _recordsLoaded = true;

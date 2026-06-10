@@ -23,7 +23,7 @@ def main():
         'solar':      {'val': 0.0, 'label': 'Соларно производство',      'unit': 'MW',  'date': None, 'snap_ts': None},
         'solar_gwh':  {'val': 0.0, 'label': 'Соларна енергия за ден',     'unit': 'GWh', 'date': None, 'snap_ts': None},
         'total_chg':  {'val': 0.0, 'label': 'Зареждане ССЕЕ + Помпи',    'unit': 'MW',  'date': None, 'snap_ts': None},
-        'batt_chg':   {'val': 0.0, 'label': 'Зареждане само ССЕЕ',        'unit': 'MW',  'date': None, 'snap_ts': None, 'since': PUMPS_START},
+        'batt_chg':   {'val': 0.0, 'label': 'Зареждане батерии',           'unit': 'MW',  'date': None, 'snap_ts': None},
         'batt_dis':   {'val': 0.0, 'label': 'Разреждане на ССЕЕ',         'unit': 'MW',  'date': None, 'snap_ts': None},
         'export':     {'val': 0.0, 'label': 'Пикова мощност износ',       'unit': 'MW',  'date': None, 'snap_ts': None},
         'daily_re':   {'val': 0.0, 'label': 'Дневен дял ВЕИ',             'unit': '%',   'date': None, 'snap_ts': None},
