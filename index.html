@@ -1330,7 +1330,7 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   bar.style.display = '';
   const useEur = eurMode;
   const unit = useEur ? 'млн.€' : 'GWh';
-  bar.innerHTML = '<div class="balance-label" style="margin-bottom:6px;">Трансгранична енергия за деня (' + unit + ')</div>'
+  bar.innerHTML = '<div class="stat-label" style="margin-bottom:6px;">Трансгранична енергия за деня</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
     + FLOW_CFG.map(f => {
         const gwh = ctryGwh[f.key];
@@ -1340,15 +1340,17 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
         const label = isImp ? 'внос' : 'износ';
         const avgP  = ctryMwh[f.key] > 0 ? ctryEur[f.key] / ctryMwh[f.key] : NaN;
         const eurVal = ctryEur[f.key] / 1e6;  // MWh*EUR → млн.€
+        const arrowSpan = `<span style="color:${isImp?'#cc2200':'#1a8a1a'}">${arrow}</span>`;
         const mainVal = useEur
-          ? `${arrow} ${Math.abs(eurVal).toFixed(2)} ${unit}`
-          : `${arrow} ${Math.abs(gwh).toFixed(1)} GWh`;
+          ? `${arrowSpan} ${Math.abs(eurVal).toFixed(2)}`
+          : `${arrowSpan} ${Math.abs(gwh).toFixed(1)}`;
         const sub = useEur
           ? (Math.abs(gwh) > 0.01 ? `<div class="stat-unit">${Math.abs(gwh).toFixed(1)} GWh ${label}</div>` : '')
           : (isFinite(avgP) ? `<div class="stat-unit">@ ${avgP.toFixed(0)} €/MWh</div>` : '');
-        return `<div class="balance-item ${isImp ? 'expense' : 'revenue'}" style="border-top:3px solid ${f.color};min-width:90px;">
-          <div class="balance-label">${f.label}</div>
-          <div class="balance-val ${isImp ? 'expense' : 'revenue'}">${mainVal}</div>
+        return `<div class="balance-item" style="border-top:3px solid ${f.color};min-width:90px;">
+          <div class="stat-label">${f.label}</div>
+          <div class="stat-val">${mainVal}</div>
+          <div class="stat-unit">${unit} ${label}</div>
           ${sub}
         </div>`;
       }).join('')
