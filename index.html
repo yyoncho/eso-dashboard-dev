@@ -478,9 +478,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     </div>
   </div>
 
-  <!-- per-country daily flow cards -->
-  <div id="flows-country-bar" class="panel" style="display:none;margin-bottom:12px;padding:10px 14px;"></div>
-
   <!-- flows timeline -->
   <div class="panel" id="flows-profile" style="margin-bottom:12px;">
     <div class="panel-header">
@@ -490,6 +487,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <button class="fs-btn" onclick="toggleFullscreen('flows-profile','chart-flows-ts')" title="Цял екран">⛶</button>
       </div>
     </div>
+    <div id="flows-country-bar" style="display:none;padding:8px 12px;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-flows-ts" class="fs-chart" style="height:480px;"></div>
     </div>
@@ -855,6 +853,7 @@ function setEurMode(on) {
   if (window._lastBinned) {
     drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
     updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    updateDayBalance(window._lastBinned, window._lastPriceData, window._lastDateStr);
   }
   writeHash(currentDay, null);
 }
@@ -1329,21 +1328,28 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const hasAny = FLOW_CFG.some(f => Math.abs(ctryGwh[f.key]) > 0.01);
   if (!hasAny) { bar.style.display = 'none'; return; }
   bar.style.display = '';
-  bar.innerHTML = '<div class="balance-label" style="margin-bottom:6px;">Трансгранична енергия за деня (GWh)</div>'
+  const useEur = eurMode;
+  const unit = useEur ? 'млн.€' : 'GWh';
+  bar.innerHTML = '<div class="balance-label" style="margin-bottom:6px;">Трансгранична енергия за деня (' + unit + ')</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
     + FLOW_CFG.map(f => {
         const gwh = ctryGwh[f.key];
         if (Math.abs(gwh) < 0.01) return '';
         const isImp = gwh > 0;
-        const color = isImp ? '#c62828' : '#2e7d32';
         const arrow = isImp ? '▲' : '▼';
         const label = isImp ? 'внос' : 'износ';
         const avgP  = ctryMwh[f.key] > 0 ? ctryEur[f.key] / ctryMwh[f.key] : NaN;
-        const priceStr = isFinite(avgP) ? `<div class="stat-unit">@ ${avgP.toFixed(0)} €/MWh</div>` : '';
+        const eurVal = ctryEur[f.key] / 1e6;  // MWh*EUR → млн.€
+        const mainVal = useEur
+          ? `${arrow} ${Math.abs(eurVal).toFixed(2)} ${unit}`
+          : `${arrow} ${Math.abs(gwh).toFixed(1)} GWh`;
+        const sub = useEur
+          ? (Math.abs(gwh) > 0.01 ? `<div class="stat-unit">${Math.abs(gwh).toFixed(1)} GWh ${label}</div>` : '')
+          : (isFinite(avgP) ? `<div class="stat-unit">@ ${avgP.toFixed(0)} €/MWh</div>` : '');
         return `<div class="balance-item ${isImp ? 'expense' : 'revenue'}" style="border-top:3px solid ${f.color};min-width:90px;">
           <div class="balance-label">${f.label}</div>
-          <div class="balance-val ${isImp ? 'expense' : 'revenue'}">${arrow} ${Math.abs(gwh).toFixed(1)} GWh</div>
-          ${priceStr}
+          <div class="balance-val ${isImp ? 'expense' : 'revenue'}">${mainVal}</div>
+          ${sub}
         </div>`;
       }).join('')
     + '</div>';
