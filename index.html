@@ -1314,13 +1314,19 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   for (const b of binned) {
     const load  = Math.max(0, b['load_mw'] || 0);
     const p     = pByBin[b.ts] ?? getPriceAt(pd, b.ts);
-    let grossImp = 0;
-    for (const f of FLOW_CFG) { const v = b[f.key]; if (isFinite(v) && v > 0) grossImp += v; }
-    const consumedFrac = grossImp > 0 ? Math.min(1, load / grossImp) : 1;
+    let grossImp = 0, grossExp = 0;
     for (const f of FLOW_CFG) {
       const v = b[f.key];
       if (!isFinite(v)) continue;
-      const mwh = v > 0 ? v * consumedFrac * (15/60) : v * (15/60);
+      if (v > 0) grossImp += v; else grossExp += Math.abs(v);
+    }
+    const netFlow = grossImp - grossExp;  // >0 = net import, <0 = net export
+    const impFrac = grossImp > 0 && netFlow > 0 ? netFlow / grossImp : 0;
+    const expFrac = grossExp > 0 && netFlow < 0 ? Math.abs(netFlow) / grossExp : 0;
+    for (const f of FLOW_CFG) {
+      const v = b[f.key];
+      if (!isFinite(v)) continue;
+      const mwh = v > 0 ? v * impFrac * (15/60) : -Math.abs(v) * expFrac * (15/60);
       ctryGwh[f.key] += mwh / 1000;
       if (isFinite(p)) { ctryEur[f.key] += mwh * p; ctryMwh[f.key] += Math.abs(mwh); }
     }
