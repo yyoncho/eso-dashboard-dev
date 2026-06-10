@@ -1909,8 +1909,9 @@ async function loadRecords() {
       const div = document.createElement('div');
       div.className = 'rec-card';
       const valStr = r.unit === 'GWh' ? r.val.toFixed(1) : r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const fmtDate = d => { const [y,m,dd] = d.split('-'); return `${dd}.${m}.${y}`; };
       const dateHtml = r.date
-        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
+        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${fmtDate(r.date)}</a>`
         : '—';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
