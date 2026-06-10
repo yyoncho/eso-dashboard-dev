@@ -479,7 +479,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   </div>
 
   <!-- per-country daily flow cards -->
-  <div id="flows-country-bar" style="display:none;padding:8px 12px;background:#eef3f8;border:1px solid #c5d8ee;border-radius:8px;margin-bottom:12px;"></div>
+  <div id="flows-country-bar" class="panel" style="display:none;margin-bottom:12px;padding:10px 14px;"></div>
 
   <!-- flows timeline -->
   <div class="panel" id="flows-profile" style="margin-bottom:12px;">
@@ -1329,8 +1329,8 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const hasAny = FLOW_CFG.some(f => Math.abs(ctryGwh[f.key]) > 0.01);
   if (!hasAny) { bar.style.display = 'none'; return; }
   bar.style.display = '';
-  bar.innerHTML = '<div style="font-size:0.65rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Трансгранична енергия за деня (GWh)</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+  bar.innerHTML = '<div class="balance-label" style="margin-bottom:6px;">Трансгранична енергия за деня (GWh)</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
     + FLOW_CFG.map(f => {
         const gwh = ctryGwh[f.key];
         if (Math.abs(gwh) < 0.01) return '';
@@ -1339,11 +1339,10 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
         const arrow = isImp ? '▲' : '▼';
         const label = isImp ? 'внос' : 'износ';
         const avgP  = ctryMwh[f.key] > 0 ? ctryEur[f.key] / ctryMwh[f.key] : NaN;
-        const priceStr = isFinite(avgP) ? `<div style="font-size:0.62rem;color:#8a9ab0;">@ ${avgP.toFixed(0)} €/MWh</div>` : '';
-        return `<div style="background:#fff;border:1px solid #c5d8ee;border-top:3px solid ${f.color};border-radius:6px;padding:6px 10px;min-width:90px;">
-          <div style="font-size:0.65rem;color:#5a7090;">${f.label}</div>
-          <div style="font-size:1rem;font-weight:700;color:${color};">${arrow} ${Math.abs(gwh).toFixed(1)}</div>
-          <div style="font-size:0.62rem;color:#8a9ab0;">GWh ${label}</div>
+        const priceStr = isFinite(avgP) ? `<div class="stat-unit">@ ${avgP.toFixed(0)} €/MWh</div>` : '';
+        return `<div class="balance-item ${isImp ? 'expense' : 'revenue'}" style="border-top:3px solid ${f.color};min-width:90px;">
+          <div class="balance-label">${f.label}</div>
+          <div class="balance-val ${isImp ? 'expense' : 'revenue'}">${arrow} ${Math.abs(gwh).toFixed(1)} GWh</div>
           ${priceStr}
         </div>`;
       }).join('')
