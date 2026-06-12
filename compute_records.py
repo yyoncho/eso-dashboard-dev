@@ -3,43 +3,9 @@
 
 import json
 import re as re_mod
-from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import os
-
-BG_TZ = ZoneInfo('Europe/Sofia')
-
-def snap_ts_to_utc(r):
-    ts = r.get('timestamp_utc') or r.get('timestamp') or ''
-    if not ts:
-        return None
-    try:
-        ts = ts.replace('Z', '+00:00')
-        dt = datetime.fromisoformat(ts)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=BG_TZ)
-        return dt.astimezone(timezone.utc)
-    except Exception:
-        return None
-
-def intervals_h(records):
-    """Return per-record interval in hours based on actual timestamp gaps.
-    Each record owns the time from its timestamp to the next (or 5 min for the last).
-    Gaps > 30 min are capped at 30 min to avoid inflating totals on long outages."""
-    dts = [snap_ts_to_utc(r) for r in records]
-    result = []
-    for i, dt in enumerate(dts):
-        if dt is None:
-            result.append(5 / 60)
-            continue
-        if i + 1 < len(dts) and dts[i + 1] is not None:
-            gap_h = (dts[i + 1] - dt).total_seconds() / 3600
-        else:
-            gap_h = 5 / 60
-        result.append(min(gap_h, 0.5))  # cap at 30 min
-    return result
 DATA_DIR = Path(os.environ.get('DATA_DIR', Path(__file__).parent / 'data'))
 non_RE = ['АЕЦ', 'Кондензационни ТЕЦ', 'Топлофикационни ТЕЦ', 'Заводски ТЕЦ']
 RE     = ['ВЕЦ', 'Малки ВЕЦ', 'ВяЕЦ', 'ФЕЦ', 'Био ЕЦ']
@@ -50,19 +16,13 @@ def batt_discharge(r):
 
 
 def main():
-    # pumps_mw data available from 2026-06-03 onward
-    PUMPS_START = '2026-06-03'
-
     rec = {
-        'solar':      {'val': 0.0, 'label': 'Соларно производство',      'unit': 'MW',  'date': None, 'snap_ts': None},
-        'solar_gwh':  {'val': 0.0, 'label': 'Соларна енергия за ден',     'unit': 'GWh', 'date': None, 'snap_ts': None},
-        'total_chg':  {'val': 0.0, 'label': 'Зареждане ССЕЕ + Помпи',    'unit': 'MW',  'date': None, 'snap_ts': None},
-        'batt_chg':   {'val': 0.0, 'label': 'Зареждане батерии',           'unit': 'MW',  'date': None, 'snap_ts': None},
-        'batt_dis':   {'val': 0.0, 'label': 'Разреждане на ССЕЕ',         'unit': 'MW',  'date': None, 'snap_ts': None},
-        'export':     {'val': 0.0, 'label': 'Пикова мощност износ',       'unit': 'MW',  'date': None, 'snap_ts': None},
-        'daily_re':   {'val': 0.0, 'label': 'Дневен дял ВЕИ',             'unit': '%',   'date': None, 'snap_ts': None},
-        're_gwh_day': {'val': 0.0, 'label': 'ВЕИ енергия за ден',         'unit': 'GWh', 'date': None, 'snap_ts': None},
-        're_hours':   {'val': 0.0, 'label': 'Най-дълго 100% ВЕИ',         'unit': 'ч',   'date': None, 'snap_ts': None},
+        'solar':    {'val': 0.0, 'label': 'Соларно производство', 'unit': 'MW', 'date': None, 'snap_ts': None},
+        'batt_chg': {'val': 0.0, 'label': 'Зареждане на ССЕЕ',    'unit': 'MW', 'date': None, 'snap_ts': None},
+        'batt_dis': {'val': 0.0, 'label': 'Разреждане на ССЕЕ',   'unit': 'MW', 'date': None, 'snap_ts': None},
+        'export':   {'val': 0.0, 'label': 'Пикова мощност износ',  'unit': 'MW', 'date': None, 'snap_ts': None},
+        'daily_re': {'val': 0.0, 'label': 'Дневен дял ВЕИ',        'unit': '%',  'date': None, 'snap_ts': None},
+        're_hours': {'val': 0.0, 'label': 'Най-дълго 100% ВЕИ',    'unit': 'ч',  'date': None, 'snap_ts': None},
     }
 
     for f in sorted(DATA_DIR.glob('2026-*.jsonl')):
@@ -71,10 +31,10 @@ def main():
         n = len(records)
         if n == 0:
             continue
-        ihs = intervals_h(records)
-        load_gwh = re_gwh = re_hours = solar_gwh = 0
+        ih = 24 / n
+        load_gwh = re_gwh = re_hours = 0
 
-        for r, ih in zip(records, ihs):
+        for r in records:
             ts    = r.get('timestamp_utc') or r.get('timestamp') or ''
             solar = r.get('ФЕЦ') or 0
             chg   = abs(r.get('ССЕЕ_mw') or 0) if r.get('ССЕЕ_state') == 'charging' else 0
@@ -82,20 +42,14 @@ def main():
             exp   = max(0.0, -(r.get('net_import_mw') or 0))
             load  = r.get('Товар на РБ') or 0
             re_av = sum(r.get(k) or 0 for k in RE) + dis
-            load_gwh  += load  * ih / 1000
-            re_gwh    += min(re_av, load) * ih / 1000
-            solar_gwh += solar * ih / 1000
+            load_gwh += load  * ih / 1000
+            re_gwh   += min(re_av, load) * ih / 1000
             if load > 0 and re_av >= load:
                 re_hours += ih
 
-            pumps = r.get('pumps_mw') or 0
-            total_chg = chg + pumps
-
             if solar > rec['solar']['val']:
                 rec['solar'].update(val=round(solar, 1), date=day, snap_ts=ts)
-            if total_chg > rec['total_chg']['val']:
-                rec['total_chg'].update(val=round(total_chg, 1), date=day, snap_ts=ts)
-            if day >= PUMPS_START and chg > rec['batt_chg']['val']:
+            if chg > rec['batt_chg']['val']:
                 rec['batt_chg'].update(val=round(chg, 1), date=day, snap_ts=ts)
             if dis > rec['batt_dis']['val']:
                 rec['batt_dis'].update(val=round(dis, 1), date=day, snap_ts=ts)
@@ -107,10 +61,6 @@ def main():
             rec['daily_re'].update(val=round(daily_re, 1), date=day, snap_ts=None)
         if re_hours > rec['re_hours']['val']:
             rec['re_hours'].update(val=round(re_hours, 2), date=day, snap_ts=None)
-        if solar_gwh > rec['solar_gwh']['val']:
-            rec['solar_gwh'].update(val=round(solar_gwh, 1), date=day, snap_ts=None)
-        if re_gwh > rec['re_gwh_day']['val']:
-            rec['re_gwh_day'].update(val=round(re_gwh, 1), date=day, snap_ts=None)
 
     out = DATA_DIR / 'records.json'
     out.write_text(json.dumps(rec, ensure_ascii=False, indent=2))

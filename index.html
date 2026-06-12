@@ -119,6 +119,9 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .panel-body { padding: 10px 12px; }
 .info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
 .info-btn:hover { background:rgba(255,255,255,0.2); }
+.fs-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:3px;width:20px;height:16px;font-size:0.75rem;cursor:pointer;line-height:1;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center; }
+.fs-btn:hover { background:rgba(255,255,255,0.2); }
+.panel.fs-active { position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;margin:0;border-radius:0;overflow:hidden; }
 .info-dropdown { display:none;font-size:0.72rem;color:#4a5a7a;background:#eef3fb;border:1px solid #c5d8ee;border-top:none;padding:8px 12px;line-height:1.5; }
 .info-dropdown.open { display:block; }
 
@@ -198,7 +201,6 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 .rec-date  { font-size: 0.7rem; white-space: nowrap; }
 .rec-date a { color: #004494; text-decoration: none; font-weight: 600; }
 .rec-date a:hover { text-decoration: underline; }
-.rec-since { font-size: 0.6rem; color: #9aabb0; white-space: nowrap; }
 
 /* ── RE stats bar ── */
 #re-stats-bar { display: none; }
@@ -274,11 +276,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <div class="stat-val" id="s-gen">—</div>
       <div class="stat-unit">MW</div>
     </div>
+    <div class="stat-card orange">
+      <div class="stat-label">IBEX цена</div>
+      <div class="stat-val" id="s-ibex-price">—</div>
+      <div class="stat-unit">EUR/MWh</div>
+    </div>
     <div class="stat-card" id="s-import-card">
       <div class="stat-label" id="s-import-label">Внос/Износ</div>
       <div class="stat-val" id="s-import">—</div>
       <div class="stat-unit">MW</div>
-      <div class="stat-sub" id="s-import-eur">—</div>
     </div>
     <div id="s-dyn" style="display:contents;"></div>
   </div>
@@ -346,7 +352,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
               <div class="stat-unit" id="b-export-mwh">—</div>
             </div>
             <div class="balance-item" style="grid-column:1/-1;">
-              <div class="balance-label">Нетен баланс (+ приход / &minus; разход)</div>
+              <div class="balance-label">Нетен баланс (+ износ / &minus; внос)</div>
               <div class="balance-val neutral" id="b-net-eur">—</div>
               <div class="stat-unit" id="b-net-mwh">—</div>
             </div>
@@ -428,13 +434,14 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
         </div>
         <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Информация">?</button>
+        <button class="fs-btn" onclick="toggleFullscreen('day-profile','chart-timeline')" title="Цял екран">⛶</button>
       </div>
     </div>
     <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
     <div id="re-stats-bar" style="display:none;"></div>
     <div id="total-stats-bar" class="stat-grid" style="padding:8px 12px;margin-bottom:0;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
-      <div id="chart-timeline" style="height:520px;"></div>
+      <div id="chart-timeline" class="fs-chart" style="height:640px;"></div>
     </div>
     <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 0 6px;border-top:1px solid #eef2f8;">
       <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Предишен час">◄</button>
@@ -445,9 +452,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
   <!-- flows timeline -->
   <div class="panel" id="flows-profile" style="margin-bottom:12px;">
-    <div class="panel-header"><a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a></div>
+    <div class="panel-header">
+      <a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="tog-btn" id="tog-flows-eur" onclick="setFlowsEurMode(!flowsEurMode)">€/ч</button>
+        <button class="fs-btn" onclick="toggleFullscreen('flows-profile','chart-flows-ts')" title="Цял екран">⛶</button>
+      </div>
+    </div>
     <div style="padding:6px 8px 10px;">
-      <div id="chart-flows-ts" style="height:480px;"></div>
+      <div id="chart-flows-ts" class="fs-chart" style="height:480px;"></div>
     </div>
   </div>
 
@@ -521,6 +534,7 @@ let priceCache = {};
 const chartMode = 'instant';
 let reMode            = false;
 let eurMode           = false;
+let flowsEurMode      = false;
 const totalStatsVisible = true;
 let colMode           = false;
 let pieMwhMode        = false;
@@ -813,6 +827,12 @@ function setEurMode(on) {
   }
   writeHash(currentDay, null);
 }
+function setFlowsEurMode(on) {
+  flowsEurMode = on;
+  document.getElementById('tog-flows-eur').classList.toggle('active', on);
+  if (window._lastFlowsBinned) drawFlowsTimeline(window._lastFlowsBinned, window._lastFlowsPd);
+}
+
 function setColMode(on) {
   colMode = on;
   document.getElementById('tog-col').classList.toggle('active', on);
@@ -1059,12 +1079,11 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-gen').textContent  = fmt0(gen);
 
   const price = getPriceAt(pd, toUtcMs(latest));
+  document.getElementById('s-ibex-price').textContent = isFinite(price) ? fmt1(price) : '—';
   const isImp = nImp > 0;
   document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
   document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
-  document.getElementById('s-import-eur').textContent = isFinite(price)
-    ? (isImp?'Разход: ':'Приход: ')+fmtEur(Math.abs(nImp)*price)+'/h' : '';
 
   // Dynamic source cards sorted by descending MW
   const tsMs = toUtcMs(latest);
@@ -1737,31 +1756,42 @@ function drawTimeline(binned, pd, dateStr) {
   }
 }
 
-function drawFlowsTimeline(binned) {
+function drawFlowsTimeline(binned, pd) {
   if (!binned.length) return;
+  window._lastFlowsBinned = binned;
+  window._lastFlowsPd = pd;
   const pts = binned;
   const xs  = pts.map(p => toSofiaStr(p.ts));
 
+  function mwToEur(mw, p) {
+    if (!flowsEurMode || mw == null || isNaN(mw)) return mw;
+    const pr = getPriceAt(pd, p.ts);
+    return isFinite(pr) ? Math.round(mw * pr) : null;
+  }
+  const unit = flowsEurMode ? '€/h' : 'MW';
+  const htFmt = flowsEurMode
+    ? lbl => `${lbl}: %{y:,.0f} €/h<extra></extra>`
+    : lbl => `${lbl}: %{y:.0f} MW<extra></extra>`;
+
   const traces = FLOW_CFG.map(f => ({
-    x: xs, y: pts.map(p=>isNaN(p[f.key])?null:p[f.key]||0),
+    x: xs, y: pts.map(p => { const v = isNaN(p[f.key])?null:p[f.key]||0; return mwToEur(v,p)??v; }),
     name: f.label, line: { color: f.color, width: 1.5 },
-    hovertemplate: `${f.label}: %{y:.0f} MW<extra></extra>`,
+    hovertemplate: htFmt(f.label),
   }));
-  const netY = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
-  // filled area below/above zero for net position
+  const netRaw = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
   traces.push({
-    x: xs, y: netY,
+    x: xs, y: pts.map((p,i) => { const v=netRaw[i]; return v===null?null:(mwToEur(v,p)??v); }),
     name: 'Нетна позиция', fill: 'tozeroy',
     fillcolor: 'rgba(80,80,80,0.15)',
     line: { color: '#1a2233', width: 2.5 },
-    hovertemplate: 'Нетна позиция: %{y:.0f} MW<extra></extra>',
+    hovertemplate: htFmt('Нетна позиция'),
   });
 
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
     xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
-    yaxis: { ...LO.yaxis, title: 'MW (+ внос / − износ)' },
+    yaxis: { ...LO.yaxis, title: `${unit} (+ внос / − износ)` },
     legend: { ...LO.legend, orientation: 'h', y: -0.2 },
     margin: { t: 8, b: 90, l: 58, r: 10 },
     shapes: [{ type:'line', xref:'paper', x0:0, x1:1, y0:0, y1:0,
@@ -1772,6 +1802,43 @@ function drawFlowsTimeline(binned) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  TIMESTAMP
 // ══════════════════════════════════════════════════════════════════════════════
+function toggleFullscreen(panelId, chartId) {
+  const panel   = document.getElementById(panelId);
+  const chartEl = document.getElementById(chartId);
+  const active  = panel.classList.toggle('fs-active');
+  document.body.style.overflow = active ? 'hidden' : '';
+
+  function exitFs(savedH) {
+    panel.classList.remove('fs-active');
+    document.body.style.overflow = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      chartEl.style.height = savedH;
+      Plotly.relayout(chartId, { autosize: true });
+    }));
+  }
+
+  if (active) {
+    const savedH = chartEl.style.height;  // save before overwriting
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const headerH = panel.querySelector('.panel-header').offsetHeight;
+      chartEl.style.height = (window.innerHeight - headerH) + 'px';
+      Plotly.relayout(chartId, { autosize: true });
+    }));
+    const onKey = e => { if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); exitFs(savedH); } };
+    document.addEventListener('keydown', onKey);
+    // also handle clicking the button again while in fullscreen
+    panel.dataset.fsRestoreH = savedH;
+  } else {
+    // button clicked again to exit
+    const savedH = panel.dataset.fsRestoreH || '';
+    delete panel.dataset.fsRestoreH;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      chartEl.style.height = savedH;
+      Plotly.relayout(chartId, { autosize: true });
+    }));
+  }
+}
+
 function updateTimestamp(latest) {
   const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
   if (!latest) { el.textContent = 'Няма данни'; return; }
@@ -1885,7 +1952,7 @@ async function refresh() {
     drawPie(displaySnap);
     updateDayStartLabel();
     drawTimeline(displayBinned, pd, dateStr);
-    drawFlowsTimeline(displayBinned);
+    drawFlowsTimeline(displayBinned, pd);
     updateTotalStats(displayBinned, pd, dateStr);
     drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
     loadRecords();
@@ -1903,16 +1970,14 @@ async function loadRecords() {
     const rec = await getJSON(`${BASE}/records.json`);
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
-    const ORDER = ['solar', 'solar_gwh', 'total_chg', 'batt_chg', 'batt_dis', 'daily_re', 're_gwh_day', 're_hours', 'export'];
+    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
     for (const key of ORDER) {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
-      const fmtHours = h => { const hh = Math.floor(h); const mm = String(Math.round((h-hh)*60)).padStart(2,'0'); return `${hh}:${mm}`; };
-      const valStr = r.unit === 'ч' ? fmtHours(r.val) : r.unit === 'GWh' || r.unit === '%' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
-      const fmtDate = d => { const [y,m,dd] = d.split('-'); return `${dd}.${m}.${y}`; };
+      const valStr = r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
       const dateHtml = r.date
-        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${fmtDate(r.date)}</a>`
+        ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
         : '—';
       div.innerHTML = `
         <div class="rec-label">${r.label}</div>
@@ -1929,9 +1994,29 @@ function toggleRecords(e) {
   e.stopPropagation();
   document.getElementById('rec-dropdown-panel').classList.toggle('open');
 }
-document.addEventListener('click', () => {
+document.addEventListener('click', e => {
   document.getElementById('rec-dropdown-panel').classList.remove('open');
+  // Anchor links: offset scroll by sticky header height
+  const a = e.target.closest('a.anchor-link[href^="#"]');
+  if (a) {
+    const id = a.getAttribute('href').slice(1);
+    const target = document.getElementById(id);
+    if (target) {
+      e.preventDefault();
+      const gap = getStickyTop() + 8;
+      const y = target.getBoundingClientRect().top + window.scrollY - gap;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }
 });
+
+function getStickyTop() {
+  const h = document.querySelector('header');
+  let height = h ? h.offsetHeight : 0;
+  const sc = document.getElementById('snap-scrubber');
+  if (sc && sc.offsetHeight > 0 && sc.style.display !== 'none') height += sc.offsetHeight;
+  return height;
+}
 
 function navigateRecord(e, el) {
   e.preventDefault();
