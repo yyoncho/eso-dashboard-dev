@@ -224,26 +224,20 @@ function snapToSofiaMinutes(r) {
   } catch { return null; }
 }
 
-// IBEX SDAC times are CET/CEST (UTC+2 summer, UTC+1 winter).
-// Sofia is EET/EEST (UTC+3 summer, UTC+2 winter). Always 1h ahead of CET.
-// So to match SDAC "hh:mm" to a Sofia-time ESO snapshot, add 1 hour.
-function sdacToSofiaMinutes(hourStr) {
-  const [hh, mm] = hourStr.split(':').map(Number);
-  return ((hh + 1) % 24) * 60 + mm;
-}
-
-// Find ESO snapshot closest to a given SDAC CET slot (converted to Sofia time)
-function findBestSnap(snaps, hourStr) {
+// Find ESO snapshot closest to a BG-time hour string (already in Sofia/EET time).
+// Returns null if no snapshot within 30 minutes (avoids stale/future matches).
+function findBestSnap(snaps, bgHourStr) {
   if (!snaps || !snaps.length) return null;
-  const targetMin = sdacToSofiaMinutes(hourStr);
+  const [hh, mm] = bgHourStr.split(':').map(Number);
+  const targetMin = hh * 60 + mm;
   let best = null, bestDiff = Infinity;
   for (const s of snaps) {
     const sm = snapToSofiaMinutes(s);
     if (sm === null) continue;
-    const diff = Math.min(Math.abs(sm - targetMin), 1440 - Math.abs(sm - targetMin));
+    const diff = Math.abs(sm - targetMin);
     if (diff < bestDiff) { bestDiff = diff; best = s; }
   }
-  return best;
+  return bestDiff <= 30 ? best : null;
 }
 
 // Total MW stack for Y-range calculation (includes battery discharge + charging as load)
@@ -341,7 +335,21 @@ fetch('ibex_sdac_data.json')
   .then(r => r.json())
   .then(data => {
     CURVES = {};
-    data.forEach(r => { CURVES[r.d + '|' + r.h] = r; });
+    data.forEach(r => {
+      // SDAC times are CET/CEST (UTC+2 summer). BG is EET/EEST (UTC+3 summer).
+      // Always +1h. Slots at 23:xx roll over to next calendar day in BG time.
+      const hh = +r.h.slice(0, 2);
+      const bgHh = (hh + 1) % 24;
+      let bgDate = r.d;
+      if (hh === 23) {
+        const p = r.d.split('-');
+        const dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+        dt.setUTCDate(dt.getUTCDate() + 1);
+        bgDate = dt.toISOString().slice(0, 10);
+      }
+      const bgH = String(bgHh).padStart(2, '0') + r.h.slice(2);
+      CURVES[bgDate + '|' + bgH] = r;
+    });
     AVAILABLE = Object.keys(CURVES).sort();
     AVAILABLE.forEach((k, i) => INDEX[k] = i);
 
