@@ -287,17 +287,18 @@ function fillGenBar(snap, yMax) {
   const topSpacer = Math.max(0, yMax - stackMw);
 
   let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
-  // Charging segment at top (demand, not supply — shown with stripe pattern)
-  if (battChargeMw > 1) {
-    const f = battChargeMw.toFixed(2);
-    html += `<div class="gen-seg gen-seg-charge" style="flex:${f};" title="Зареждане ССЕБ: ${Math.round(battChargeMw)} MW">
-      ${battChargeMw / stackMw * 100 > 5 ? `<div class="gen-seg-label">Зареж.</div><div class="gen-seg-mw">${Math.round(battChargeMw)} MW</div>` : ''}
-    </div>`;
-  }
+  // Import at very top
   if (importSeg) {
     const f = importSeg.mw.toFixed(2);
     html += `<div class="gen-seg" style="flex:${f};background:${importSeg.color};" title="${importSeg.label}: ${Math.round(importSeg.mw)} MW">
       ${importSeg.mw / stackMw * 100 > 5 ? `<div class="gen-seg-label">${importSeg.label}</div><div class="gen-seg-mw">${Math.round(importSeg.mw)} MW</div>` : ''}
+    </div>`;
+  }
+  // Charging just below import, near the consumption marker level
+  if (battChargeMw > 1) {
+    const f = battChargeMw.toFixed(2);
+    html += `<div class="gen-seg gen-seg-charge" style="flex:${f};" title="Зареждане ССЕБ: ${Math.round(battChargeMw)} MW">
+      ${battChargeMw / stackMw * 100 > 5 ? `<div class="gen-seg-label">Зареж.</div><div class="gen-seg-mw">${Math.round(battChargeMw)} MW</div>` : ''}
     </div>`;
   }
   for (const v of genSegs) {
