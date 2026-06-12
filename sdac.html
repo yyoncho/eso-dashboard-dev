@@ -78,39 +78,38 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
 
 /* ── generation bar ── */
 #gen-bar {
-  width: 96px; flex-shrink: 0;
-  display: flex; flex-direction: column;
+  width: 96px; flex-shrink: 0; position: relative;
   background: #fff; border-left: 1px solid #c5d8ee;
-  padding: 4px 2px; overflow: hidden;
+  overflow: hidden;
+}
+/* labels float above the bar, don't affect layout */
+#gen-bar-labels {
+  position: absolute; top: 4px; left: 0; right: 0;
+  text-align: center; z-index: 2; pointer-events: none;
 }
 #gen-bar-title {
-  font-size: 0.58rem; color: #7a8aaa; text-align: center;
-  padding: 4px 0 1px; font-weight: 600;
-  letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0;
+  font-size: 0.58rem; color: #7a8aaa;
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  line-height: 1.4;
 }
 #gen-bar-total {
   font-size: 0.72rem; font-weight: 700; color: #1a2233;
-  text-align: center; padding: 0 0 4px; flex-shrink: 0;
 }
+/* stack fills the full panel; padding injected by JS to match Plotly margins */
 #gen-bar-stack {
-  flex: 1; display: flex; flex-direction: column;
-  min-height: 0; gap: 0;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  box-sizing: border-box;
 }
-#gen-bar-spacer { background: transparent; }
-#gen-bar-cv-line {
-  flex-shrink: 0; height: 2px; background: #e07000;
-  position: relative;
-}
-#gen-bar-cv-line::after {
-  content: attr(data-label);
-  position: absolute; right: 4px; top: -13px;
-  font-size: 0.5rem; color: #e07000; font-weight: 700; white-space: nowrap;
+/* inner flex holds the proportional segments */
+#gen-bar-inner {
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
 }
 .gen-seg {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   overflow: hidden; border-top: 1px solid rgba(255,255,255,0.25);
-  min-height: 2px; position: relative;
+  min-height: 0;
 }
 .gen-seg-label {
   font-size: 0.56rem; font-weight: 700; line-height: 1.2;
@@ -160,6 +159,10 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
     <input type="date" id="date-picker">
     <select id="hour-picker"></select>
     <button class="nav-btn" id="btn-next" onclick="step(1)">&#8594;</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:0.75rem;color:rgba(255,255,255,0.85);cursor:pointer;user-select:none;margin-left:6px;">
+      <input type="checkbox" id="gen-toggle" checked style="accent-color:#ffd700;width:14px;height:14px;cursor:pointer;">
+      Генерация
+    </label>
   </div>
 
   <div class="stats">
@@ -183,9 +186,13 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
     <div id="loading">Loading curve data…</div>
   </div>
   <div id="gen-bar">
-    <div id="gen-bar-title">Производство</div>
-    <div id="gen-bar-total">— MW</div>
-    <div id="gen-bar-stack"></div>
+    <div id="gen-bar-labels">
+      <div id="gen-bar-title">Производство</div>
+      <div id="gen-bar-total">— MW</div>
+    </div>
+    <div id="gen-bar-stack">
+      <div id="gen-bar-inner"></div>
+    </div>
   </div>
 </div>
 
@@ -231,14 +238,21 @@ function snapToSofiaMinutes(r) {
   } catch { return null; }
 }
 
-async function updateGenBar(date, hourStr, yMax, clearingVol) {
+async function updateGenBar(date, hourStr, yRange, plotMargins) {
   const snaps = await fetchGenForDay(date);
-  const stack = document.getElementById('gen-bar-stack');
+  const inner = document.getElementById('gen-bar-inner');
   const totalEl = document.getElementById('gen-bar-total');
+  const stack = document.getElementById('gen-bar-stack');
+
+  // Apply Plotly margins so the stack aligns exactly with the plot area
+  if (plotMargins) {
+    stack.style.paddingTop = plotMargins.t + 'px';
+    stack.style.paddingBottom = plotMargins.b + 'px';
+  }
 
   if (!snaps || !snaps.length) {
     totalEl.textContent = '—';
-    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">Няма данни за деня</div>';
+    inner.innerHTML = '';
     return;
   }
 
@@ -254,39 +268,40 @@ async function updateGenBar(date, hourStr, yMax, clearingVol) {
 
   if (!best) {
     totalEl.textContent = '—';
-    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">Няма снимка</div>';
+    inner.innerHTML = '';
     return;
   }
 
   const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, best[m.key] || 0) }));
   const totalMw = vals.reduce((s, v) => s + v.mw, 0);
-  const totalMwh = totalMw * 0.25;  // convert to MWh (15-min slot) — same unit as Y-axis
+  const totalMwh = totalMw * 0.25;  // MW → MWh for 15-min slot (same unit as Y-axis)
 
   totalEl.textContent = totalMw > 0 ? Math.round(totalMw) + ' MW' : '—';
 
-  if (totalMw === 0 || !yMax) {
-    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">0 MW</div>';
-    return;
-  }
+  if (totalMw === 0 || !yRange) { inner.innerHTML = ''; return; }
 
-  // Spacer flex = unfilled portion above the generation stack (same scale as Y-axis)
-  const spacerFlex = Math.max(0, yMax - totalMwh);
-  // Segments ordered most-expensive→cheapest top→bottom (column direction)
+  // yMin is 0 (rangemode:'tozero'), yMax is the top of the axis
+  const yMax = yRange[1];
+
+  // Flex total = yMax (spans 0→yMax, matching the Y-axis exactly)
+  // flex-column: first child = top (yMax), last child = bottom (0)
+  const topSpacer = Math.max(0, yMax - totalMwh);
+
+  // Segments: reversed merit order so cheapest (solar) sits at the bottom
   const segs = [...vals].reverse().filter(v => v.mw >= 1);
 
-  let html = `<div style="flex:${spacerFlex.toFixed(1)};min-height:0;background:rgba(0,0,0,0.03);"></div>`;
-
+  let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
   for (const v of segs) {
-    const segFlex = (v.mw * 0.25).toFixed(1);
+    const f = (v.mw * 0.25).toFixed(2);
     const pct = v.mw / totalMw * 100;
     const showText = pct > 8;
-    html += `<div class="gen-seg" style="flex:${segFlex};background:${v.color};"
+    html += `<div class="gen-seg" style="flex:${f};background:${v.color};"
       title="${v.label}: ${Math.round(v.mw)} MW">
       ${showText ? `<div class="gen-seg-label">${v.label}</div><div class="gen-seg-mw">${Math.round(v.mw)} MW</div>` : ''}
     </div>`;
   }
 
-  stack.innerHTML = html;
+  inner.innerHTML = html;
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -429,7 +444,8 @@ function draw() {
     },
     yaxis: {
       title: mobile ? '' : { text: 'Cumulative Volume (MWh)', standoff: 6 },
-      gridcolor: '#dde6f0', zeroline: false,
+      gridcolor: '#dde6f0', zeroline: true, zerolinecolor: '#aac0d8', zerolinewidth: 1,
+      rangemode: 'tozero',
     },
     legend: {
       orientation: 'h',
@@ -444,12 +460,15 @@ function draw() {
     autosize: true,
   }, { responsive: true, displayModeBar: false });
 
-  // Compute Y-axis max from data (same scale as the chart)
-  const yMax = Math.max(
-    ...buy.map(p => p.x).filter(isFinite),
-    ...sell.map(p => p.x).filter(isFinite)
-  );
-  updateGenBar(key.split('|')[0], key.split('|')[1], yMax, r.cv);
+  // Read Plotly's computed Y-axis range and margins after layout is applied
+  const gd = document.getElementById('chart');
+  const [keyDate, keyHour] = key.split('|');
+  requestAnimationFrame(() => {
+    const fl = gd._fullLayout;
+    const yRange = fl ? fl.yaxis.range : null;   // [yMin, yMax] bottom→top
+    const plotMargins = fl ? fl.margin : null;
+    updateGenBar(keyDate, keyHour, yRange, plotMargins);
+  });
 }
 
 function step(dir) {
@@ -466,6 +485,10 @@ function step(dir) {
 
 document.getElementById('date-picker').addEventListener('change', draw);
 document.getElementById('hour-picker').addEventListener('change', draw);
+document.getElementById('gen-toggle').addEventListener('change', function() {
+  document.getElementById('gen-bar').style.display = this.checked ? '' : 'none';
+  draw();
+});
 window.addEventListener('resize', draw);
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
