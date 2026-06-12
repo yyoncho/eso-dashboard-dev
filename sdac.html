@@ -219,11 +219,18 @@ function snapToSofiaMinutes(r) {
   } catch { return null; }
 }
 
-// Find ESO snapshot closest to a given Sofia-time hour:min string
+// IBEX SDAC times are CET/CEST (UTC+2 summer, UTC+1 winter).
+// Sofia is EET/EEST (UTC+3 summer, UTC+2 winter). Always 1h ahead of CET.
+// So to match SDAC "hh:mm" to a Sofia-time ESO snapshot, add 1 hour.
+function sdacToSofiaMinutes(hourStr) {
+  const [hh, mm] = hourStr.split(':').map(Number);
+  return ((hh + 1) % 24) * 60 + mm;
+}
+
+// Find ESO snapshot closest to a given SDAC CET slot (converted to Sofia time)
 function findBestSnap(snaps, hourStr) {
   if (!snaps || !snaps.length) return null;
-  const [hh, mm] = hourStr.split(':').map(Number);
-  const targetMin = hh * 60 + mm;
+  const targetMin = sdacToSofiaMinutes(hourStr);
   let best = null, bestDiff = Infinity;
   for (const s of snaps) {
     const sm = snapToSofiaMinutes(s);
@@ -234,11 +241,12 @@ function findBestSnap(snaps, hourStr) {
   return best;
 }
 
-// Total MW stack for Y-range calculation
+// Total MW stack for Y-range calculation (includes battery discharge)
 function snapStackMw(snap) {
   if (!snap) return 0;
   const genMw = MERIT.reduce((s, m) => s + Math.max(0, snap[m.key] || 0), 0);
-  return genMw + Math.max(0, snap['net_import_mw'] || 0);
+  const battMw = snap['ССЕЕ_state'] === 'discharging' ? (snap['ССЕЕ_mw'] || 0) : 0;
+  return genMw + battMw + Math.max(0, snap['net_import_mw'] || 0);
 }
 
 // Fill the bar DOM from a pre-fetched snapshot and the resolved Y-axis max (MW)
@@ -248,6 +256,11 @@ function fillGenBar(snap, yMax) {
   if (!snap || !yMax) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
 
   const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, snap[m.key] || 0) }));
+
+  // Add battery discharge as top-of-merit source (gold, most expensive)
+  const battMw = snap['ССЕЕ_state'] === 'discharging' ? (snap['ССЕЕ_mw'] || 0) : 0;
+  if (battMw > 1) vals.push({ key: 'ССЕЕ', label: 'ССЕБ', mw: battMw, color: '#ffd700' });
+
   const genMw = vals.reduce((s, v) => s + v.mw, 0);
   const netImportMw = snap['net_import_mw'] || 0;
 
