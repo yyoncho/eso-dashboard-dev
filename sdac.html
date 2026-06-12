@@ -187,17 +187,18 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
 // ── generation bar ──────────────────────────────────────────────────────────
 const GEN_BASE = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
-// Merit order cheapest→most expensive; bar fills bottom→top
+// Merit order cheapest→most expensive; bar fills bottom→top.
+// Dispatchable hydro (ВЕЦ/М.ВЕЦ) has high water value → near top, just below battery.
 const MERIT = [
   { key: 'ФЕЦ',                 label: 'ФЕЦ',       color: '#fa4b42' },
   { key: 'ВяЕЦ',                label: 'ВяЕЦ',      color: '#2ee0ca' },
-  { key: 'ВЕЦ',                 label: 'ВЕЦ',       color: '#6b8abc' },
-  { key: 'Малки ВЕЦ',           label: 'М.ВЕЦ',     color: '#d568fb' },
   { key: 'Био ЕЦ',              label: 'Биомаса',   color: '#feb56a' },
   { key: 'АЕЦ',                 label: 'АЕЦ',       color: '#2caffe' },
   { key: 'Топлофикационни ТЕЦ', label: 'Топло.ТЕЦ',color: '#00e272' },
   { key: 'Заводски ТЕЦ',        label: 'Зав.ТЕЦ',  color: '#fe6a35' },
   { key: 'Кондензационни ТЕЦ',  label: 'Конд.ТЕЦ', color: '#544fc5' },
+  { key: 'Малки ВЕЦ',           label: 'М.ВЕЦ',     color: '#d568fb' },
+  { key: 'ВЕЦ',                 label: 'ВЕЦ',       color: '#6b8abc' },
 ];
 
 const genCache = {};
