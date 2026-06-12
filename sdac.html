@@ -67,12 +67,68 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
 .stat-val.dim { color: rgba(255,255,255,0.75); font-size: 0.9rem; }
 .stat-label { font-size: 0.58rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
 
-/* ── chart ── */
+/* ── chart area ── */
+#chart-wrap { flex: 1; display: flex; min-height: 0; }
 #chart { flex: 1; min-height: 0; position: relative; }
 #loading {
   position: absolute; inset: 0; background: #eef3f8;
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; color: #004494; z-index: 10;
+}
+
+/* ── generation bar ── */
+#gen-bar {
+  width: 96px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: #fff; border-left: 1px solid #c5d8ee;
+  padding: 4px 2px; overflow: hidden;
+}
+#gen-bar-title {
+  font-size: 0.58rem; color: #7a8aaa; text-align: center;
+  padding: 4px 0 1px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0;
+}
+#gen-bar-total {
+  font-size: 0.72rem; font-weight: 700; color: #1a2233;
+  text-align: center; padding: 0 0 4px; flex-shrink: 0;
+}
+#gen-bar-stack {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0; gap: 0;
+}
+#gen-bar-spacer { background: transparent; }
+#gen-bar-cv-line {
+  flex-shrink: 0; height: 2px; background: #e07000;
+  position: relative;
+}
+#gen-bar-cv-line::after {
+  content: attr(data-label);
+  position: absolute; right: 4px; top: -13px;
+  font-size: 0.5rem; color: #e07000; font-weight: 700; white-space: nowrap;
+}
+.gen-seg {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; border-top: 1px solid rgba(255,255,255,0.25);
+  min-height: 2px; position: relative;
+}
+.gen-seg-label {
+  font-size: 0.56rem; font-weight: 700; line-height: 1.2;
+  color: rgba(255,255,255,0.95); text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 88px; text-align: center; padding: 0 2px;
+}
+.gen-seg-mw {
+  font-size: 0.52rem; color: rgba(255,255,255,0.8);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 600px) {
+  #gen-bar { width: 64px; }
+  #gen-bar-title { font-size: 0.5rem; }
+  #gen-bar-total { font-size: 0.62rem; }
+  .gen-seg-label { font-size: 0.48rem; }
+  .gen-seg-mw { display: none; }
 }
 
 /* ── mobile ── */
@@ -122,11 +178,118 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
   </div>
 </header>
 
-<div id="chart">
-  <div id="loading">Loading curve data…</div>
+<div id="chart-wrap">
+  <div id="chart">
+    <div id="loading">Loading curve data…</div>
+  </div>
+  <div id="gen-bar">
+    <div id="gen-bar-title">Производство</div>
+    <div id="gen-bar-total">— MW</div>
+    <div id="gen-bar-stack"></div>
+  </div>
 </div>
 
 <script>
+// ── generation bar ──────────────────────────────────────────────────────────
+const GEN_BASE = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+
+// Merit order: cheapest first (rendered at bottom of bar)
+const MERIT = [
+  { key: 'ФЕЦ',                 label: 'ФЕЦ',       color: '#fa4b42' },
+  { key: 'ВяЕЦ',                label: 'ВяЕЦ',      color: '#2ee0ca' },
+  { key: 'ВЕЦ',                 label: 'ВЕЦ',       color: '#6b8abc' },
+  { key: 'Малки ВЕЦ',           label: 'М.ВЕЦ',     color: '#d568fb' },
+  { key: 'Био ЕЦ',              label: 'Биомаса',   color: '#feb56a' },
+  { key: 'АЕЦ',                 label: 'АЕЦ',       color: '#2caffe' },
+  { key: 'Топлофикационни ТЕЦ', label: 'Топло.ТЕЦ',color: '#00e272' },
+  { key: 'Заводски ТЕЦ',        label: 'Зав.ТЕЦ',  color: '#fe6a35' },
+  { key: 'Кондензационни ТЕЦ',  label: 'Конд.ТЕЦ', color: '#544fc5' },
+];
+
+const genCache = {};
+
+async function fetchGenForDay(date) {
+  if (genCache[date] !== undefined) return genCache[date];
+  try {
+    const res = await fetch(`${GEN_BASE}/${date}.jsonl`);
+    if (!res.ok) { genCache[date] = null; return null; }
+    const text = await res.text();
+    const snaps = text.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    genCache[date] = snaps;
+    return snaps;
+  } catch { genCache[date] = null; return null; }
+}
+
+function snapToSofiaMinutes(r) {
+  const ts = r.timestamp_utc || r.timestamp || '';
+  if (!ts) return null;
+  try {
+    const dt = new Date(ts);
+    const s = dt.toLocaleString('en-US', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit', hour12: false });
+    const [h, m] = s.split(':').map(Number);
+    return h * 60 + m;
+  } catch { return null; }
+}
+
+async function updateGenBar(date, hourStr, yMax, clearingVol) {
+  const snaps = await fetchGenForDay(date);
+  const stack = document.getElementById('gen-bar-stack');
+  const totalEl = document.getElementById('gen-bar-total');
+
+  if (!snaps || !snaps.length) {
+    totalEl.textContent = '—';
+    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">Няма данни за деня</div>';
+    return;
+  }
+
+  const [hh, mm] = hourStr.split(':').map(Number);
+  const targetMin = hh * 60 + mm;
+  let best = null, bestDiff = Infinity;
+  for (const s of snaps) {
+    const sm = snapToSofiaMinutes(s);
+    if (sm === null) continue;
+    const diff = Math.min(Math.abs(sm - targetMin), 1440 - Math.abs(sm - targetMin));
+    if (diff < bestDiff) { bestDiff = diff; best = s; }
+  }
+
+  if (!best) {
+    totalEl.textContent = '—';
+    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">Няма снимка</div>';
+    return;
+  }
+
+  const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, best[m.key] || 0) }));
+  const totalMw = vals.reduce((s, v) => s + v.mw, 0);
+  const totalMwh = totalMw * 0.25;  // convert to MWh (15-min slot) — same unit as Y-axis
+
+  totalEl.textContent = totalMw > 0 ? Math.round(totalMw) + ' MW' : '—';
+
+  if (totalMw === 0 || !yMax) {
+    stack.innerHTML = '<div style="color:#aaa;font-size:0.62rem;text-align:center;padding:12px 2px;">0 MW</div>';
+    return;
+  }
+
+  // Spacer flex = unfilled portion above the generation stack (same scale as Y-axis)
+  const spacerFlex = Math.max(0, yMax - totalMwh);
+  // Segments ordered most-expensive→cheapest top→bottom (column direction)
+  const segs = [...vals].reverse().filter(v => v.mw >= 1);
+
+  let html = `<div style="flex:${spacerFlex.toFixed(1)};min-height:0;background:rgba(0,0,0,0.03);"></div>`;
+
+  for (const v of segs) {
+    const segFlex = (v.mw * 0.25).toFixed(1);
+    const pct = v.mw / totalMw * 100;
+    const showText = pct > 8;
+    html += `<div class="gen-seg" style="flex:${segFlex};background:${v.color};"
+      title="${v.label}: ${Math.round(v.mw)} MW">
+      ${showText ? `<div class="gen-seg-label">${v.label}</div><div class="gen-seg-mw">${Math.round(v.mw)} MW</div>` : ''}
+    </div>`;
+  }
+
+  stack.innerHTML = html;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 let CURVES = null;
 let AVAILABLE = [];
 let INDEX = {};
@@ -280,6 +443,13 @@ function draw() {
     hovermode: 'closest',
     autosize: true,
   }, { responsive: true, displayModeBar: false });
+
+  // Compute Y-axis max from data (same scale as the chart)
+  const yMax = Math.max(
+    ...buy.map(p => p.x).filter(isFinite),
+    ...sell.map(p => p.x).filter(isFinite)
+  );
+  updateGenBar(key.split('|')[0], key.split('|')[1], yMax, r.cv);
 }
 
 function step(dir) {
