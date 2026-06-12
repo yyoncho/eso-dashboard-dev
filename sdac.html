@@ -408,7 +408,7 @@ async function draw() {
 
   document.getElementById('s-price').textContent = r.cp != null ? r.cp.toFixed(2) : '—';
   document.getElementById('s-vol').textContent   = r.cv != null ? Math.round(r.cv) + ' MW' : '—';
-  document.getElementById('s-zero').textContent  = `↑${Math.round(sellDepth)} / ↓${Math.round(buyDepth)}`;
+  document.getElementById('s-zero').textContent  = r.cp != null ? `↑${Math.round(sellDepth)} / ↓${Math.round(buyDepth)}` : '—';
 
   const idx = INDEX[key];
   document.getElementById('btn-prev').disabled = idx <= 0;
@@ -430,10 +430,13 @@ async function draw() {
 
   const mobile = isMobile();
   const loadMw = (showBar && bestSnap) ? (bestSnap.load_mw || 0) : 0;
-  const shapes = [{
-    type: 'rect', x0: -10, x1: 10, y0: 0, y1: 1, yref: 'paper',
-    fillcolor: 'rgba(0,150,0,0.07)', line: { color: 'rgba(0,150,0,0.4)', width: 1, dash: 'dot' },
-  }];
+  const shapes = [];
+  if (r.cp != null) {
+    shapes.push({
+      type: 'rect', x0: -10, x1: 10, y0: 0, y1: 1, yref: 'paper',
+      fillcolor: 'rgba(0,150,0,0.07)', line: { color: 'rgba(0,150,0,0.4)', width: 1, dash: 'dot' },
+    });
+  }
   const annotations = [];
   if (loadMw > 0) {
     shapes.push({
