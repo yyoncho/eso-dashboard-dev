@@ -219,13 +219,9 @@ function snapToSofiaMinutes(r) {
   } catch { return null; }
 }
 
-async function updateGenBar(date, hourStr, yMax) {
-  const inner = document.getElementById('gen-bar-inner');
-  const totalEl = document.getElementById('gen-bar-total');
-  const snaps = await fetchGenForDay(date);
-
-  if (!snaps || !snaps.length || !yMax) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
-
+// Find ESO snapshot closest to a given Sofia-time hour:min string
+function findBestSnap(snaps, hourStr) {
+  if (!snaps || !snaps.length) return null;
   const [hh, mm] = hourStr.split(':').map(Number);
   const targetMin = hh * 60 + mm;
   let best = null, bestDiff = Infinity;
@@ -235,23 +231,32 @@ async function updateGenBar(date, hourStr, yMax) {
     const diff = Math.min(Math.abs(sm - targetMin), 1440 - Math.abs(sm - targetMin));
     if (diff < bestDiff) { bestDiff = diff; best = s; }
   }
+  return best;
+}
 
-  if (!best) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
+// Total MW stack for Y-range calculation
+function snapStackMw(snap) {
+  if (!snap) return 0;
+  const genMw = MERIT.reduce((s, m) => s + Math.max(0, snap[m.key] || 0), 0);
+  return genMw + Math.max(0, snap['net_import_mw'] || 0);
+}
 
-  const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, best[m.key] || 0) }));
+// Fill the bar DOM from a pre-fetched snapshot and the resolved Y-axis max (MW)
+function fillGenBar(snap, yMax) {
+  const inner = document.getElementById('gen-bar-inner');
+  const totalEl = document.getElementById('gen-bar-total');
+  if (!snap || !yMax) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
+
+  const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, snap[m.key] || 0) }));
   const genMw = vals.reduce((s, v) => s + v.mw, 0);
+  const netImportMw = snap['net_import_mw'] || 0;
 
-  // Net import (positive = importing, negative = exporting)
-  const netImportMw = best['net_import_mw'] || 0;
-
-  // Snapshot Sofia time for time-matching confirmation
   const snapSofiaTime = (() => {
-    const ts = best.timestamp_utc || best.timestamp || '';
+    const ts = snap.timestamp_utc || snap.timestamp || '';
     if (!ts) return '';
     return new Date(ts).toLocaleString('en-US', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit', hour12: false });
   })();
 
-  // Display: generation total + net import/export + snapshot time
   const netLabel = netImportMw < 0
     ? `Износ: ${Math.round(-netImportMw)} MW`
     : netImportMw > 5 ? `Внос: ${Math.round(netImportMw)} MW` : '';
@@ -259,31 +264,22 @@ async function updateGenBar(date, hourStr, yMax) {
     + (netLabel ? `<br><span style="font-size:0.58rem;color:#555;font-weight:600">${netLabel}</span>` : '')
     + (snapSofiaTime ? `<br><span style="font-size:0.5rem;color:#999">@ ${snapSofiaTime}</span>` : '');
 
-  // Segments: generation sources (most expensive at top) + net import (if positive) above them
-  const genSegs = [...vals].reverse().filter(v => v.mw >= 1); // expensive first = top
+  const genSegs = [...vals].reverse().filter(v => v.mw >= 1);
   const importSeg = netImportMw > 5 ? { label: 'Внос', mw: netImportMw, color: '#8899bb' } : null;
-
-  // Total stack height in MWh (same unit as Y-axis)
-  const stackMwh = (genMw + Math.max(0, netImportMw)) * 0.25;
-  const topSpacer = Math.max(0, yMax - stackMwh);
+  const stackMw = genMw + Math.max(0, netImportMw);
+  const topSpacer = Math.max(0, yMax - stackMw);
 
   let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
-
-  // Import segment sits above generation (highest in merit order)
   if (importSeg) {
-    const f = (importSeg.mw * 0.25).toFixed(2);
-    const show = importSeg.mw / (genMw + importSeg.mw) * 100 > 5;
+    const f = importSeg.mw.toFixed(2);
     html += `<div class="gen-seg" style="flex:${f};background:${importSeg.color};" title="${importSeg.label}: ${Math.round(importSeg.mw)} MW">
-      ${show ? `<div class="gen-seg-label">${importSeg.label}</div><div class="gen-seg-mw">${Math.round(importSeg.mw)} MW</div>` : ''}
+      ${importSeg.mw / stackMw * 100 > 5 ? `<div class="gen-seg-label">${importSeg.label}</div><div class="gen-seg-mw">${Math.round(importSeg.mw)} MW</div>` : ''}
     </div>`;
   }
-
   for (const v of genSegs) {
-    const f = (v.mw * 0.25).toFixed(2);
-    const pct = v.mw / genMw * 100;
-    const show = pct > 8;
+    const f = v.mw.toFixed(2);
     html += `<div class="gen-seg" style="flex:${f};background:${v.color};" title="${v.label}: ${Math.round(v.mw)} MW">
-      ${show ? `<div class="gen-seg-label">${v.label}</div><div class="gen-seg-mw">${Math.round(v.mw)} MW</div>` : ''}
+      ${v.mw / genMw * 100 > 8 ? `<div class="gen-seg-label">${v.label}</div><div class="gen-seg-mw">${Math.round(v.mw)} MW</div>` : ''}
     </div>`;
   }
   inner.innerHTML = html;
@@ -351,7 +347,7 @@ function nearestKey(date, hour) {
 
 function isMobile() { return window.innerWidth < 600; }
 
-function draw() {
+async function draw() {
   if (!CURVES) return;
   const date = document.getElementById('date-picker').value;
   const hour = hourPicker.value;
@@ -374,12 +370,26 @@ function draw() {
   const buyDepth  = buyBand.length  > 1 ? Math.abs(buyBand[buyBand.length-1].x  - buyBand[0].x)  : 0;
 
   document.getElementById('s-price').textContent = r.cp != null ? r.cp.toFixed(2) : '—';
-  document.getElementById('s-vol').textContent   = r.cv != null ? Math.round(r.cv) + ' MWh' : '—';
+  document.getElementById('s-vol').textContent   = r.cv != null ? Math.round(r.cv) + ' MW' : '—';
   document.getElementById('s-zero').textContent  = `↑${Math.round(sellDepth)} / ↓${Math.round(buyDepth)}`;
 
   const idx = INDEX[key];
   document.getElementById('btn-prev').disabled = idx <= 0;
   document.getElementById('btn-next').disabled = idx >= AVAILABLE.length - 1;
+
+  // Pre-fetch generation snapshot so we can set correct Y range before rendering
+  const showBar = document.getElementById('gen-toggle').checked;
+  let bestSnap = null;
+  let genStackMw = 0;
+  if (showBar) {
+    const snaps = await fetchGenForDay(date);
+    bestSnap = findBestSnap(snaps, hour);
+    genStackMw = snapStackMw(bestSnap);
+  }
+
+  // Y range = max(bidding data, generation stack) + 10% headroom, rounded to 500
+  const biddingMax = Math.max(...buy.map(p => p.x), ...sell.map(p => p.x), r.cv || 0);
+  const yTop = Math.ceil(Math.max(biddingMax, genStackMw) * 1.1 / 500) * 500;
 
   const mobile = isMobile();
   const shapes = [{
@@ -403,23 +413,23 @@ function draw() {
       type: 'scatter', mode: 'lines', name: 'Demand',
       x: buy.map(p => p.y), y: buy.map(p => p.x),
       line: { color: '#004494', width: mobile ? 1.5 : 2, shape: 'hv' },
-      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MWh<extra>Demand</extra>',
+      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MW<extra>Demand</extra>',
     },
     {
       type: 'scatter', mode: 'lines', name: 'Supply',
       x: sell.map(p => p.y), y: sell.map(p => p.x),
       line: { color: '#cc2200', width: mobile ? 1.5 : 2, shape: 'hv' },
-      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MWh<extra>Supply</extra>',
+      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MW<extra>Supply</extra>',
     },
     ...(r.cp != null ? [{
       type: 'scatter', mode: 'markers', name: 'Clearing',
       x: [r.cp], y: [r.cv],
       marker: { size: mobile ? 9 : 11, color: '#ffd700', symbol: 'star', line: { color: '#333', width: 1 } },
-      hovertemplate: '%{x:.2f} EUR/MWh @ %{y:.0f} MWh<extra>Clearing</extra>',
+      hovertemplate: '%{x:.2f} EUR/MWh @ %{y:.0f} MW<extra>Clearing</extra>',
     }] : []),
   ];
 
-  Plotly.react('chart', traces, {
+  await Plotly.react('chart', traces, {
     paper_bgcolor: '#fff', plot_bgcolor: '#f7fafd',
     font: { family: 'Arial, Helvetica, sans-serif', color: '#1a2233', size: mobile ? 10 : 12 },
     xaxis: {
@@ -428,9 +438,9 @@ function draw() {
       range: [-50, 350],
     },
     yaxis: {
-      title: mobile ? '' : { text: 'Cumulative Volume (MWh)', standoff: 6 },
+      title: mobile ? '' : { text: 'Cumulative Volume (MW)', standoff: 6 },
       gridcolor: '#dde6f0', zeroline: true, zerolinecolor: '#aac0d8', zerolinewidth: 1,
-      rangemode: 'tozero',
+      range: [0, yTop],
     },
     legend: {
       orientation: 'h',
@@ -443,21 +453,24 @@ function draw() {
     shapes,
     hovermode: 'closest',
     autosize: true,
-  }, { responsive: true, displayModeBar: false }).then(() => {
-    // Position gen-bar overlay AFTER Plotly has finalised _fullLayout (includes auto-ranged yaxis)
-    if (document.getElementById('gen-toggle').checked) {
-      const gd = document.getElementById('chart');
-      const fl = gd._fullLayout;
-      if (!fl || !fl.yaxis) return;
+  }, { responsive: true, displayModeBar: false });
+
+  // Position and fill generation bar using Plotly's finalised axis geometry
+  if (showBar) {
+    const gd = document.getElementById('chart');
+    const fl = gd._fullLayout;
+    if (fl && fl.yaxis) {
       const bar = document.getElementById('gen-bar');
-      // Use the actual Y-axis pixel extent (not margin), so bar aligns pixel-perfectly
-      const yTop    = fl.yaxis._offset;                          // px from top of chart div
-      const yBottom = gd.clientHeight - yTop - fl.yaxis._length; // px from bottom
-      bar.style.top    = yTop + 'px';
-      bar.style.bottom = yBottom + 'px';
-      updateGenBar(key.split('|')[0], key.split('|')[1], fl.yaxis.range[1]);
+      bar.style.top    = fl.yaxis._offset + 'px';
+      bar.style.bottom = (gd.clientHeight - fl.yaxis._offset - fl.yaxis._length) + 'px';
+      if (bestSnap) {
+        fillGenBar(bestSnap, fl.yaxis.range[1]);
+      } else {
+        document.getElementById('gen-bar-total').innerHTML = '—';
+        document.getElementById('gen-bar-inner').innerHTML = '';
+      }
     }
-  });
+  }
 }
 
 function step(dir) {
