@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBEX SDAC Curve Viewer</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #eef3f8; color: #1a2233; font-size: 14px;
+  display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+}
+
+/* ── header ── */
+header {
+  background: linear-gradient(180deg, #004494 0%, #003070 100%);
+  color: #fff;
+  border-bottom: 3px solid #ffd700;
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+.logo-area { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.logo-circle {
+  width: 34px; height: 34px; border-radius: 50%; background: #fff; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 0.68rem; color: #003070; letter-spacing: -0.03em;
+}
+.logo-text h1 { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; }
+.logo-text p  { font-size: 0.6rem; opacity: 0.6; letter-spacing: 0.01em; }
+
+.back-link {
+  font-size: 0.72rem; color: rgba(255,255,255,0.7);
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+}
+.back-link:hover { color: #ffd700; }
+
+/* ── controls row ── */
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nav-btn {
+  padding: 6px 14px; background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  color: #fff; font-size: 1rem; cursor: pointer; line-height: 1;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
+.nav-btn:active:not(:disabled) { background: rgba(255,255,255,0.4); }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+select, input[type=date] {
+  padding: 5px 8px; border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.12); color: #fff;
+  font-size: 0.85rem; cursor: pointer; color-scheme: dark;
+}
+select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
+
+/* ── stats ── */
+.stats {
+  margin-left: auto;
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+.stat { text-align: right; }
+.stat-val { font-size: 1rem; font-weight: 700; color: #ffd700; white-space: nowrap; }
+.stat-val.dim { color: rgba(255,255,255,0.75); font-size: 0.9rem; }
+.stat-label { font-size: 0.58rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+
+/* ── chart ── */
+#chart { flex: 1; min-height: 0; position: relative; }
+#loading {
+  position: absolute; inset: 0; background: #eef3f8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; color: #004494; z-index: 10;
+}
+
+/* ── mobile ── */
+@media (max-width: 600px) {
+  header { padding: 6px 10px; gap: 8px; }
+  .logo-text p { display: none; }
+  .back-link { display: none; }
+  .stats { margin-left: 0; width: 100%; justify-content: space-between; gap: 6px; }
+  .stat { text-align: left; }
+  .stat-val { font-size: 0.9rem; }
+  select, input[type=date] { font-size: 0.8rem; padding: 5px 6px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-circle">БГ</div>
+    <div class="logo-text">
+      <h1>IBEX SDAC · Curve Viewer</h1>
+      <p>Supply / Demand aggregated curves · 15-min intervals</p>
+    </div>
+  </div>
+  <a class="back-link" href="index.html">← Dashboard</a>
+
+  <div class="controls">
+    <button class="nav-btn" id="btn-prev" onclick="step(-1)">&#8592;</button>
+    <input type="date" id="date-picker">
+    <select id="hour-picker"></select>
+    <button class="nav-btn" id="btn-next" onclick="step(1)">&#8594;</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val" id="s-price">—</div>
+      <div class="stat-label">Clearing EUR/MWh</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val dim" id="s-vol">—</div>
+      <div class="stat-label">Clearing MWh</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val dim" id="s-zero">—</div>
+      <div class="stat-label">Zero ±10 EUR (↑sell/↓buy)</div>
+    </div>
+  </div>
+</header>
+
+<div id="chart">
+  <div id="loading">Loading curve data…</div>
+</div>
+
+<script>
+let CURVES = null;
+let AVAILABLE = [];
+let INDEX = {};
+
+function parseHash(hash) {
+  // Support both / (new) and | (legacy) as separator
+  const sep = hash.includes('/') ? '/' : '|';
+  return hash.split(sep);
+}
+function toKey(d, h) { return d + '|' + h; }
+function toHash(key) { return '?' + key.replace('|', '/'); }
+
+const hourPicker = document.getElementById('hour-picker');
+for (let h = 0; h < 24; h++) {
+  for (const m of [0, 15, 30, 45]) {
+    const val = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    hourPicker.appendChild(opt);
+  }
+}
+
+fetch('ibex_sdac_data.json')
+  .then(r => r.json())
+  .then(data => {
+    CURVES = {};
+    data.forEach(r => { CURVES[r.d + '|' + r.h] = r; });
+    AVAILABLE = Object.keys(CURVES).sort();
+    AVAILABLE.forEach((k, i) => INDEX[k] = i);
+
+    const dates = [...new Set(AVAILABLE.map(k => k.split('|')[0]))].sort();
+    const dp = document.getElementById('date-picker');
+    dp.min = dates[0]; dp.max = dates[dates.length - 1];
+
+    const raw = location.search.slice(1) || location.hash.slice(1);
+    const hashKey = raw ? toKey(...parseHash(raw)) : null;
+    if (hashKey && CURVES[hashKey]) {
+      const [d, h] = hashKey.split('|');
+      dp.value = d; hourPicker.value = h;
+    } else {
+      const [d, h] = AVAILABLE[AVAILABLE.length - 1].split('|');
+      dp.value = d; hourPicker.value = h;
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    draw();
+  })
+  .catch(e => {
+    document.getElementById('loading').textContent = 'Failed to load data: ' + e;
+  });
+
+function nearestKey(date, hour) {
+  const target = date + '|' + hour;
+  if (CURVES[target]) return target;
+  let best = AVAILABLE[0];
+  for (const k of AVAILABLE) { if (k <= target) best = k; else break; }
+  return best;
+}
+
+function isMobile() { return window.innerWidth < 600; }
+
+function draw() {
+  if (!CURVES) return;
+  const date = document.getElementById('date-picker').value;
+  const hour = hourPicker.value;
+  const key = nearestKey(date, hour);
+
+  if (key !== date + '|' + hour) {
+    const [d, h] = key.split('|');
+    document.getElementById('date-picker').value = d;
+    hourPicker.value = h;
+  }
+  history.replaceState(null, '', toHash(key));
+
+  const r = CURVES[key];
+  const buy  = r.b;
+  const sell = r.s;
+
+  const sellBand  = sell.filter(p => p.y >= -10 && p.y <= 10);
+  const buyBand   = buy.filter(p => p.y >= -10 && p.y <= 10);
+  const sellDepth = sellBand.length > 1 ? Math.abs(sellBand[sellBand.length-1].x - sellBand[0].x) : 0;
+  const buyDepth  = buyBand.length  > 1 ? Math.abs(buyBand[buyBand.length-1].x  - buyBand[0].x)  : 0;
+
+  document.getElementById('s-price').textContent = r.cp != null ? r.cp.toFixed(2) : '—';
+  document.getElementById('s-vol').textContent   = r.cv != null ? Math.round(r.cv) + ' MWh' : '—';
+  document.getElementById('s-zero').textContent  = `↑${Math.round(sellDepth)} / ↓${Math.round(buyDepth)}`;
+
+  const idx = INDEX[key];
+  document.getElementById('btn-prev').disabled = idx <= 0;
+  document.getElementById('btn-next').disabled = idx >= AVAILABLE.length - 1;
+
+  const mobile = isMobile();
+  const shapes = [{
+    type: 'rect', x0: -10, x1: 10, y0: 0, y1: 1, yref: 'paper',
+    fillcolor: 'rgba(0,150,0,0.07)', line: { color: 'rgba(0,150,0,0.4)', width: 1, dash: 'dot' },
+  }];
+
+  if (r.cp != null) {
+    shapes.push({
+      type: 'line', x0: r.cp, x1: r.cp, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#e07000', width: 1.5, dash: 'dash' },
+    });
+    shapes.push({
+      type: 'rect', x0: r.cp - 10, x1: r.cp + 10, y0: 0, y1: 1, yref: 'paper',
+      fillcolor: 'rgba(224,112,0,0.07)', line: { width: 0 },
+    });
+  }
+
+  const traces = [
+    {
+      type: 'scatter', mode: 'lines', name: 'Demand',
+      x: buy.map(p => p.y), y: buy.map(p => p.x),
+      line: { color: '#004494', width: mobile ? 1.5 : 2, shape: 'hv' },
+      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MWh<extra>Demand</extra>',
+    },
+    {
+      type: 'scatter', mode: 'lines', name: 'Supply',
+      x: sell.map(p => p.y), y: sell.map(p => p.x),
+      line: { color: '#cc2200', width: mobile ? 1.5 : 2, shape: 'hv' },
+      hovertemplate: '%{x:.2f} EUR/MWh · %{y:.0f} MWh<extra>Supply</extra>',
+    },
+    ...(r.cp != null ? [{
+      type: 'scatter', mode: 'markers', name: 'Clearing',
+      x: [r.cp], y: [r.cv],
+      marker: { size: mobile ? 9 : 11, color: '#ffd700', symbol: 'star', line: { color: '#333', width: 1 } },
+      hovertemplate: '%{x:.2f} EUR/MWh @ %{y:.0f} MWh<extra>Clearing</extra>',
+    }] : []),
+  ];
+
+  Plotly.react('chart', traces, {
+    paper_bgcolor: '#fff', plot_bgcolor: '#f7fafd',
+    font: { family: 'Arial, Helvetica, sans-serif', color: '#1a2233', size: mobile ? 10 : 12 },
+    xaxis: {
+      title: mobile ? '' : { text: 'Price (EUR/MWh)', standoff: 6 },
+      gridcolor: '#dde6f0', zeroline: true, zerolinecolor: '#aac0d8', zerolinewidth: 1.5,
+      range: [-50, 350],
+    },
+    yaxis: {
+      title: mobile ? '' : { text: 'Cumulative Volume (MWh)', standoff: 6 },
+      gridcolor: '#dde6f0', zeroline: false,
+    },
+    legend: {
+      orientation: 'h',
+      bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#c5d8ee', borderwidth: 1,
+      x: 0.5, y: -0.12, xanchor: 'center', yanchor: 'top',
+    },
+    margin: mobile
+      ? { t: 8, b: 36, l: 44, r: 8 }
+      : { t: 12, b: 52, l: 70, r: 20 },
+    shapes,
+    hovermode: 'closest',
+    autosize: true,
+  }, { responsive: true, displayModeBar: false });
+}
+
+function step(dir) {
+  if (!CURVES) return;
+  const key = nearestKey(document.getElementById('date-picker').value, hourPicker.value);
+  const next = AVAILABLE[INDEX[key] + dir];
+  if (next) {
+    const [d, h] = next.split('|');
+    document.getElementById('date-picker').value = d;
+    hourPicker.value = h;
+    draw();
+  }
+}
+
+document.getElementById('date-picker').addEventListener('change', draw);
+document.getElementById('hour-picker').addEventListener('change', draw);
+window.addEventListener('resize', draw);
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft')  step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+window.addEventListener('popstate', () => {
+  const raw = location.search.slice(1) || location.hash.slice(1);
+  const hkey = raw ? toKey(...parseHash(raw)) : null;
+  if (hkey && CURVES && CURVES[hkey]) {
+    const [d, h] = hkey.split('|');
+    document.getElementById('date-picker').value = d;
+    hourPicker.value = h;
+    draw();
+  }
+});
+</script>
+</body>
+</html>
