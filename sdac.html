@@ -241,13 +241,12 @@ function findBestSnap(snaps, bgHourStr) {
   return bestDiff <= 30 ? best : null;
 }
 
-// Total MW stack for Y-range calculation (includes battery discharge + charging as load)
+// Total MW stack for Y-range calculation
 function snapStackMw(snap) {
   if (!snap) return 0;
   const genMw = MERIT.reduce((s, m) => s + Math.max(0, snap[m.key] || 0), 0);
   const battMw = snap['ССЕЕ_state'] === 'discharging' ? (snap['ССЕЕ_mw'] || 0) : 0;
-  const chargeMw = snap['ССЕЕ_state'] === 'charging' ? Math.abs(snap['ССЕЕ_mw'] || 0) : 0;
-  return genMw + battMw + Math.max(0, snap['net_import_mw'] || 0) + chargeMw;
+  return genMw + battMw + Math.max(0, snap['net_import_mw'] || 0);
 }
 
 // Fill the bar DOM from a pre-fetched snapshot and the resolved Y-axis max (MW)
@@ -283,7 +282,7 @@ function fillGenBar(snap, yMax) {
 
   const genSegs = [...vals].reverse().filter(v => v.mw >= 1);
   const importSeg = netImportMw > 5 ? { label: 'Внос', mw: netImportMw, color: '#8899bb' } : null;
-  const stackMw = genMw + Math.max(0, netImportMw) + battChargeMw;
+  const stackMw = genMw + Math.max(0, netImportMw);
   const topSpacer = Math.max(0, yMax - stackMw);
 
   let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
@@ -292,13 +291,6 @@ function fillGenBar(snap, yMax) {
     const f = importSeg.mw.toFixed(2);
     html += `<div class="gen-seg" style="flex:${f};background:${importSeg.color};" title="${importSeg.label}: ${Math.round(importSeg.mw)} MW">
       ${importSeg.mw / stackMw * 100 > 5 ? `<div class="gen-seg-label">${importSeg.label}</div><div class="gen-seg-mw">${Math.round(importSeg.mw)} MW</div>` : ''}
-    </div>`;
-  }
-  // Charging just below import, near the consumption marker level
-  if (battChargeMw > 1) {
-    const f = battChargeMw.toFixed(2);
-    html += `<div class="gen-seg gen-seg-charge" style="flex:${f};" title="Зареждане ССЕБ: ${Math.round(battChargeMw)} MW">
-      ${battChargeMw / stackMw * 100 > 5 ? `<div class="gen-seg-label">Зареж.</div><div class="gen-seg-mw">${Math.round(battChargeMw)} MW</div>` : ''}
     </div>`;
   }
   for (const v of genSegs) {
