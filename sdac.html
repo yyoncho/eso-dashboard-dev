@@ -112,6 +112,11 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
   font-size: 0.5rem; color: rgba(255,255,255,0.8);
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
+.gen-seg-charge {
+  background: repeating-linear-gradient(
+    -45deg, #2c3e50, #2c3e50 4px, #1a252f 4px, #1a252f 8px
+  ) !important;
+}
 @media (max-width: 600px) {
   #gen-bar { width: 56px; }
   .gen-seg-label { font-size: 0.46rem; }
@@ -241,12 +246,13 @@ function findBestSnap(snaps, hourStr) {
   return best;
 }
 
-// Total MW stack for Y-range calculation (includes battery discharge)
+// Total MW stack for Y-range calculation (includes battery discharge + charging as load)
 function snapStackMw(snap) {
   if (!snap) return 0;
   const genMw = MERIT.reduce((s, m) => s + Math.max(0, snap[m.key] || 0), 0);
   const battMw = snap['ССЕЕ_state'] === 'discharging' ? (snap['ССЕЕ_mw'] || 0) : 0;
-  return genMw + battMw + Math.max(0, snap['net_import_mw'] || 0);
+  const chargeMw = snap['ССЕЕ_state'] === 'charging' ? Math.abs(snap['ССЕЕ_mw'] || 0) : 0;
+  return genMw + battMw + Math.max(0, snap['net_import_mw'] || 0) + chargeMw;
 }
 
 // Fill the bar DOM from a pre-fetched snapshot and the resolved Y-axis max (MW)
@@ -263,6 +269,7 @@ function fillGenBar(snap, yMax) {
 
   const genMw = vals.reduce((s, v) => s + v.mw, 0);
   const netImportMw = snap['net_import_mw'] || 0;
+  const battChargeMw = snap['ССЕЕ_state'] === 'charging' ? Math.abs(snap['ССЕЕ_mw'] || 0) : 0;
 
   const snapSofiaTime = (() => {
     const ts = snap.timestamp_utc || snap.timestamp || '';
@@ -273,16 +280,25 @@ function fillGenBar(snap, yMax) {
   const netLabel = netImportMw < 0
     ? `Износ: ${Math.round(-netImportMw)} MW`
     : netImportMw > 5 ? `Внос: ${Math.round(netImportMw)} MW` : '';
+  const chargeLabel = battChargeMw > 1 ? `Зар.: ${Math.round(battChargeMw)} MW` : '';
   totalEl.innerHTML = `${Math.round(genMw)} MW`
     + (netLabel ? `<br><span style="font-size:0.58rem;color:#555;font-weight:600">${netLabel}</span>` : '')
+    + (chargeLabel ? `<br><span style="font-size:0.56rem;color:#7a99bb;font-weight:600">${chargeLabel}</span>` : '')
     + (snapSofiaTime ? `<br><span style="font-size:0.5rem;color:#999">@ ${snapSofiaTime}</span>` : '');
 
   const genSegs = [...vals].reverse().filter(v => v.mw >= 1);
   const importSeg = netImportMw > 5 ? { label: 'Внос', mw: netImportMw, color: '#8899bb' } : null;
-  const stackMw = genMw + Math.max(0, netImportMw);
+  const stackMw = genMw + Math.max(0, netImportMw) + battChargeMw;
   const topSpacer = Math.max(0, yMax - stackMw);
 
   let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
+  // Charging segment at top (demand, not supply — shown with stripe pattern)
+  if (battChargeMw > 1) {
+    const f = battChargeMw.toFixed(2);
+    html += `<div class="gen-seg gen-seg-charge" style="flex:${f};" title="Зареждане ССЕБ: ${Math.round(battChargeMw)} MW">
+      ${battChargeMw / stackMw * 100 > 5 ? `<div class="gen-seg-label">Зареж.</div><div class="gen-seg-mw">${Math.round(battChargeMw)} MW</div>` : ''}
+    </div>`;
+  }
   if (importSeg) {
     const f = importSeg.mw.toFixed(2);
     html += `<div class="gen-seg" style="flex:${f};background:${importSeg.color};" title="${importSeg.label}: ${Math.round(importSeg.mw)} MW">
@@ -405,10 +421,28 @@ async function draw() {
   const yTop = Math.ceil(Math.max(biddingMax, genStackMw) * 1.1 / 500) * 500;
 
   const mobile = isMobile();
+  const loadMw = (showBar && bestSnap) ? (bestSnap.load_mw || 0) : 0;
   const shapes = [{
     type: 'rect', x0: -10, x1: 10, y0: 0, y1: 1, yref: 'paper',
     fillcolor: 'rgba(0,150,0,0.07)', line: { color: 'rgba(0,150,0,0.4)', width: 1, dash: 'dot' },
   }];
+  const annotations = [];
+  if (loadMw > 0) {
+    shapes.push({
+      type: 'line', x0: 0, x1: 1, xref: 'paper',
+      y0: loadMw, y1: loadMw, yref: 'y',
+      line: { color: 'rgba(180,30,30,0.55)', width: 1.5, dash: 'dot' },
+    });
+    annotations.push({
+      x: 0.005, xref: 'paper', xanchor: 'left',
+      y: loadMw, yref: 'y', yanchor: 'middle',
+      text: `${Math.round(loadMw)} MW`,
+      showarrow: false,
+      font: { size: 9, color: '#b41e1e', family: 'Arial, Helvetica, sans-serif' },
+      bgcolor: 'rgba(255,255,255,0.82)',
+      borderpad: 2,
+    });
+  }
 
   if (r.cp != null) {
     shapes.push({
@@ -464,6 +498,7 @@ async function draw() {
       ? { t: 8, b: 36, l: 44, r: 8 }
       : { t: 12, b: 52, l: 70, r: 20 },
     shapes,
+    annotations,
     hovermode: 'closest',
     autosize: true,
   }, { responsive: true, displayModeBar: false });
