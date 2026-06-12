@@ -75,6 +75,49 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
   font-size: 1rem; color: #004494; z-index: 10;
 }
 
+/* ── generation bar overlay (inside chart, matches plot area via JS) ── */
+#gen-bar {
+  position: absolute; right: 0; width: 96px;
+  /* top/bottom set by JS to match Plotly plot margins */
+  overflow: hidden; pointer-events: none;
+  background: rgba(255,255,255,0.93);
+  border-left: 1px solid #c5d8ee;
+  display: flex; flex-direction: column; box-sizing: border-box;
+}
+#gen-bar-title {
+  position: absolute; top: 4px; left: 0; right: 0; z-index: 2;
+  font-size: 0.56rem; color: #7a8aaa; text-align: center;
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+#gen-bar-total {
+  position: absolute; top: 17px; left: 0; right: 0; z-index: 2;
+  font-size: 0.7rem; font-weight: 700; color: #1a2233; text-align: center;
+}
+#gen-bar-inner {
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
+}
+.gen-seg {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; border-top: 1px solid rgba(255,255,255,0.3);
+  min-height: 0;
+}
+.gen-seg-label {
+  font-size: 0.54rem; font-weight: 700; line-height: 1.2;
+  color: rgba(255,255,255,0.95); text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 88px; text-align: center; padding: 0 2px;
+}
+.gen-seg-mw {
+  font-size: 0.5rem; color: rgba(255,255,255,0.8);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+@media (max-width: 600px) {
+  #gen-bar { width: 56px; }
+  .gen-seg-label { font-size: 0.46rem; }
+  .gen-seg-mw { display: none; }
+}
+
 /* ── mobile ── */
 @media (max-width: 600px) {
   header { padding: 6px 10px; gap: 8px; }
@@ -104,6 +147,10 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
     <input type="date" id="date-picker">
     <select id="hour-picker"></select>
     <button class="nav-btn" id="btn-next" onclick="step(1)">&#8594;</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:0.75rem;color:rgba(255,255,255,0.85);cursor:pointer;user-select:none;margin-left:6px;">
+      <input type="checkbox" id="gen-toggle" checked style="accent-color:#ffd700;width:14px;height:14px;cursor:pointer;">
+      Генерация
+    </label>
   </div>
 
   <div class="stats">
@@ -124,9 +171,125 @@ select:focus, input[type=date]:focus { outline: 2px solid #ffd700; }
 
 <div id="chart">
   <div id="loading">Loading curve data…</div>
+  <div id="gen-bar">
+    <div id="gen-bar-title">Производство</div>
+    <div id="gen-bar-total">— MW</div>
+    <div id="gen-bar-inner"></div>
+  </div>
 </div>
 
 <script>
+// ── generation bar ──────────────────────────────────────────────────────────
+const GEN_BASE = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+
+// Merit order cheapest→most expensive; bar fills bottom→top
+const MERIT = [
+  { key: 'ФЕЦ',                 label: 'ФЕЦ',       color: '#fa4b42' },
+  { key: 'ВяЕЦ',                label: 'ВяЕЦ',      color: '#2ee0ca' },
+  { key: 'ВЕЦ',                 label: 'ВЕЦ',       color: '#6b8abc' },
+  { key: 'Малки ВЕЦ',           label: 'М.ВЕЦ',     color: '#d568fb' },
+  { key: 'Био ЕЦ',              label: 'Биомаса',   color: '#feb56a' },
+  { key: 'АЕЦ',                 label: 'АЕЦ',       color: '#2caffe' },
+  { key: 'Топлофикационни ТЕЦ', label: 'Топло.ТЕЦ',color: '#00e272' },
+  { key: 'Заводски ТЕЦ',        label: 'Зав.ТЕЦ',  color: '#fe6a35' },
+  { key: 'Кондензационни ТЕЦ',  label: 'Конд.ТЕЦ', color: '#544fc5' },
+];
+
+const genCache = {};
+
+async function fetchGenForDay(date) {
+  if (genCache[date] !== undefined) return genCache[date];
+  try {
+    const res = await fetch(`${GEN_BASE}/${date}.jsonl`);
+    if (!res.ok) { genCache[date] = null; return null; }
+    const snaps = (await res.text()).trim().split('\n')
+      .filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    genCache[date] = snaps;
+    return snaps;
+  } catch { genCache[date] = null; return null; }
+}
+
+function snapToSofiaMinutes(r) {
+  const ts = r.timestamp_utc || r.timestamp || '';
+  if (!ts) return null;
+  try {
+    const s = new Date(ts).toLocaleString('en-US', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit', hour12: false });
+    const [h, m] = s.split(':').map(Number);
+    return h * 60 + m;
+  } catch { return null; }
+}
+
+async function updateGenBar(date, hourStr, yMax) {
+  const inner = document.getElementById('gen-bar-inner');
+  const totalEl = document.getElementById('gen-bar-total');
+  const snaps = await fetchGenForDay(date);
+
+  if (!snaps || !snaps.length || !yMax) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
+
+  const [hh, mm] = hourStr.split(':').map(Number);
+  const targetMin = hh * 60 + mm;
+  let best = null, bestDiff = Infinity;
+  for (const s of snaps) {
+    const sm = snapToSofiaMinutes(s);
+    if (sm === null) continue;
+    const diff = Math.min(Math.abs(sm - targetMin), 1440 - Math.abs(sm - targetMin));
+    if (diff < bestDiff) { bestDiff = diff; best = s; }
+  }
+
+  if (!best) { totalEl.innerHTML = '—'; inner.innerHTML = ''; return; }
+
+  const vals = MERIT.map(m => ({ ...m, mw: Math.max(0, best[m.key] || 0) }));
+  const genMw = vals.reduce((s, v) => s + v.mw, 0);
+
+  // Net import (positive = importing, negative = exporting)
+  const netImportMw = best['net_import_mw'] || 0;
+
+  // Snapshot Sofia time for time-matching confirmation
+  const snapSofiaTime = (() => {
+    const ts = best.timestamp_utc || best.timestamp || '';
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('en-US', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit', hour12: false });
+  })();
+
+  // Display: generation total + net import/export + snapshot time
+  const netLabel = netImportMw < 0
+    ? `Износ: ${Math.round(-netImportMw)} MW`
+    : netImportMw > 5 ? `Внос: ${Math.round(netImportMw)} MW` : '';
+  totalEl.innerHTML = `${Math.round(genMw)} MW`
+    + (netLabel ? `<br><span style="font-size:0.58rem;color:#555;font-weight:600">${netLabel}</span>` : '')
+    + (snapSofiaTime ? `<br><span style="font-size:0.5rem;color:#999">@ ${snapSofiaTime}</span>` : '');
+
+  // Segments: generation sources (most expensive at top) + net import (if positive) above them
+  const genSegs = [...vals].reverse().filter(v => v.mw >= 1); // expensive first = top
+  const importSeg = netImportMw > 5 ? { label: 'Внос', mw: netImportMw, color: '#8899bb' } : null;
+
+  // Total stack height in MWh (same unit as Y-axis)
+  const stackMwh = (genMw + Math.max(0, netImportMw)) * 0.25;
+  const topSpacer = Math.max(0, yMax - stackMwh);
+
+  let html = `<div style="flex:${topSpacer.toFixed(2)};min-height:0;"></div>`;
+
+  // Import segment sits above generation (highest in merit order)
+  if (importSeg) {
+    const f = (importSeg.mw * 0.25).toFixed(2);
+    const show = importSeg.mw / (genMw + importSeg.mw) * 100 > 5;
+    html += `<div class="gen-seg" style="flex:${f};background:${importSeg.color};" title="${importSeg.label}: ${Math.round(importSeg.mw)} MW">
+      ${show ? `<div class="gen-seg-label">${importSeg.label}</div><div class="gen-seg-mw">${Math.round(importSeg.mw)} MW</div>` : ''}
+    </div>`;
+  }
+
+  for (const v of genSegs) {
+    const f = (v.mw * 0.25).toFixed(2);
+    const pct = v.mw / genMw * 100;
+    const show = pct > 8;
+    html += `<div class="gen-seg" style="flex:${f};background:${v.color};" title="${v.label}: ${Math.round(v.mw)} MW">
+      ${show ? `<div class="gen-seg-label">${v.label}</div><div class="gen-seg-mw">${Math.round(v.mw)} MW</div>` : ''}
+    </div>`;
+  }
+  inner.innerHTML = html;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 let CURVES = null;
 let AVAILABLE = [];
 let INDEX = {};
@@ -266,7 +429,8 @@ function draw() {
     },
     yaxis: {
       title: mobile ? '' : { text: 'Cumulative Volume (MWh)', standoff: 6 },
-      gridcolor: '#dde6f0', zeroline: false,
+      gridcolor: '#dde6f0', zeroline: true, zerolinecolor: '#aac0d8', zerolinewidth: 1,
+      rangemode: 'tozero',
     },
     legend: {
       orientation: 'h',
@@ -279,7 +443,21 @@ function draw() {
     shapes,
     hovermode: 'closest',
     autosize: true,
-  }, { responsive: true, displayModeBar: false });
+  }, { responsive: true, displayModeBar: false }).then(() => {
+    // Position gen-bar overlay AFTER Plotly has finalised _fullLayout (includes auto-ranged yaxis)
+    if (document.getElementById('gen-toggle').checked) {
+      const gd = document.getElementById('chart');
+      const fl = gd._fullLayout;
+      if (!fl || !fl.yaxis) return;
+      const bar = document.getElementById('gen-bar');
+      // Use the actual Y-axis pixel extent (not margin), so bar aligns pixel-perfectly
+      const yTop    = fl.yaxis._offset;                          // px from top of chart div
+      const yBottom = gd.clientHeight - yTop - fl.yaxis._length; // px from bottom
+      bar.style.top    = yTop + 'px';
+      bar.style.bottom = yBottom + 'px';
+      updateGenBar(key.split('|')[0], key.split('|')[1], fl.yaxis.range[1]);
+    }
+  });
 }
 
 function step(dir) {
@@ -296,6 +474,10 @@ function step(dir) {
 
 document.getElementById('date-picker').addEventListener('change', draw);
 document.getElementById('hour-picker').addEventListener('change', draw);
+document.getElementById('gen-toggle').addEventListener('change', function() {
+  document.getElementById('gen-bar').style.display = this.checked ? '' : 'none';
+  if (this.checked) draw();
+});
 window.addEventListener('resize', draw);
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
