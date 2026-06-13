@@ -357,7 +357,15 @@ fetch('ibex_sdac_data.json')
       const [d, h] = hashKey.split('|');
       dp.value = d; hourPicker.value = h;
     } else {
-      const [d, h] = AVAILABLE[AVAILABLE.length - 1].split('|');
+      // Default to current BG time, rounded down to nearest 15-min slot
+      const now = new Date();
+      const bgStr = now.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }); // "YYYY-MM-DD HH:MM:SS"
+      const bgDate = bgStr.slice(0, 10);
+      const bgHh = +bgStr.slice(11, 13);
+      const bgMm = Math.floor(+bgStr.slice(14, 16) / 15) * 15;
+      const bgH = String(bgHh).padStart(2, '0') + ':' + String(bgMm).padStart(2, '0');
+      const nowKey = nearestKey(bgDate, bgH);
+      const [d, h] = nowKey.split('|');
       dp.value = d; hourPicker.value = h;
     }
 
