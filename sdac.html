@@ -400,8 +400,13 @@ fetch('sdac/index.json')
       return bgDate;
     }
 
-    const cetDate = bgDateToCet(targetBgDate, targetBgH || '12:00');
-    const cetIdx = dates.indexOf(cetDate);
+    let cetDate = bgDateToCet(targetBgDate, targetBgH || '12:00');
+    let cetIdx = dates.indexOf(cetDate);
+    // If date not in index (e.g. data hasn't been updated yet), fall back to last available
+    if (cetIdx === -1) {
+      cetDate = dates[dates.length - 1];
+      cetIdx = dates.length - 1;
+    }
     const toLoad = [cetDate];
     if (cetIdx > 0) toLoad.push(dates[cetIdx - 1]);
     if (cetIdx < dates.length - 1) toLoad.push(dates[cetIdx + 1]);
@@ -425,6 +430,7 @@ fetch('sdac/index.json')
   });
 
 function nearestKey(date, hour) {
+  if (!AVAILABLE.length) return null;
   const target = date + '|' + hour;
   if (CURVES[target]) return target;
   let best = AVAILABLE[0];
