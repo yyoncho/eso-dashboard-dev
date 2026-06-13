@@ -417,7 +417,9 @@ fetch('sdac/index.json')
       const [d, h] = parseHash(raw);
       dp.value = d; hourPicker.value = h;
     } else {
-      const nowKey = nearestKey(targetBgDate, targetBgH || '12:00');
+      const nowKey = nearestKey(targetBgDate, targetBgH || '12:00')
+                     || AVAILABLE[AVAILABLE.length - 1];
+      if (!nowKey) { document.getElementById('loading').textContent = 'No data available'; return; }
       const [d, h] = nowKey.split('|');
       dp.value = d; hourPicker.value = h;
     }
@@ -445,6 +447,7 @@ async function draw() {
   const date = document.getElementById('date-picker').value;
   const hour = hourPicker.value;
   const key = nearestKey(date, hour);
+  if (!key) return;
 
   if (key !== date + '|' + hour) {
     const [d, h] = key.split('|');
