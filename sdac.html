@@ -303,7 +303,7 @@ function fillGenBar(snap, yMax) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-let CURVES = null;
+let CURVES = {};
 let AVAILABLE = [];
 let INDEX = {};
 
@@ -325,39 +325,102 @@ for (let h = 0; h < 24; h++) {
   }
 }
 
-fetch('ibex_sdac_data.json')
+// Per-day curve cache: cetDate -> array of records (already ingested into CURVES)
+const dayCache = {};
+
+function ingestDay(data) {
+  data.forEach(r => {
+    // SDAC times are CET/CEST (UTC+2 summer). BG is EET/EEST (UTC+3 summer). Always +1h.
+    const hh = +r.h.slice(0, 2);
+    const bgHh = (hh + 1) % 24;
+    let bgDate = r.d;
+    if (hh === 23) {
+      const p = r.d.split('-');
+      const dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+      dt.setUTCDate(dt.getUTCDate() + 1);
+      bgDate = dt.toISOString().slice(0, 10);
+    }
+    const bgH = String(bgHh).padStart(2, '0') + r.h.slice(2);
+    const key = bgDate + '|' + bgH;
+    if (!CURVES[key]) {
+      CURVES[key] = r;
+      AVAILABLE.push(key);
+    }
+  });
+  AVAILABLE.sort();
+  AVAILABLE.forEach((k, i) => INDEX[k] = i);
+}
+
+async function loadDay(cetDate) {
+  if (dayCache[cetDate]) return;
+  dayCache[cetDate] = true;
+  try {
+    const res = await fetch(`sdac/${cetDate}.json`);
+    if (!res.ok) return;
+    ingestDay(await res.json());
+  } catch {}
+}
+
+// Initialise from index — load current day then draw; prefetch neighbours lazily
+fetch('sdac/index.json')
   .then(r => r.json())
-  .then(data => {
-    CURVES = {};
-    data.forEach(r => {
-      // SDAC times are CET/CEST (UTC+2 summer). BG is EET/EEST (UTC+3 summer).
-      // Always +1h. Slots at 23:xx roll over to next calendar day in BG time.
-      const hh = +r.h.slice(0, 2);
-      const bgHh = (hh + 1) % 24;
-      let bgDate = r.d;
-      if (hh === 23) {
-        const p = r.d.split('-');
-        const dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
-        dt.setUTCDate(dt.getUTCDate() + 1);
-        bgDate = dt.toISOString().slice(0, 10);
-      }
-      const bgH = String(bgHh).padStart(2, '0') + r.h.slice(2);
-      CURVES[bgDate + '|' + bgH] = r;
-    });
-    AVAILABLE = Object.keys(CURVES).sort();
-    AVAILABLE.forEach((k, i) => INDEX[k] = i);
-
-    const dates = [...new Set(AVAILABLE.map(k => k.split('|')[0]))].sort();
+  .then(async dates => {
+    // Set up date picker range from index
     const dp = document.getElementById('date-picker');
-    dp.min = dates[0]; dp.max = dates[dates.length - 1];
+    // Convert CET dates to BG dates for display (last CET date rolls to next BG date)
+    const lastCet = dates[dates.length - 1];
+    const p = lastCet.split('-');
+    const lastDt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    lastDt.setUTCDate(lastDt.getUTCDate() + 1); // +1 because 23:xx slots go to next BG day
+    dp.min = dates[0]; dp.max = lastDt.toISOString().slice(0, 10);
 
+    // Determine which CET date to load first
     const raw = location.search.slice(1) || location.hash.slice(1);
-    const hashKey = raw ? toKey(...parseHash(raw)) : null;
-    if (hashKey && CURVES[hashKey]) {
-      const [d, h] = hashKey.split('|');
+    let targetBgDate, targetBgH;
+    if (raw) {
+      [targetBgDate, targetBgH] = parseHash(raw);
+    } else {
+      const now = new Date();
+      const bgStr = now.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' });
+      targetBgDate = bgStr.slice(0, 10);
+      const bgHh = +bgStr.slice(11, 13);
+      const bgMm = Math.floor(+bgStr.slice(14, 16) / 15) * 15;
+      targetBgH = String(bgHh).padStart(2, '0') + ':' + String(bgMm).padStart(2, '0');
+    }
+
+    // BG date → CET date (subtract 1 day for 00:xx BG slots which come from previous CET day)
+    function bgDateToCet(bgDate, bgH) {
+      const h = +bgH.slice(0, 2);
+      if (h === 0) {
+        const p = bgDate.split('-');
+        const dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+        dt.setUTCDate(dt.getUTCDate() - 1);
+        return dt.toISOString().slice(0, 10);
+      }
+      return bgDate;
+    }
+
+    let cetDate = bgDateToCet(targetBgDate, targetBgH || '12:00');
+    let cetIdx = dates.indexOf(cetDate);
+    // If date not in index (e.g. data hasn't been updated yet), fall back to last available
+    if (cetIdx === -1) {
+      cetDate = dates[dates.length - 1];
+      cetIdx = dates.length - 1;
+    }
+    const toLoad = [cetDate];
+    if (cetIdx > 0) toLoad.push(dates[cetIdx - 1]);
+    if (cetIdx < dates.length - 1) toLoad.push(dates[cetIdx + 1]);
+
+    await Promise.all(toLoad.map(loadDay));
+
+    if (raw && CURVES[toKey(...parseHash(raw))]) {
+      const [d, h] = parseHash(raw);
       dp.value = d; hourPicker.value = h;
     } else {
-      const [d, h] = AVAILABLE[AVAILABLE.length - 1].split('|');
+      const nowKey = nearestKey(targetBgDate, targetBgH || '12:00')
+                     || AVAILABLE[AVAILABLE.length - 1];
+      if (!nowKey) { document.getElementById('loading').textContent = 'No data available'; return; }
+      const [d, h] = nowKey.split('|');
       dp.value = d; hourPicker.value = h;
     }
 
@@ -369,6 +432,7 @@ fetch('ibex_sdac_data.json')
   });
 
 function nearestKey(date, hour) {
+  if (!AVAILABLE.length) return null;
   const target = date + '|' + hour;
   if (CURVES[target]) return target;
   let best = AVAILABLE[0];
@@ -383,6 +447,7 @@ async function draw() {
   const date = document.getElementById('date-picker').value;
   const hour = hourPicker.value;
   const key = nearestKey(date, hour);
+  if (!key) return;
 
   if (key !== date + '|' + hour) {
     const [d, h] = key.split('|');
@@ -407,6 +472,14 @@ async function draw() {
   const idx = INDEX[key];
   document.getElementById('btn-prev').disabled = idx <= 0;
   document.getElementById('btn-next').disabled = idx >= AVAILABLE.length - 1;
+
+  // Prefetch neighbouring CET day files in the background
+  const cetDate = r.d;
+  const p = cetDate.split('-');
+  const prev = new Date(Date.UTC(+p[0], +p[1]-1, +p[2])); prev.setUTCDate(prev.getUTCDate()-1);
+  const next = new Date(Date.UTC(+p[0], +p[1]-1, +p[2])); next.setUTCDate(next.getUTCDate()+1);
+  loadDay(prev.toISOString().slice(0,10));
+  loadDay(next.toISOString().slice(0,10));
 
   // Pre-fetch generation snapshot so we can set correct Y range before rendering
   const showBar = document.getElementById('gen-toggle').checked;
