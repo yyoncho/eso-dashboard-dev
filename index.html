@@ -945,9 +945,17 @@ function updateTotalStats(binned, pd, dateStr) {
   const eurRow = document.getElementById('b-batt-eur-row');
   if (chgMwh > 0 && disMwh > 0) {
     eurRow.style.display = 'block';
-    document.getElementById('b-batt-chg-eur').textContent = fmtEur(battChgCost * 1e6);
+    const chgDisplay = -battChgCost * 1e6; // positive = profit (charging at negative price)
+    const chgEl = document.getElementById('b-batt-chg-eur');
+    chgEl.textContent = fmtEur(chgDisplay);
+    chgEl.className = 'balance-val ' + (chgDisplay >= 0 ? 'revenue' : 'expense');
+
     document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh зар.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
-    document.getElementById('b-batt-dis-eur').textContent = fmtEur(battEurDis * 1e6);
+    const disDisplay = battEurDis * 1e6; // positive = earned (discharging at positive price)
+    const disEl = document.getElementById('b-batt-dis-eur');
+    disEl.textContent = fmtEur(disDisplay);
+    disEl.className = 'balance-val ' + (disDisplay >= 0 ? 'revenue' : 'expense');
+
     document.getElementById('b-batt-dis-sub').textContent = `${fmt0(disMwh)} MWh разр.` + (isFinite(avgDis) ? ` @ ${avgDis.toFixed(1)} EUR/MWh` : '');
     const arbEl = document.getElementById('b-batt-arb');
     arbEl.className = 'balance-val ' + (battDelta >= 0 ? 'revenue' : 'expense');
@@ -1081,7 +1089,9 @@ function updateStatusCards(latest, pd) {
   const price = getPriceAt(pd, toUtcMs(latest));
   document.getElementById('s-ibex-price').textContent = isFinite(price) ? fmt1(price) : '—';
   const isImp = nImp > 0;
-  document.getElementById('s-import-card').className = 'stat-card '+(isImp?'red':'green');
+  // At negative price: importing earns money (green), exporting costs money (red)
+  const isCostly = isFinite(price) ? (nImp * price > 0) : isImp;
+  document.getElementById('s-import-card').className = 'stat-card '+(isCostly?'red':'green');
   document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
 
@@ -1127,36 +1137,44 @@ function updateFlowsTable(latest, pd) {
 
   const tbody = document.getElementById('flows-tbody');
   tbody.innerHTML = '';
+  const negPrice = isFinite(price) && price < 0;
   for (const f of FLOW_CFG) {
     const mw = latest[f.key]||0, isImp = mw>0;
     const pct = Math.min(100,(Math.abs(mw)/maxAbs)*48);
-    const eurh = isFinite(price)?Math.abs(mw)*price:NaN;
+    const eurVal = isFinite(price) ? (isImp ? -1 : 1) * Math.abs(mw) * price : NaN;
+    // Beneficial = earning money: import at neg price OR export at pos price
+    const beneficial = isFinite(price) ? (isImp === negPrice) : !isImp;
+    const mwClass  = beneficial ? 'export-val' : 'import-val';
+    const eurColor = isFinite(eurVal) ? (eurVal >= 0 ? '#1a8a1a' : '#cc2200') : '#666';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:600;">${f.label}</td>
-      <td class="${isImp?'import-val':'export-val'}">${fmt0(Math.abs(mw))} MW ${isImp?'▲':'▼'}</td>
+      <td class="${mwClass}">${fmt0(Math.abs(mw))} MW ${isImp?'▲':'▼'}</td>
       <td><div class="flow-bar-wrap">
         <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
         <div class="flow-bar ${isImp?'import':'export'}" style="width:${pct}%;"></div>
       </div></td>
-      <td style="text-align:right;font-size:0.75rem;color:${isImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(eurh)?fmtEur(isImp?-eurh:eurh)+'/h ~':'—'}</td>`;
+      <td style="text-align:right;font-size:0.75rem;color:${eurColor};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(eurVal)?fmtEur(eurVal)+'/h ~':'—'}</td>`;
     tbody.appendChild(tr);
   }
 
   // Net total row
   const netMw  = latest['net_import_mw'] || 0;
   const isNetImp = netMw > 0;
-  const netEurh  = isFinite(price) ? Math.abs(netMw) * price : NaN;
+  const netEurVal = isFinite(price) ? (isNetImp ? -1 : 1) * Math.abs(netMw) * price : NaN;
+  const netBeneficial = isFinite(price) ? (isNetImp === negPrice) : !isNetImp;
+  const netMwClass  = netBeneficial ? 'export-val' : 'import-val';
+  const netEurColor = isFinite(netEurVal) ? (netEurVal >= 0 ? '#1a8a1a' : '#cc2200') : '#666';
   const netTr = document.createElement('tr');
   netTr.style.cssText = 'border-top:2px solid #c5d8ee;font-weight:700;';
   netTr.innerHTML = `
     <td style="font-weight:700;color:#1a2233;">Нетна позиция</td>
-    <td class="${isNetImp?'import-val':'export-val'}">${fmt0(Math.abs(netMw))} MW ${isNetImp?'▲':'▼'}</td>
+    <td class="${netMwClass}">${fmt0(Math.abs(netMw))} MW ${isNetImp?'▲':'▼'}</td>
     <td><div class="flow-bar-wrap">
       <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#999;"></div>
       <div class="flow-bar ${isNetImp?'import':'export'}" style="width:${Math.min(48,(Math.abs(netMw)/maxAbs)*48)}%;"></div>
     </div></td>
-    <td style="text-align:right;font-size:0.75rem;color:${isNetImp?'#cc2200':'#1a8a1a'};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(netEurh)?fmtEur(isNetImp?-netEurh:netEurh)+'/h ~':'—'}</td>`;
+    <td style="text-align:right;font-size:0.75rem;color:${netEurColor};" title="Оценка на база IBEX DA цена — не е реална сетълмент стойност">${isFinite(netEurVal)?fmtEur(netEurVal)+'/h ~':'—'}</td>`;
   tbody.appendChild(netTr);
 }
 
@@ -1217,9 +1235,17 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   const net = expEur - impEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
   const avgExpPrice = expMwh > 0 ? expEur / expMwh : NaN;
-  document.getElementById('b-import-eur').textContent = fmtEur(impEur);
+  // Sign convention: positive = revenue (green), negative = cost (red)
+  // impEur > 0 = paid for import (cost → show as negative); impEur < 0 = earned from import at neg price
+  const impDisplay = -impEur;
+  const expDisplay = expEur;
+  const impEl = document.getElementById('b-import-eur');
+  impEl.textContent = fmtEur(impDisplay);
+  impEl.className = 'balance-val ' + (impDisplay >= 0 ? 'revenue' : 'expense');
   document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос'+(isFinite(avgImpPrice)?` @ ${fmt1(avgImpPrice)} EUR/MWh`:'');
-  document.getElementById('b-export-eur').textContent = fmtEur(expEur);
+  const expEl = document.getElementById('b-export-eur');
+  expEl.textContent = fmtEur(expDisplay);
+  expEl.className = 'balance-val ' + (expDisplay >= 0 ? 'revenue' : 'expense');
   document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ'+(isFinite(avgExpPrice)?` @ ${fmt1(avgExpPrice)} EUR/MWh`:'');
   const netEl = document.getElementById('b-net-eur');
   netEl.textContent = fmtEur(net);
@@ -1234,7 +1260,11 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
   if (pumpsRow) {
     if (pumpsChgMwh > 0) {
       const avgPr = pumpsChgEur / pumpsChgMwh;
-      document.getElementById('b-pumps-eur').textContent = fmtEur(pumpsChgEur);
+      const pumpsDisplay = -pumpsChgEur; // negative price → positive (profit)
+      const pumpsEl = document.getElementById('b-pumps-eur');
+      pumpsEl.textContent = fmtEur(pumpsDisplay);
+      pumpsEl.className = 'balance-val ' + (pumpsDisplay >= 0 ? 'revenue' : 'expense');
+
       document.getElementById('b-pumps-sub').textContent = `${fmt0(pumpsChgMwh)} MWh${isFinite(avgPr) ? ` @ ${fmt1(avgPr)} EUR/MWh` : ''}`;
       pumpsRow.style.display = '';
     } else {
