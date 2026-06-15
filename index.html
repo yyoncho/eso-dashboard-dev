@@ -2000,12 +2000,12 @@ async function loadRecords() {
     const rec = await getJSON(`${BASE}/records.json`);
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
-    const ORDER = ['solar', 'batt_chg', 'batt_dis', 'daily_re', 're_hours', 'export'];
+    const ORDER = ['solar', 'solar_gwh', 'batt_chg', 'total_chg', 'batt_dis', 'daily_re', 're_gwh_day', 're_hours', 'export'];
     for (const key of ORDER) {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
-      const valStr = r.unit === '%' || r.unit === 'ч' ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const valStr = ['%', 'ч', 'GWh'].includes(r.unit) ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
       const dateHtml = r.date
         ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
         : '—';
