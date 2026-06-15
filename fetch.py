@@ -175,6 +175,46 @@ def _merge_ibex_into(data: dict, ibex_rows: list[dict]) -> dict:
     return data
 
 
+def update_neighbor_prices(year: int, month: int):
+    """Download RO and GR day-ahead prices from energy-charts, same format as BG prices."""
+    from calendar import monthrange
+    import urllib.parse
+    _, last_day = monthrange(year, month)
+    start = f"{year}-{month:02d}-01T00:00+00:00"
+    end   = f"{year}-{month:02d}-{last_day:02d}T23:59+00:00"
+    now   = datetime.now(timezone.utc)
+
+    for bzn in ('RO', 'GR'):
+        ym   = f"{year:04d}-{month:02d}"
+        path = DATA_DIR / f"prices-{bzn.lower()}-{ym}.json"
+        if path.exists():
+            try:
+                cached = json.loads(path.read_text())
+                fetched_at = cached.get("fetched_at")
+                if fetched_at:
+                    age_h = (now - datetime.fromisoformat(fetched_at)).total_seconds() / 3600
+                    if age_h < 4:
+                        continue
+            except Exception:
+                pass
+        print(f"Fetching {bzn} prices for {ym} …", flush=True)
+        try:
+            url = (
+                "https://api.energy-charts.info/price"
+                f"?bzn={bzn}"
+                f"&start={urllib.parse.quote(start)}"
+                f"&end={urllib.parse.quote(end)}"
+            )
+            req = urllib.request.Request(url, headers={"User-Agent": "eso-dashboard/1.0"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                data = json.loads(r.read())
+            print(f"  {bzn} → {len(data.get('unix_seconds', []))} price points", flush=True)
+            data["fetched_at"] = now.isoformat()
+            path.write_text(json.dumps(data))
+        except Exception as e:
+            print(f"  WARN: {bzn} price fetch failed: {e}", flush=True)
+
+
 def update_prices(year: int, month: int):
     """Download IBEX/DA prices from energy-charts (+ ibex.bg fallback), refreshing every 4 hours.
 
@@ -256,6 +296,7 @@ def main():
     # refresh prices for current month (once per day)
     now_utc = datetime.now(timezone.utc)
     update_prices(now_utc.year, now_utc.month)
+    update_neighbor_prices(now_utc.year, now_utc.month)
 
     print(f"[{record['timestamp_utc']}] load {record['load_mw']} MW  "
           f"gen {record['gen_total_mw']} MW  "
