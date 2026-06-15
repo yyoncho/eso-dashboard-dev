@@ -1184,8 +1184,8 @@ function updateStatusCards(latest, pd, nbrPd) {
     const roP = getPriceAt(nbrPd.ro, tsMs2), grP = getPriceAt(nbrPd.gr, tsMs2);
     const roMw = latest['RO_mw'] || 0, grMw = latest['GR_mw'] || 0;
     let congEurH = 0, hasCongData = false;
-    if (isFinite(roP)) { congEurH += roMw * (roP - price); hasCongData = true; }
-    if (isFinite(grP)) { congEurH += grMw * (grP - price); hasCongData = true; }
+    if (isFinite(roP)) { congEurH += -roMw * (roP - price); hasCongData = true; }
+    if (isFinite(grP)) { congEurH += -grMw * (grP - price); hasCongData = true; }
     if (hasCongData) {
       const congColor = congEurH >= 0 ? '#0088aa' : '#cc2200';
       cards.push({ label: 'Конгестия', color: congColor,
@@ -1229,7 +1229,7 @@ function updateFlowsTable(latest, pd, nbrPd) {
     // Congestion: flow × (neighbor_price − bg_price), positive = ESO earns revenue
     const np = nbrPrice[f.key];
     const spread = isFinite(np) && isFinite(price) ? np - price : NaN;
-    const congEur = isFinite(spread) ? mw * spread : NaN;  // EUR/h
+    const congEur = isFinite(spread) ? -mw * spread : NaN;  // EUR/h; -mw because ESO_mw<0=export
     const congColor = isFinite(congEur) ? (congEur >= 0 ? '#1a8a1a' : '#cc2200') : '#999';
     const congTxt = isFinite(congEur)
       ? `<span style="color:${congColor};font-size:0.75rem;">${fmtEur(congEur)}/h</span>`
@@ -1347,8 +1347,8 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null, nbrPd = null) {
     // Congestion: flow × (neighbor_price − bg_price) × interval_h
     const roMw = b['RO_mw'] || 0, grMw = b['GR_mw'] || 0;
     const roP = roPByBin[b.ts] ?? NaN, grP = grPByBin[b.ts] ?? NaN;
-    if (isFinite(p) && isFinite(roP)) { congRoEur += roMw * (roP - p) * (15/60); congRoMwh += Math.abs(roMw) * (15/60); }
-    if (isFinite(p) && isFinite(grP)) { congGrEur += grMw * (grP - p) * (15/60); congGrMwh += Math.abs(grMw) * (15/60); }
+    if (isFinite(p) && isFinite(roP)) { congRoEur += -roMw * (roP - p) * (15/60); congRoMwh += Math.abs(roMw) * (15/60); }
+    if (isFinite(p) && isFinite(grP)) { congGrEur += -grMw * (grP - p) * (15/60); congGrMwh += Math.abs(grMw) * (15/60); }
   }
   const net = expEur - impEur;
   const avgImpPrice = impMwh > 0 ? impEur / impMwh : NaN;
