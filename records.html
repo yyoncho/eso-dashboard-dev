@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рекорди — БГ Мрежов Монитор</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #eef3f8; color: #1a2233; font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── header ── */
+header {
+  background: linear-gradient(180deg, #004494 0%, #003070 100%);
+  color: #fff;
+  border-bottom: 3px solid #ffd700;
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.logo-area { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.logo-circle {
+  width: 34px; height: 34px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 0.68rem; color: #003070; letter-spacing: -0.03em; flex-shrink: 0;
+}
+.logo-text h1 { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; }
+.logo-text p  { font-size: 0.6rem; opacity: 0.6; }
+.back-link {
+  font-size: 0.72rem; color: rgba(255,255,255,0.7); text-decoration: none; flex-shrink: 0;
+}
+.back-link:hover { color: #ffd700; }
+
+/* ── page layout ── */
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+
+/* ── view toggle ── */
+#detail-view { display: none; }
+
+/* ── breadcrumb ── */
+.breadcrumb {
+  font-size: 0.8rem; color: #5a6a85; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb a { color: #2d6bbf; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { opacity: 0.5; }
+
+/* ── page title ── */
+.page-title {
+  font-size: 1.4rem; font-weight: 700; color: #1a2233; margin-bottom: 6px;
+}
+.page-subtitle {
+  font-size: 0.8rem; color: #7a8aaa; margin-bottom: 24px;
+}
+
+/* ── records grid ── */
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.rec-card {
+  background: #fff;
+  border: 1px solid #dde4f0;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.rec-card:hover {
+  border-color: #2d6bbf;
+  box-shadow: 0 2px 8px rgba(45,107,191,0.12);
+}
+.rec-card.active {
+  border-color: #2d6bbf;
+  box-shadow: 0 0 0 2px rgba(45,107,191,0.2);
+  background: #f5f8ff;
+}
+.rec-card-label { font-size: 0.75rem; color: #7a8aaa; margin-bottom: 8px; font-weight: 500; }
+.rec-card-value {
+  font-size: 1.6rem; font-weight: 700; color: #1a2233; line-height: 1;
+  margin-bottom: 4px;
+}
+.rec-card-unit { font-size: 0.75rem; color: #7a8aaa; display: inline; margin-left: 4px; }
+.rec-card-date { font-size: 0.7rem; color: #aab0c0; margin-top: 8px; }
+.rec-card-arrow {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: #c0cce0; font-size: 1rem;
+  transition: color 0.15s, transform 0.15s;
+}
+.rec-card:hover .rec-card-arrow,
+.rec-card.active .rec-card-arrow { color: #2d6bbf; transform: translateY(-50%) translateX(2px); }
+
+/* ── detail view ── */
+.detail-kpi-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+}
+@media (max-width: 480px) { .detail-kpi-row { grid-template-columns: 1fr; } }
+.kpi-box {
+  background: #fff; border: 1px solid #dde4f0; border-radius: 8px; padding: 16px;
+}
+.kpi-box.clickable { cursor: pointer; transition: box-shadow 0.15s, transform 0.12s; -webkit-tap-highlight-color: rgba(45,107,191,0.12); }
+.kpi-box.clickable:hover { box-shadow: 0 4px 16px rgba(45,107,191,0.13); transform: translateY(-2px); }
+.kpi-box.clickable:active { transform: translateY(0); box-shadow: none; }
+.kpi-box-label { font-size: 0.72rem; color: #7a8aaa; font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi-box-value { font-size: 1.5rem; font-weight: 700; color: #1a2233; }
+.kpi-box-unit { font-size: 0.8rem; color: #7a8aaa; margin-left: 4px; }
+.kpi-box-date { font-size: 0.72rem; color: #aab0c0; margin-top: 6px; }
+.kpi-box-hint { font-size: 0.68rem; color: #2d6bbf; margin-top: 4px; opacity: 0.7; }
+.kpi-box.current { border-left: 3px solid #2d6bbf; }
+.kpi-box.previous { border-left: 3px solid #c0cce0; }
+
+/* ── chart ── */
+.chart-wrap {
+  background: #fff; border: 1px solid #dde4f0; border-radius: 8px;
+  padding: 16px; margin-bottom: 24px;
+}
+.chart-title { font-size: 0.85rem; font-weight: 600; color: #1a2233; margin-bottom: 4px; }
+.chart-subtitle { font-size: 0.72rem; color: #7a8aaa; margin-bottom: 12px; }
+#detail-chart { width: 100%; height: 320px; cursor: pointer; }
+
+/* ── top-10 table ── */
+.top10-wrap {
+  background: #fff; border: 1px solid #dde4f0; border-radius: 8px; overflow: hidden;
+}
+.top10-title {
+  padding: 14px 16px 12px; font-size: 0.85rem; font-weight: 600; color: #1a2233;
+  border-bottom: 1px solid #eef0f5;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  padding: 8px 16px; font-size: 0.72rem; font-weight: 600; color: #7a8aaa;
+  text-align: left; background: #f8fafc; border-bottom: 1px solid #eef0f5;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+td { padding: 10px 16px; font-size: 0.82rem; border-bottom: 1px solid #f0f3f8; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.rank-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 0.72rem; font-weight: 700; background: #eef3f8; color: #5a6a85;
+}
+.rank-badge.gold   { background: #ffd700; color: #7a5800; }
+.rank-badge.silver { background: #c8d0dc; color: #3a4458; }
+.rank-badge.bronze { background: #dea97a; color: #6b3c10; }
+.view-day-link {
+  color: #2d6bbf; text-decoration: none; font-size: 0.75rem; font-weight: 500;
+  white-space: nowrap;
+}
+.view-day-link:hover { text-decoration: underline; }
+.val-cell { font-weight: 600; color: #1a2233; }
+
+/* ── data source note ── */
+.data-note {
+  font-size: 0.68rem; color: #aab0c0; margin-top: 24px; text-align: center;
+}
+
+/* ── loading ── */
+.loading { text-align: center; padding: 48px; color: #7a8aaa; font-size: 0.9rem; }
+
+/* ── day modal ── */
+#day-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+#day-modal.open { display: flex; }
+#day-modal-inner {
+  background: #fff; border-radius: 10px; padding: 24px;
+  max-width: 960px; width: 96%; max-height: 92vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+#day-modal-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+#day-modal-title { font-weight: 700; font-size: 1rem; color: #1a2233; }
+#day-modal-close {
+  background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #7a8aaa; line-height: 1;
+}
+#day-modal-close:hover { color: #1a2233; }
+#day-modal-chart { height: 420px; width: 100%; }
+#day-modal-note { font-size: 0.7rem; color: #7a8aaa; margin-top: 14px; text-align: center; }
+#day-modal-record-note { font-size: 0.72rem; color: #e07000; font-weight: 600; margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-circle">БГ</div>
+    <div class="logo-text">
+      <h1>Мрежов монитор — България</h1>
+      <p>Неофициален ресурс • данни от ЕСО ЕАД и IBEX • не представлява ЕСО ЕАД</p>
+    </div>
+  </div>
+  <a class="back-link" href="index.html">← Табло</a>
+</header>
+
+<main>
+  <div id="list-view">
+    <div class="page-title">🏆 Рекорди</div>
+    <div class="page-subtitle">Исторически рекорди на българската електроенергийна система. Кликнете на рекорд за прогресия.</div>
+    <div class="records-grid" id="records-grid">
+      <div class="loading">Зареждане…</div>
+    </div>
+  </div>
+
+  <div id="detail-view">
+    <div class="breadcrumb">
+      <a href="#" id="back-btn">Рекорди</a>
+      <span>›</span>
+      <span id="detail-breadcrumb-label">—</span>
+    </div>
+    <div class="page-title" id="detail-title">—</div>
+    <div class="page-subtitle" id="detail-subtitle">—</div>
+
+    <div class="detail-kpi-row">
+      <div class="kpi-box current" id="kpi-cur-box">
+        <div class="kpi-box-label">Текущ рекорд</div>
+        <div>
+          <span class="kpi-box-value" id="kpi-cur-val">—</span>
+          <span class="kpi-box-unit" id="kpi-cur-unit"></span>
+        </div>
+        <div class="kpi-box-date" id="kpi-cur-date"></div>
+        <div class="kpi-box-hint" id="kpi-cur-hint"></div>
+      </div>
+      <div class="kpi-box previous" id="kpi-prev-box">
+        <div class="kpi-box-label">Предишен рекорд</div>
+        <div>
+          <span class="kpi-box-value" id="kpi-prev-val">—</span>
+          <span class="kpi-box-unit" id="kpi-prev-unit"></span>
+        </div>
+        <div class="kpi-box-date" id="kpi-prev-date"></div>
+        <div class="kpi-box-hint" id="kpi-prev-hint"></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title" id="chart-title">Прогресия на рекорда</div>
+      <div class="chart-subtitle" id="chart-subtitle">Всяка точка = нов рекорд</div>
+      <div id="detail-chart"></div>
+    </div>
+
+    <div class="top10-wrap">
+      <div class="top10-title">Топ 10 дни</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px">#</th>
+            <th>Дата</th>
+            <th>Стойност</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="top10-body"></tbody>
+      </table>
+    </div>
+
+    <div class="data-note" id="data-note"></div>
+  </div>
+</main>
+
+<!-- Day view modal (historical SCADA data) -->
+<div id="day-modal">
+  <div id="day-modal-inner">
+    <div id="day-modal-header">
+      <span id="day-modal-title"></span>
+      <button id="day-modal-close">✕</button>
+    </div>
+    <div id="day-modal-chart"></div>
+    <div id="day-modal-record-note"></div>
+    <div id="day-modal-note">Данни от ЕСО SCADA (часови стойности, местно СЧВ). Зонираните часове са в UTC+3 (EEST).</div>
+  </div>
+</div>
+
+<script>
+const BASE = location.hostname === 'localhost'
+  ? '/data'
+  : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+
+const JSONL_START = '2026-05-01';
+
+let _rec = null;
+let _hist = null;
+
+const ORDER = [
+  'solar', 'solar_gwh', 'export',
+  'batt_chg', 'total_chg', 'chg_gwh_day',
+  'batt_dis', 'dis_gwh_day',
+  'daily_re', 're_gwh_day', 're_hours',
+  'pumps_gwh',
+];
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url);
+  return r.json();
+}
+
+function fmtVal(val, unit) {
+  if (unit === 'GWh') return val.toFixed(1);
+  if (unit === '%')   return val.toFixed(1);
+  if (unit === 'ч')   return val.toFixed(1);
+  return Math.round(val).toLocaleString('bg-BG');
+}
+
+function daysAgo(d) {
+  if (!d) return '';
+  const ms = Date.now() - new Date(d).getTime();
+  const days = Math.floor(ms / 86400000);
+  if (days === 0) return 'днес';
+  if (days === 1) return '1 ден';
+  if (days < 7)   return `${days} дни`;
+  if (days < 30)  return `${Math.floor(days / 7)} сед.`;
+  if (days < 365) return `${Math.floor(days / 30)} мес.`;
+  return `${Math.floor(days / 365)} год.`;
+}
+
+// ── URL hash navigation ───────────────────────────────────────────────────────
+
+function navToDetail(key) {
+  history.pushState({ key }, '', '#' + key);
+  renderDetail(key);
+}
+
+function navToList() {
+  history.pushState(null, '', location.pathname + location.search);
+  renderList();
+}
+
+function renderList() {
+  document.getElementById('list-view').style.display = '';
+  document.getElementById('detail-view').style.display = 'none';
+  document.querySelectorAll('.rec-card').forEach(c => c.classList.remove('active'));
+  window.scrollTo(0, 0);
+}
+
+function renderDetail(key) {
+  const r = _rec[key];
+  const h = _hist[key];
+  if (!r || !h) return;
+
+  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('detail-view').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  document.querySelectorAll('.rec-card').forEach(c => c.classList.remove('active'));
+  const card = document.querySelector(`.rec-card[data-key="${key}"]`);
+  if (card) card.classList.add('active');
+
+  document.getElementById('detail-breadcrumb-label').textContent = r.label;
+  document.getElementById('detail-title').textContent = r.label;
+  document.getElementById('detail-subtitle').textContent =
+    `Данни от ${h.since || '2015'}. Всяка точка = нов рекорд.`;
+
+  const hist = h.history || [];
+  const cur  = hist[hist.length - 1];
+  const prev = hist[hist.length - 2];
+  document.getElementById('kpi-cur-val').textContent  = cur  ? fmtVal(cur.val,  r.unit) : '—';
+  document.getElementById('kpi-cur-unit').textContent  = r.unit;
+  document.getElementById('kpi-cur-date').textContent  = cur  ? cur.d : '';
+  document.getElementById('kpi-prev-val').textContent  = prev ? fmtVal(prev.val, r.unit) : '—';
+  document.getElementById('kpi-prev-unit').textContent = r.unit;
+  document.getElementById('kpi-prev-date').textContent = prev ? prev.d : '';
+
+  function wireKpiBox(boxId, hintId, date) {
+    const box = document.getElementById(boxId);
+    const hint = document.getElementById(hintId);
+    box.onclick = null;
+    if (!date) { box.classList.remove('clickable'); hint.textContent = ''; return; }
+    if (date >= JSONL_START) {
+      box.classList.add('clickable');
+      hint.textContent = 'Виж ден →';
+      box.onclick = () => { window.location.href = 'index.html#day=' + date; };
+    } else if (_hist._days && _hist._days[date]) {
+      box.classList.add('clickable');
+      hint.textContent = 'Виж ден →';
+      box.onclick = () => showDayModal(date);
+    } else {
+      box.classList.remove('clickable');
+      hint.textContent = '';
+    }
+  }
+  wireKpiBox('kpi-cur-box',  'kpi-cur-hint',  cur  ? cur.d  : null);
+  wireKpiBox('kpi-prev-box', 'kpi-prev-hint', prev ? prev.d : null);
+
+  renderChart(key, r, h);
+  renderTop10(key, r, h.top10 || []);
+
+  const notes = {
+    solar:       'ЕСО SCADA часови данни (2015–2026-06), след което локално записани 5-мин данни.',
+    solar_gwh:   'ЕСО SCADA часови данни (2015–2026-06), след което локално записани 5-мин данни.',
+    export:      'Следени от май 2026 (ССЕЕ пуснато). Исторически рекорди преди 2026 не са включени — тогавашните пикове са несравними с ССЕЕ-подпомогнатия износ.',
+    daily_re:    'ВЕИ = ВЕЦ + Малки ВЕЦ + ВяЕЦ + ФЕЦ + Биомаса (ENTSOE). Без ССЕЕ за периоди преди 2026.',
+    re_gwh_day:  'ВЕИ дневна енергия без ССЕЕ (ENTSOE).',
+    re_hours:    'Часове при 100% ВЕИ покритие без ССЕЕ (ENTSOE). ССЕЕ удвоява реалните стойности от 2026.',
+    batt_chg:    'ЕСО SCADA данни от 3 юни 2026 (след пускане на помпите).',
+    total_chg:   'ССЕЕ зареждане + Помпи. ЕСО SCADA данни от 3 юни 2026.',
+    batt_dis:    'ЕСО SCADA данни от май 2026.',
+    chg_gwh_day: 'Дневна заредена енергия. ЕСО SCADA данни от 3 юни 2026.',
+    dis_gwh_day: 'Дневна разредена енергия. ЕСО SCADA данни от 3 юни 2026.',
+    pumps_gwh:   'Дневна енергия на помпите. ЕСО SCADA данни от 3 юни 2026.',
+  };
+  document.getElementById('data-note').textContent = notes[key] || '';
+}
+
+window.addEventListener('popstate', () => {
+  const key = location.hash.slice(1);
+  if (key && _rec && _rec[key]) {
+    renderDetail(key);
+  } else {
+    renderList();
+  }
+});
+
+// ── Grid ─────────────────────────────────────────────────────────────────────
+
+function buildGrid(rec, hist) {
+  const grid = document.getElementById('records-grid');
+  grid.innerHTML = '';
+  for (const key of ORDER) {
+    const r = rec[key];
+    if (!r) continue;
+    const val = fmtVal(r.val, r.unit);
+    const card = document.createElement('div');
+    card.className = 'rec-card';
+    card.dataset.key = key;
+    card.innerHTML = `
+      <div class="rec-card-label">${r.label}</div>
+      <div>
+        <span class="rec-card-value">${val}</span>
+        <span class="rec-card-unit">${r.unit}</span>
+      </div>
+      <div class="rec-card-date">${r.date || '—'}${r.date ? ' · ' + daysAgo(r.date) : ''}</div>
+      <span class="rec-card-arrow">›</span>`;
+    card.addEventListener('click', () => navToDetail(key));
+    grid.appendChild(card);
+  }
+}
+
+// ── Progression chart ─────────────────────────────────────────────────────────
+
+function xaxisConfig(since) {
+  const today = new Date().toISOString().slice(0, 10);
+  // Full date e.g. '2026-06-03'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+    return { range: [since, today], tickformat: '%d %b', dtick: 86400000 * 7 };
+  }
+  // Year-month e.g. '2026-05' or '2026-06'
+  if (/^\d{4}-\d{2}$/.test(since)) {
+    return { range: [since + '-01', today], tickformat: '%d %b', dtick: 86400000 * 7 };
+  }
+  // Year only: full range
+  return { range: [since + '-01-01', today], tickformat: '%Y', dtick: 'M12' };
+}
+
+function renderChart(key, r, h) {
+  const hist = (h.history || []).filter(p => p.val > 0);
+  if (hist.length === 0) {
+    Plotly.purge('detail-chart');
+    document.getElementById('detail-chart').innerHTML = '<div class="loading">Няма достатъчно данни</div>';
+    return;
+  }
+
+  const xs  = hist.map(p => p.d);
+  const ys  = hist.map(p => p.val);
+  const today = new Date().toISOString().slice(0, 10);
+  const extX = [...xs, today];
+  const extY = [...ys, ys[ys.length - 1]];
+
+  const traces = [
+    {
+      x: extX, y: extY,
+      mode: 'lines',
+      line: { color: '#a0b8d8', dash: 'dash', width: 1.5, shape: 'hv' },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    {
+      x: xs, y: ys,
+      mode: 'markers',
+      marker: { color: '#2d6bbf', size: 9, line: { color: '#fff', width: 2 } },
+      hovertemplate: `<b>%{x}</b><br>${r.label}: <b>%{y}</b> ${r.unit}<extra></extra>`,
+      showlegend: false,
+    },
+  ];
+
+  const xc = xaxisConfig(h.since || '2015');
+  const layout = {
+    margin: { t: 10, r: 20, b: 40, l: 55 },
+    paper_bgcolor: '#fff', plot_bgcolor: '#fff',
+    xaxis: {
+      type: 'date', range: xc.range,
+      tickformat: xc.tickformat, dtick: xc.dtick,
+      gridcolor: '#f0f3f8', linecolor: '#dde4f0',
+    },
+    yaxis: {
+      ticksuffix: ` ${r.unit}`,
+      gridcolor: '#f0f3f8', linecolor: '#dde4f0', zeroline: false,
+    },
+    hoverlabel: { bgcolor: '#1a2233', font: { color: '#fff', size: 12 } },
+  };
+
+  Plotly.react('detail-chart', traces, layout, {
+    responsive: true, displayModeBar: false,
+  });
+
+  const el = document.getElementById('detail-chart');
+  el.removeAllListeners && el.removeAllListeners('plotly_click');
+  el.on('plotly_click', data => {
+    const pt = data.points[0];
+    const date = pt.x.slice(0, 10);
+    if (date >= JSONL_START) {
+      window.location.href = 'index.html#day=' + date;
+    } else if (_hist._days && _hist._days[date]) {
+      showDayModal(date);
+    }
+  });
+}
+
+// ── Top-10 table ──────────────────────────────────────────────────────────────
+
+function dayLinkHtml(date, showDate = false) {
+  const dateStr = showDate ? `${date} · ` : '';
+  if (date >= JSONL_START) {
+    return `${dateStr}<a class="view-day-link" href="index.html#day=${date}">Виж ден →</a>`;
+  }
+  if (_hist._days && _hist._days[date]) {
+    return `${dateStr}<a class="view-day-link" href="#" data-day="${date}">Виж ден →</a>`;
+  }
+  return date;
+}
+
+function renderTop10(key, r, top10) {
+  const body = document.getElementById('top10-body');
+  body.innerHTML = '';
+  if (!top10.length) {
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#aab0c0;padding:20px">Няма данни</td></tr>';
+    return;
+  }
+  for (const row of top10) {
+    const badgeClass = row.rank === 1 ? 'gold' : row.rank === 2 ? 'silver' : row.rank === 3 ? 'bronze' : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="rank-badge ${badgeClass}">${row.rank}</span></td>
+      <td>${row.d}</td>
+      <td class="val-cell">${fmtVal(row.val, r.unit)} <span style="color:#aab0c0;font-weight:400;font-size:0.72rem">${r.unit}</span></td>
+      <td>${dayLinkHtml(row.d)}</td>`;
+    body.appendChild(tr);
+  }
+  // Delegate click for historical day links
+  body.querySelectorAll('a[data-day]').forEach(a => {
+    a.addEventListener('click', e => { e.preventDefault(); showDayModal(a.dataset.day); });
+  });
+}
+
+// ── Historical day modal ──────────────────────────────────────────────────────
+
+function showDayModal(date) {
+  const dayData = _hist._days && _hist._days[date];
+  if (!dayData) return;
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const label = h => `${String(h).padStart(2,'0')}:00`;
+
+  const get = (h, k) => (dayData[String(h)] || {})[k] || 0;
+
+  const sol  = hours.map(h => get(h, 'sol'));
+  const wind = hours.map(h => get(h, 'wind'));
+  const hyd  = hours.map(h => get(h, 'hyd'));
+  const bio  = hours.map(h => get(h, 'bio'));
+  const nuc  = hours.map(h => get(h, 'nuc'));
+  const coal = hours.map(h => get(h, 'coal'));
+  const xlabels = hours.map(label);
+
+  // Order and colors matching ESO dashboard SERIES definition
+  const traces = [
+    { name: 'АЕЦ',      y: nuc,  marker: { color: '#2caffe' }, type: 'bar' },
+    { name: 'Въглища',  y: coal, marker: { color: '#544fc5' }, type: 'bar' },
+    { name: 'ВЕЦ',      y: hyd,  marker: { color: '#6b8abc' }, type: 'bar' },
+    { name: 'ВяЕЦ',     y: wind, marker: { color: '#2ee0ca' }, type: 'bar' },
+    { name: 'ФЕЦ',      y: sol,  marker: { color: '#fa4b42' }, type: 'bar' },
+    { name: 'Биомаса',  y: bio,  marker: { color: '#feb56a' }, type: 'bar' },
+  ];
+
+  const layout = {
+    barmode: 'stack',
+    xaxis: { tickvals: xlabels.filter((_, i) => i % 3 === 0), ticktext: xlabels.filter((_, i) => i % 3 === 0), tickfont: { size: 11 } },
+    yaxis: { ticksuffix: ' MW', gridcolor: '#f0f3f8', tickfont: { size: 11 } },
+    margin: { t: 14, r: 10, b: 40, l: 60 },
+    paper_bgcolor: '#fff', plot_bgcolor: '#fff',
+    legend: { orientation: 'h', y: -0.2, font: { size: 12 } },
+    hoverlabel: { bgcolor: '#1a2233', font: { color: '#fff', size: 12 } },
+  };
+
+  document.getElementById('day-modal-title').textContent = `Производство на ${date} (SCADA, СЧВ)`;
+  document.getElementById('day-modal-record-note').textContent = '⚡ Исторически рекорд за тази категория';
+  document.getElementById('day-modal').classList.add('open');
+
+  Plotly.react('day-modal-chart', traces.map((t, i) => ({
+    ...t, x: xlabels,
+    hovertemplate: `<b>%{x}</b><br>${t.name}: <b>%{y}</b> MW<extra></extra>`,
+  })), layout, { responsive: true, displayModeBar: false });
+}
+
+function closeDayModal() {
+  document.getElementById('day-modal').classList.remove('open');
+  Plotly.purge('day-modal-chart');
+}
+
+document.getElementById('day-modal-close').addEventListener('click', closeDayModal);
+document.getElementById('day-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('day-modal')) closeDayModal();
+});
+
+// ── Back button ──────────────────────────────────────────────────────────────
+
+document.getElementById('back-btn').addEventListener('click', e => {
+  e.preventDefault();
+  navToList();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  const [rec, hist] = await Promise.all([
+    getJSON(`${BASE}/records.json`),
+    getJSON(`${BASE}/records_history.json`),
+  ]);
+  _rec = rec;
+  _hist = hist;
+  buildGrid(rec, hist);
+
+  const key = location.hash.slice(1);
+  if (key && rec[key]) {
+    renderDetail(key);
+  }
+}
+
+init().catch(e => {
+  document.getElementById('records-grid').innerHTML =
+    `<div class="loading">Грешка при зареждане: ${e.message}</div>`;
+});
+</script>
+</body>
+</html>

@@ -52,7 +52,7 @@ def main():
     PUMPS_START = '2026-06-03'
 
     rec = {
-        'solar':       {'val': 0.0, 'label': 'Соларно производство',      'unit': 'MW',  'date': None, 'snap_ts': None},
+        'solar':       {'val': 0.0, 'label': 'Пиково соларно производство',      'unit': 'MW',  'date': None, 'snap_ts': None},
         'solar_gwh':   {'val': 0.0, 'label': 'Соларна енергия за ден',     'unit': 'GWh', 'date': None, 'snap_ts': None},
         'total_chg':   {'val': 0.0, 'label': 'Зареждане ССЕЕ + Помпи',    'unit': 'MW',  'date': None, 'snap_ts': None},
         'batt_chg':    {'val': 0.0, 'label': 'Зареждане батерии',           'unit': 'MW',  'date': None, 'snap_ts': None},

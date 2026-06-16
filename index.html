@@ -116,6 +116,17 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   .stat-label { font-size: 0.58rem; }
   #snap-scrubber { position: relative !important; top: auto !important; }
 }
+#snap-scrubber {
+  display: none;
+  background: #edf2f8;
+  border-bottom: 1px solid #c5d8ee;
+  padding: 6px 20px;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 67px;
+  z-index: 99;
+}
 .panel-body { padding: 10px 12px; }
 .info-btn { background:none;border:1px solid rgba(255,255,255,0.5);color:#fff;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
 .info-btn:hover { background:rgba(255,255,255,0.2); }
@@ -174,6 +185,19 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 #gen-table td, #gen-table th { font-size: 0.8rem; }
 
 @media (max-width: 960px) { .main-cols { grid-template-columns: 1fr; } }
+
+/* ── record alert strip ── */
+.rec-alert-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fff8d6; border: 1px solid #f0c000; border-radius: 14px;
+  padding: 3px 10px 3px 8px; margin-right: 8px; font-size: 0.75rem; font-weight: 600;
+  color: #5a3a00; text-decoration: none; cursor: pointer; transition: background 0.12s;
+  vertical-align: middle;
+}
+.rec-alert-chip:hover { background: #ffeaa0; }
+.rec-alert-chip .chip-trophy { font-size: 0.85rem; }
+.rec-alert-label { font-size: 0.65rem; color: #7a5500; font-weight: 400; margin-left: 2px; }
+#rec-alerts-label { font-size: 0.7rem; font-weight: 700; color: #7a5500; margin-right: 10px; vertical-align: middle; letter-spacing: 0.03em; }
 
 /* ── records dropdown ── */
 .rec-dropdown-wrap { position: relative; }
@@ -245,7 +269,9 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <div id="rec-dropdown-panel">
             <div class="rec-dropdown-title">Рекорди — ВЕИ и ССЕЕ</div>
             <div id="records-inner"></div>
-
+            <div style="padding:8px 12px 4px;border-top:1px solid #eef0f5;margin-top:4px">
+              <a href="records.html" style="font-size:0.75rem;color:#2d6bbf;text-decoration:none">Пълна история на рекордите →</a>
+            </div>
           </div>
         </div>
       </div>
@@ -256,13 +282,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 <div class="past-banner" id="past-banner">
   📅 Исторически данни — показват се архивни записи, не актуална информация
 </div>
-<div id="snap-scrubber" style="display:none;background:#edf2f8;border-bottom:1px solid #c5d8ee;padding:6px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;">
+<div id="snap-scrubber">
   <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
   <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
   <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
 </div>
 
 <div class="content">
+
+  <div id="rec-alerts" style="display:none;background:#fffbea;border:1px solid #f0d040;border-radius:8px;padding:7px 14px;margin-bottom:12px;overflow-x:auto;white-space:nowrap;"></div>
 
   <!-- status cards -->
   <div class="stat-grid">
@@ -2133,7 +2161,12 @@ function updateScrubber(records) {
   const el = document.getElementById('snap-scrubber');
   const slider = document.getElementById('snap-slider');
   const isToday = currentDay === null;
-  el.style.display = records.length > 1 ? 'flex' : 'none';
+  if (records.length > 1) {
+    el.style.display = 'flex';
+    el.style.top = (document.querySelector('header').offsetHeight) + 'px';
+  } else {
+    el.style.display = 'none';
+  }
   slider.max = records.length - 1;
   slider.value = records.length - 1;
   updateSnapLabel(records[records.length - 1]);
@@ -2238,7 +2271,8 @@ async function refresh() {
     drawFlowsTimeline(displayBinned, pd);
     updateTotalStats(displayBinned, pd, dateStr);
     drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
-    loadRecords();
+    await loadRecords();
+    updateRecordAlerts(allRecords, displayBinned, dateStr);
 
   } catch(e) {
     console.error(e);
@@ -2247,10 +2281,12 @@ async function refresh() {
 }
 
 let _recordsLoaded = false;
+let _rec = null;
 async function loadRecords() {
   if (_recordsLoaded) return;
   try {
     const rec = await getJSON(`${BASE}/records.json`);
+    _rec = rec;
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
     const ORDER = ['solar', 'solar_gwh', 'batt_chg', 'total_chg', 'chg_gwh_day', 'batt_dis', 'dis_gwh_day', 'pumps_gwh', 'daily_re', 're_gwh_day', 're_hours', 'export'];
@@ -2271,6 +2307,78 @@ async function loadRecords() {
     }
     _recordsLoaded = true;
   } catch(e) { console.warn('records.json not available', e); }
+}
+
+function updateRecordAlerts(allRecords, binned, dateStr) {
+  const el = document.getElementById('rec-alerts');
+  if (!el || !_rec || !allRecords || !allRecords.length) return;
+
+  const ih = 15 / 60;
+  let solarPeak = 0, chgPeak = 0, totalChgPeak = 0, disPeak = 0, exportPeak = 0;
+  let solarGwh = 0, chgGwh = 0, disGwh = 0, pumpsGwh = 0;
+
+  // Snapshot peaks from raw records
+  for (const r of allRecords) {
+    solarPeak    = Math.max(solarPeak,    r['ФЕЦ'] || 0);
+    chgPeak      = Math.max(chgPeak,      Math.max(0, r['batt_charge_mw'] || 0));
+    totalChgPeak = Math.max(totalChgPeak, Math.max(0, (r['batt_charge_mw'] || 0) + (r['pumps_mw'] || 0)));
+    disPeak      = Math.max(disPeak,      Math.max(0, r['batt_discharge_mw'] || 0));
+    exportPeak   = Math.max(exportPeak,   Math.max(0, -(r['net_import_mw'] || 0)));
+  }
+
+  // GWh accumulators from 15-min binned
+  let loadGwh = 0, reGwh = 0, reHours = 0;
+  for (const b of binned) {
+    solarGwh += Math.max(0, b['ФЕЦ'] || 0) * ih / 1000;
+    chgGwh   += Math.max(0, b['batt_charge_mw'] || 0) * ih / 1000;
+    disGwh   += Math.max(0, battDis(b['batt_discharge_mw'], b.ts)) * ih / 1000;
+    pumpsGwh += Math.max(0, b['pumps_mw'] || 0) * ih / 1000;
+    const load  = b['load_mw'] || 0;
+    const re    = (b['ФЕЦ']||0) + (b['ВяЕЦ']||0) + (b['ВЕЦ']||0) + (b['Малки ВЕЦ']||0) + (b['Био ЕЦ']||0) + battDis(b['batt_discharge_mw'], b.ts);
+    const rfl   = Math.min(re, load);
+    loadGwh += load * ih / 1000;
+    reGwh   += rfl  * ih / 1000;
+    if (load > 0 && re >= load) reHours += ih;
+  }
+  const dailyRePct = loadGwh > 0 ? reGwh / loadGwh * 100 : 0;
+
+  const live = {
+    solar:       solarPeak,
+    solar_gwh:   solarGwh,
+    batt_chg:    chgPeak,
+    total_chg:   totalChgPeak,
+    batt_dis:    disPeak,
+    chg_gwh_day: chgGwh,
+    dis_gwh_day: disGwh,
+    pumps_gwh:   pumpsGwh,
+    export:      exportPeak,
+    daily_re:    dailyRePct,
+    re_gwh_day:  reGwh,
+    re_hours:    reHours,
+  };
+
+  const beating = [];
+  for (const [key, val] of Object.entries(live)) {
+    const rec = _rec[key];
+    if (!rec || !isFinite(val) || val <= 0) continue;
+    // Show trophy if this day holds the current record, or if running value is beating it
+    if (rec.date === dateStr || val > rec.val) {
+      const fmt = ['%','ч'].includes(rec.unit) ? val.toFixed(1) : rec.unit === 'GWh' ? val.toFixed(2) : Math.round(val).toLocaleString('bg-BG');
+      beating.push({ key, label: rec.label, val: fmt, unit: rec.unit, prev: rec.val });
+    }
+  }
+
+  if (!beating.length) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const dayLabel = dateStr === todayStr() ? 'днес' : 'на този ден';
+  el.innerHTML = `<span id="rec-alerts-label">🏆 Рекорди ${dayLabel}:</span>` +
+    beating.map(b => {
+      const prevFmt = ['%','ч'].includes(b.unit) ? b.prev.toFixed(1) : b.unit === 'GWh' ? b.prev.toFixed(2) : Math.round(b.prev).toLocaleString('bg-BG');
+      return `<a class="rec-alert-chip" href="records.html#${b.key}">` +
+        `<span class="chip-trophy">🏆</span>${b.val} ${b.unit}` +
+        `<span class="rec-alert-label">${b.label}</span></a>`;
+    }).join('');
 }
 
 function toggleRecords(e) {
