@@ -9,6 +9,7 @@ DATA_WORKTREE="$(cd "$SCRIPT_DIR/../eso-data" && pwd)"
 set -euo pipefail
 DATA_DIR="$DATA_WORKTREE/data" python3 "$SCRIPT_DIR/fetch.py"
 DATA_DIR="$DATA_WORKTREE/data" python3 "$SCRIPT_DIR/compute_records.py"
+DATA_DIR="$DATA_WORKTREE/data" python3 "$SCRIPT_DIR/update_records_history_jsonl.py"
 
 # ── Git: best-effort — data is always committed locally; push when GH reachable
 set +e
