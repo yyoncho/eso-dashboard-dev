@@ -78,7 +78,7 @@ def main():
         for r, ih in zip(records, ihs):
             ts    = r.get('timestamp_utc') or r.get('timestamp') or ''
             solar = r.get('ФЕЦ') or 0
-            chg   = abs(r.get('ССЕЕ_mw') or 0) if r.get('ССЕЕ_state') == 'charging' else 0
+            chg   = r.get('batt_charge_mw') or 0
             dis   = batt_discharge(r)
             exp   = max(0.0, -(r.get('net_import_mw') or 0))
             load  = r.get('Товар на РБ') or 0
