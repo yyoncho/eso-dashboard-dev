@@ -56,9 +56,9 @@ def main():
         'solar_gwh':   {'val': 0.0, 'label': 'Соларна енергия за ден',     'unit': 'GWh', 'date': None, 'snap_ts': None},
         'total_chg':   {'val': 0.0, 'label': 'Зареждане ССЕЕ + Помпи',    'unit': 'MW',  'date': None, 'snap_ts': None},
         'batt_chg':    {'val': 0.0, 'label': 'Зареждане батерии',           'unit': 'MW',  'date': None, 'snap_ts': None},
-        'cum_chg_gwh': {'val': 0.0, 'label': 'Зареждане от 3 юни',        'unit': 'GWh', 'date': None, 'snap_ts': None},
+        'chg_gwh_day': {'val': 0.0, 'label': 'Зареждане за ден',            'unit': 'GWh', 'date': None, 'snap_ts': None},
         'batt_dis':    {'val': 0.0, 'label': 'Разреждане на ССЕЕ',         'unit': 'MW',  'date': None, 'snap_ts': None},
-        'cum_dis_gwh': {'val': 0.0, 'label': 'Разреждане от 3 юни',       'unit': 'GWh', 'date': None, 'snap_ts': None},
+        'dis_gwh_day': {'val': 0.0, 'label': 'Разреждане за ден',          'unit': 'GWh', 'date': None, 'snap_ts': None},
         'pumps_gwh':   {'val': 0.0, 'label': 'Помпи рекорд ден',           'unit': 'GWh', 'date': None, 'snap_ts': None},
         'export':      {'val': 0.0, 'label': 'Пикова мощност износ',       'unit': 'MW',  'date': None, 'snap_ts': None},
         'daily_re':    {'val': 0.0, 'label': 'Дневен дял ВЕИ',             'unit': '%',   'date': None, 'snap_ts': None},
@@ -122,10 +122,10 @@ def main():
             rec['pumps_gwh'].update(val=round(day_pumps_gwh, 1), date=day, snap_ts=None)
 
         if day >= PUMPS_START:
-            rec['cum_chg_gwh']['val'] = round(rec['cum_chg_gwh']['val'] + day_chg_gwh, 1)
-            rec['cum_chg_gwh']['date'] = day
-            rec['cum_dis_gwh']['val'] = round(rec['cum_dis_gwh']['val'] + day_dis_gwh, 1)
-            rec['cum_dis_gwh']['date'] = day
+            if day_chg_gwh > rec['chg_gwh_day']['val']:
+                rec['chg_gwh_day'].update(val=round(day_chg_gwh, 1), date=day, snap_ts=None)
+            if day_dis_gwh > rec['dis_gwh_day']['val']:
+                rec['dis_gwh_day'].update(val=round(day_dis_gwh, 1), date=day, snap_ts=None)
 
     out = DATA_DIR / 'records.json'
     out.write_text(json.dumps(rec, ensure_ascii=False, indent=2))
