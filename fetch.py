@@ -16,10 +16,11 @@ import json
 import os
 import re
 import sys
-import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+from curl_cffi.requests import Session as CurlSession
 
 ROOT     = Path(__file__).parent
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "data")))
@@ -33,7 +34,18 @@ try:
 except ImportError:
     HAS_EC = False
 
-HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.eso.bg/"}
+ESO_MAIN = "https://www.eso.bg/index.php?lang=bg"
+ESO_API_HEADERS = {
+    "Referer":         "https://www.eso.bg/index.php?lang=bg",
+    "Origin":          "https://www.eso.bg",
+    "Sec-Fetch-Site":  "same-origin",
+    "Sec-Fetch-Mode":  "cors",
+    "Sec-Fetch-Dest":  "empty",
+    "Accept":          "*/*",
+}
+
+# Module-level curl session — reused across calls, re-initialised on error
+_curl_session: CurlSession | None = None
 
 BG_TZ = ZoneInfo('Europe/Sofia')
 
@@ -44,10 +56,25 @@ GEN_COLS = [
 FLOW_COUNTRIES = ["RO", "SR", "MK", "GR", "TR"]
 
 
+def _get_session() -> CurlSession:
+    global _curl_session
+    if _curl_session is None:
+        _curl_session = CurlSession(impersonate="chrome124")
+        _curl_session.get(ESO_MAIN, timeout=15)
+    return _curl_session
+
+
 def fetch_json(url):
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode())
+    s = _get_session()
+    r = s.get(url, headers=ESO_API_HEADERS, timeout=15)
+    if r.status_code == 403:
+        # Session may have expired — reinitialise and retry once
+        global _curl_session
+        _curl_session = None
+        s = _get_session()
+        r = s.get(url, headers=ESO_API_HEADERS, timeout=15)
+    r.raise_for_status()
+    return r.json()
 
 
 def build_record():
