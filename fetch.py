@@ -12,6 +12,7 @@ Refreshed every 4 hours (energy-charts updates prices throughout the day):
   data/prices-YYYY-MM.json IBEX 15-min prices from energy-charts
 """
 
+import http.cookiejar
 import json
 import os
 import re
@@ -43,14 +44,26 @@ GEN_COLS = [
 ]
 FLOW_COUNTRIES = ["RO", "SR", "MK", "GR", "TR"]
 
+# Cookie jar shared across ESO requests so PHPSESSID persists within a run.
+_eso_cookie_jar = http.cookiejar.CookieJar()
+_eso_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_eso_cookie_jar))
+
+
+def _eso_session():
+    """Establish a PHP session with eso.bg (needed for API access)."""
+    req = urllib.request.Request("https://www.eso.bg/index.php?lang=bg", headers=HEADERS)
+    with _eso_opener.open(req, timeout=15):
+        pass
+
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with _eso_opener.open(req, timeout=15) as resp:
         return json.loads(resp.read().decode())
 
 
 def build_record():
+    _eso_session()
     gen_data = fetch_json("https://www.eso.bg/api/rabota_na_EEC_json.php?tovar")
     flows    = fetch_json("https://www.eso.bg/api/scada_live_json_pure.php")
 
