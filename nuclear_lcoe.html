@@ -262,41 +262,11 @@ header {
         <div style="flex:1;text-align:center">
           <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">Нетен резултат</div>
           <div style="font-size:1.7rem;font-weight:700;line-height:1.1" id="br-net">—</div>
-          <div style="font-size:0.7rem" id="br-net-sub">М EUR / год.</div>
+          <div style="font-size:0.7rem;margin-top:2px" id="br-net-sub">М EUR / год.</div>
+          <div style="font-size:0.68rem;margin-top:4px;color:#5a7090" id="br-hours-above"></div>
+          <div style="font-size:0.68rem;color:#5a7090" id="br-hours-below"></div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Stat cards -->
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label">Себестойност (LCOE)</div>
-      <div class="stat-val" id="s-lcoe">—</div>
-      <div class="stat-unit">EUR/MWh</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Overnight CAPEX</div>
-      <div class="stat-val" id="s-overnight">—</div>
-      <div class="stat-unit">EUR/kW</div>
-      <div class="stat-sub" id="s-overnight-bn"></div>
-    </div>
-    <div class="stat-card" id="card-pnl">
-      <div class="stat-label">Нетен резултат</div>
-      <div class="stat-val" id="s-pnl">—</div>
-      <div class="stat-unit">М EUR / год.</div>
-      <div class="stat-sub" id="s-above-pct"></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Средна цена (2г.)</div>
-      <div class="stat-val" id="s-avg">—</div>
-      <div class="stat-unit">EUR/MWh</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">CAPEX без лихви</div>
-      <div class="stat-val" id="s-capex-nointerest">—</div>
-      <div class="stat-unit">Млрд. EUR</div>
-      <div class="stat-sub" id="s-capex-nointerest-sub"></div>
     </div>
   </div>
 
@@ -453,12 +423,7 @@ function recalc() {
   document.getElementById('b-fom-lcoe').textContent   = r.lcoeOpex.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-total-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
 
-  document.getElementById('s-lcoe').textContent             = r.lcoe.toFixed(1);
-  document.getElementById('s-overnight').textContent        = overnight.toFixed(0);
-  document.getElementById('s-overnight-bn').textContent     = overnightBn.toFixed(2) + ' Млрд. EUR';
-  document.getElementById('s-capex-nointerest').textContent = overnightBn.toFixed(2);
-  document.getElementById('s-capex-nointerest-sub').textContent = overnight.toFixed(0) + ' EUR/kW  IDC: ' + idcBn.toFixed(2) + ' Млрд.';
-  document.getElementById('p-capex-display').textContent    = overnight.toFixed(0) + ' EUR/kW';
+  document.getElementById('p-capex-display').textContent = overnight.toFixed(0) + ' EUR/kW';
 
   if (priceHours && priceHours.length) {
     const cfFrac   = cf / 100;
@@ -473,38 +438,23 @@ function recalc() {
 
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
 
-    const netMn  = (annProfit + annLoss) / 1e6;
+    const netMn   = (annProfit + annLoss) / 1e6;
     const aboveYr = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год. над себ.';
     const belowYr = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год. под себ.';
     const isPos   = netMn >= 0;
-    const ratio   = Math.min(1, Math.abs(netMn) / (annRevenue / 1e6 * 0.5));
     const col     = isPos ? '#1a8a1a' : '#cc2200';
-
-    // Net stat card
-    const pnlCard = document.getElementById('card-pnl');
-    document.getElementById('s-pnl').textContent       = netMn.toFixed(1);
-    document.getElementById('s-above-pct').textContent = isPos ? aboveYr : belowYr;
-    if (isPos) {
-      pnlCard.style.background     = `rgb(${Math.round(255-ratio*119)},${Math.round(255-ratio*117)},${Math.round(255-ratio*229)})`;
-    } else {
-      pnlCard.style.background     = `rgb(255,${Math.round(255-ratio*221)},${Math.round(255-ratio*255)})`;
-    }
-    pnlCard.style.borderTopColor = col;
-    pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : col;
 
     // Banner box
     const bannerNet = document.getElementById('banner-net');
     bannerNet.style.background  = isPos ? '#f0f8f0' : '#fff0ee';
     bannerNet.style.borderColor = isPos ? '#a0d0a0' : '#d0a0a0';
-    document.getElementById('br-lcoe').textContent      = r.lcoe.toFixed(1);
     document.getElementById('br-net-label').style.color = isPos ? '#3a7040' : '#7a2a20';
     document.getElementById('br-net').textContent       = netMn.toFixed(1);
     document.getElementById('br-net').style.color       = col;
-    document.getElementById('br-net-sub').textContent   = 'М EUR / год.';
     document.getElementById('br-net-sub').style.color   = isPos ? '#5a8060' : '#805050';
+    document.getElementById('br-hours-above').textContent = aboveYr;
+    document.getElementById('br-hours-below').textContent = belowYr;
 
-    const ps = computePriceStats(priceHours);
-    if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
   }
 }
 
