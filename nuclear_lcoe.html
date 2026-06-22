@@ -297,7 +297,7 @@ header {
         <div class="price-stat-row"><span>Часове с цена &gt; 100 EUR/MWh</span><span id="ps-gt100">—</span></div>
         <div class="price-stat-row"><span>Часове с цена &gt; 150 EUR/MWh</span><span id="ps-gt150">—</span></div>
         <div class="price-stat-row"><span>Часове с отрицателна цена</span><span id="ps-neg">—</span></div>
-        <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
+        <div class="price-stat-row"><span>Период</span><span id="ps-period">—</span></div>
       </div>
     </div>
   </div>
@@ -480,8 +480,10 @@ async function init() {
       document.getElementById('ps-gt100').textContent  = ps.gt100.toLocaleString('bg-BG') + ' ч.';
       document.getElementById('ps-gt150').textContent  = ps.gt150.toLocaleString('bg-BG') + ' ч.';
       document.getElementById('ps-neg').textContent    = ps.neg.toLocaleString('bg-BG') + ' ч.';
-      document.getElementById('ps-updated').textContent = data.updated
-        ? new Date(data.updated).toLocaleDateString('bg-BG') : '—';
+      const fmt = ts => new Date(ts * 1000).toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' });
+      const fromStr = priceHours.length ? fmt(priceHours[0].t) : '—';
+      const toStr   = priceHours.length ? fmt(priceHours[priceHours.length - 1].t) : '—';
+      document.getElementById('ps-period').textContent = fromStr + ' – ' + toStr;
     }
     document.getElementById('data-status').textContent = data.updated
       ? 'Ember данни от: ' + new Date(data.updated).toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' })
