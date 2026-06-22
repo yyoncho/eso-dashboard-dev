@@ -449,9 +449,19 @@ function recalc() {
     document.getElementById('s-pnl').textContent  = (annEur / 1e6).toFixed(1);
     document.getElementById('s-pnl2').textContent = (totalEur / 1e6).toFixed(1);
 
+    // Color P&L card: intensity scales with |annEur| relative to annual revenue potential
+    const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
+    const ratio = Math.min(1, Math.abs(annEur) / (annRevenue * 0.5));
     const pnlCard = document.getElementById('card-pnl');
-    pnlCard.classList.toggle('green', annEur >= 0);
-    pnlCard.classList.toggle('red',   annEur < 0);
+    if (annEur >= 0) {
+      pnlCard.style.background = `rgb(${Math.round(255 - ratio*119)},${Math.round(255 - ratio*117)},${Math.round(255 - ratio*229)})`;
+      pnlCard.style.borderTopColor = '#1a8a1a';
+      pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#1a8a1a';
+    } else {
+      pnlCard.style.background = `rgb(255,${Math.round(255 - ratio*221)},${Math.round(255 - ratio*255)})`;
+      pnlCard.style.borderTopColor = '#cc2200';
+      pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#cc2200';
+    }
 
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
