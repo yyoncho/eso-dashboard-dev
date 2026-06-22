@@ -247,16 +247,28 @@ header {
       <span class="cost-readout-main" id="cr-total">11.0</span>
       <span class="cost-readout-unit">Млрд. EUR</span>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:10px">
-      <div class="slider-row" style="margin:0">
+    <div style="margin-top:10px">
+      <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
         <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
                oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
       </div>
-      <div class="slider-row" style="margin:0">
+      <div class="slider-row" style="margin:0 0 12px">
         <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
         <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:#f0f8f0;border:1px solid #a0d0a0;border-radius:4px;padding:8px 12px;text-align:center" id="banner-profit">
+          <div style="font-size:0.65rem;color:#3a7040;text-transform:uppercase;letter-spacing:0.04em">Печалба / год.</div>
+          <div style="font-size:1.4rem;font-weight:700;color:#1a8a1a;line-height:1.1" id="br-profit">—</div>
+          <div style="font-size:0.7rem;color:#5a8060" id="br-profit-sub"></div>
+        </div>
+        <div style="flex:1;background:#fff0ee;border:1px solid #d0a0a0;border-radius:4px;padding:8px 12px;text-align:center" id="banner-loss">
+          <div style="font-size:0.65rem;color:#7a2a20;text-transform:uppercase;letter-spacing:0.04em">Загуба / год.</div>
+          <div style="font-size:1.4rem;font-weight:700;color:#cc2200;line-height:1.1" id="br-loss">—</div>
+          <div style="font-size:0.7rem;color:#805050" id="br-loss-sub"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -472,8 +484,13 @@ function recalc() {
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
 
     // Profit card (green gradient)
-    document.getElementById('s-pnl').textContent       = (annProfit / 1e6).toFixed(1);
-    document.getElementById('s-above-pct').textContent = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год.';
+    const profitMn = annProfit / 1e6;
+    const lossMn   = annLoss   / 1e6;
+    const aboveYr  = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год.';
+    const belowYr  = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
+
+    document.getElementById('s-pnl').textContent       = profitMn.toFixed(1);
+    document.getElementById('s-above-pct').textContent = aboveYr;
     const ratioP  = Math.min(1, annProfit / (annRevenue * 0.5));
     const pnlCard = document.getElementById('card-pnl');
     pnlCard.style.background     = `rgb(${Math.round(255-ratioP*119)},${Math.round(255-ratioP*117)},${Math.round(255-ratioP*229)})`;
@@ -481,8 +498,14 @@ function recalc() {
     pnlCard.querySelector('.stat-val').style.color = ratioP > 0.3 ? '#fff' : '#1a8a1a';
 
     // Loss card (red gradient)
-    document.getElementById('s-below').textContent     = (annLoss / 1e6).toFixed(1);
-    document.getElementById('s-below-pct').textContent = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
+    document.getElementById('s-below').textContent     = lossMn.toFixed(1);
+    document.getElementById('s-below-pct').textContent = belowYr;
+
+    // Banner profit/loss
+    document.getElementById('br-profit').textContent     = profitMn.toFixed(1) + ' М EUR';
+    document.getElementById('br-profit-sub').textContent = aboveYr;
+    document.getElementById('br-loss').textContent       = lossMn.toFixed(1) + ' М EUR';
+    document.getElementById('br-loss-sub').textContent   = belowYr;
 
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
