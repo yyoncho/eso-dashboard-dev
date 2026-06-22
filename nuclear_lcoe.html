@@ -199,6 +199,12 @@ header {
       <div class="stat-val" id="s-avg">—</div>
       <div class="stat-unit">EUR/MWh</div>
     </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Общ разход с финансиране</div>
+      <div class="stat-val" id="s-total-cost">—</div>
+      <div class="stat-unit" id="s-total-cost-unit">Млрд. EUR</div>
+      <div class="stat-sub" id="s-total-cost-sub"></div>
+    </div>
   </div>
 
   <div class="main-cols">
@@ -412,6 +418,13 @@ function recalc() {
   // Banner
   document.getElementById('capex-slider-lcoe').textContent = r.lcoe.toFixed(1);
   document.getElementById('s-lcoe').textContent = r.lcoe.toFixed(1);
+
+  // Total cost after financing = capTotal (EUR/kW) × capacity (MW × 1000)
+  const totalCostEur = r.capTotal * mw * 1000;  // EUR
+  const totalCostBn  = totalCostEur / 1e9;
+  document.getElementById('s-total-cost').textContent     = totalCostBn.toFixed(2);
+  document.getElementById('s-total-cost-sub').textContent =
+    `overnight: ${(capex * mw / 1e6).toFixed(0)} М EUR + IDC: ${(r.idc * mw / 1e6).toFixed(0)} М EUR`;
 
   // Profitability (needs price data)
   if (priceHours && priceHours.length) {
