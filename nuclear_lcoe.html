@@ -237,20 +237,14 @@ header {
   <!-- Total financed cost slider -->
   <div class="cost-banner">
     <button class="gear-btn" onclick="openModal()" title="Параметри">⚙</button>
-    <div class="cost-banner-title">Общ разход с финансиране — обща стойност на проекта след лихви</div>
-    <div class="cost-slider-row">
-      <span class="cost-bound">1 Млрд.</span>
-      <input type="range" id="cost-slider" min="1" max="20" step="0.25" value="11" oninput="onCostSlider()">
-      <span class="cost-bound">20 Млрд. EUR</span>
-    </div>
-    <div class="cost-readout">
-      <span class="cost-readout-main" id="cr-total">11.0</span>
-      <span class="cost-readout-unit">Млрд. EUR</span>
-    </div>
-    <div style="margin-top:10px">
+    <div style="margin-bottom:2px">
+      <div class="slider-row" style="margin:0 0 8px">
+        <label>Общ разход с финансиране: <strong id="cr-total">11.0</strong> Млрд. EUR</label>
+        <input type="range" id="cost-slider" min="1" max="20" step="0.25" value="11" oninput="onCostSlider()">
+      </div>
       <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
-        <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
+        <input type="range" id="p-cf" min="30" max="100" step="1" value="90"
                oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
       </div>
       <div class="slider-row" style="margin:0 0 12px">
@@ -271,11 +265,6 @@ header {
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Warning note -->
-  <div style="background:#fffbe6;border:1px solid #e8d84a;border-left:4px solid #c8a800;border-radius:4px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;color:#5a4800;line-height:1.5">
-    <strong>⚠ Бележка:</strong> Калкулациите предполагат <strong>замяна на съществуващите мощности</strong> — новите блокове заместват изведените. При добавяне на нови блокове към съществуващите финансовият резултат ще бъде значително по-лош: пазарът ще е наситен с допълнителна ядрена мощност, цените ще паднат и себестойността ще остане непокрита за много повече часове.
   </div>
 
   <!-- Stat cards -->
@@ -346,6 +335,11 @@ header {
         <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
       </div>
     </div>
+  </div>
+
+  <!-- Warning note -->
+  <div style="background:#fffbe6;border:1px solid #e8d84a;border-left:4px solid #c8a800;border-radius:4px;padding:8px 14px;margin-top:14px;margin-bottom:10px;font-size:0.8rem;color:#5a4800;line-height:1.5">
+    <strong>⚠ Бележка:</strong> Калкулациите предполагат <strong>замяна на съществуващите мощности</strong> — новите блокове заместват изведените. При добавяне на нови блокове към съществуващите финансовият резултат ще бъде значително по-лош: пазарът ще е наситен с допълнителна ядрена мощност, цените ще паднат и себестойността ще остане непокрита за много повече часове.
   </div>
 
   <!-- Bottom note -->
