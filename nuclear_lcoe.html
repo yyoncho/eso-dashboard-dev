@@ -228,16 +228,6 @@ header {
 
       <hr class="divider">
 
-      <div class="slider-row">
-        <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
-        <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
-               oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
-      </div>
-      <div class="slider-row">
-        <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
-        <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
-               oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
-      </div>
     </div>
   </div>
 </div>
@@ -256,10 +246,18 @@ header {
     <div class="cost-readout">
       <span class="cost-readout-main" id="cr-total">11.0</span>
       <span class="cost-readout-unit">Млрд. EUR</span>
-      <span class="cost-readout-sep">→</span>
-      <span class="cost-readout-secondary">Overnight: <strong id="cr-overnight">—</strong> EUR/kW</span>
-      <span class="cost-readout-sep">→</span>
-      <span class="cost-readout-secondary">Себестойност (LCOE): <strong id="cr-lcoe">—</strong> EUR/MWh</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:10px">
+      <div class="slider-row" style="margin:0">
+        <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
+        <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
+               oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
+      </div>
+      <div class="slider-row" style="margin:0">
+        <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
+        <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
+               oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
+      </div>
     </div>
   </div>
 
@@ -281,16 +279,10 @@ header {
       <div class="stat-unit">EUR/kW</div>
       <div class="stat-sub" id="s-overnight-bn"></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">CAPEX без лихви</div>
-      <div class="stat-val" id="s-capex-nointerest">—</div>
-      <div class="stat-unit">Млрд. EUR</div>
-      <div class="stat-sub" id="s-capex-nointerest-sub"></div>
-    </div>
-    <div class="stat-card green" id="card-above">
-      <div class="stat-label">Часове над себестойност</div>
-      <div class="stat-val" id="s-above">—</div>
-      <div class="stat-unit">ч. / год.</div>
+    <div class="stat-card green" id="card-pnl">
+      <div class="stat-label">Печалба (ч. над себестойност)</div>
+      <div class="stat-val" id="s-pnl">—</div>
+      <div class="stat-unit">М EUR / год.</div>
       <div class="stat-sub" id="s-above-pct"></div>
     </div>
     <div class="stat-card red" id="card-below">
@@ -299,15 +291,16 @@ header {
       <div class="stat-unit">М EUR / год.</div>
       <div class="stat-sub" id="s-below-pct"></div>
     </div>
-    <div class="stat-card" id="card-pnl">
-      <div class="stat-label">Годишна печалба</div>
-      <div class="stat-val" id="s-pnl">—</div>
-      <div class="stat-unit">М EUR / год.</div>
-    </div>
     <div class="stat-card">
       <div class="stat-label">Средна цена (2г.)</div>
       <div class="stat-val" id="s-avg">—</div>
       <div class="stat-unit">EUR/MWh</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">CAPEX без лихви</div>
+      <div class="stat-val" id="s-capex-nointerest">—</div>
+      <div class="stat-unit">Млрд. EUR</div>
+      <div class="stat-sub" id="s-capex-nointerest-sub"></div>
     </div>
   </div>
 
@@ -448,9 +441,7 @@ function recalc() {
   const overnightBn = overnight * mw * 1000 / 1e9;
   const idcBn       = r.idc * mw * 1000 / 1e9;
 
-  document.getElementById('cr-total').textContent     = totalBn.toFixed(2);
-  document.getElementById('cr-overnight').textContent = overnight.toFixed(0);
-  document.getElementById('cr-lcoe').textContent      = r.lcoe.toFixed(1);
+  document.getElementById('cr-total').textContent = totalBn.toFixed(2);
 
   document.getElementById('b-total-financed').textContent = fmtBn(totalBn);
   document.getElementById('b-idc').textContent       = '−' + idcBn.toFixed(2) + ' Млрд. EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
@@ -472,30 +463,26 @@ function recalc() {
     const total    = priceHours.length;
     const above    = priceHours.filter(h => h.p >= r.lcoe).length;
     const below    = total - above;
-    const totalEur = priceHours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
     const span     = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
-    const annEur   = totalEur / span;
-    const lossEur  = priceHours.reduce((s, h) => h.p < r.lcoe ? s + (h.p - r.lcoe) * mw * cfFrac : s, 0);
-    const annLoss  = lossEur / span;
-
-    document.getElementById('s-above').textContent     = Math.round(above / span).toLocaleString('bg-BG');
-    document.getElementById('s-above-pct').textContent = (above / total * 100).toFixed(0) + '% от часовете';
-    document.getElementById('s-below').textContent     = (annLoss / 1e6).toFixed(1);
-    document.getElementById('s-below-pct').textContent = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
-    document.getElementById('s-pnl').textContent       = (annEur / 1e6).toFixed(1);
+    const profitEur = priceHours.reduce((s, h) => h.p >= r.lcoe ? s + (h.p - r.lcoe) * mw * cfFrac : s, 0);
+    const lossEur   = priceHours.reduce((s, h) => h.p <  r.lcoe ? s + (h.p - r.lcoe) * mw * cfFrac : s, 0);
+    const annProfit = profitEur / span;
+    const annLoss   = lossEur  / span;
 
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
-    const ratio      = Math.min(1, Math.abs(annEur) / (annRevenue * 0.5));
-    const pnlCard    = document.getElementById('card-pnl');
-    if (annEur >= 0) {
-      pnlCard.style.background     = `rgb(${Math.round(255-ratio*119)},${Math.round(255-ratio*117)},${Math.round(255-ratio*229)})`;
-      pnlCard.style.borderTopColor = '#1a8a1a';
-      pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#1a8a1a';
-    } else {
-      pnlCard.style.background     = `rgb(255,${Math.round(255-ratio*221)},${Math.round(255-ratio*255)})`;
-      pnlCard.style.borderTopColor = '#cc2200';
-      pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#cc2200';
-    }
+
+    // Profit card (green gradient)
+    document.getElementById('s-pnl').textContent       = (annProfit / 1e6).toFixed(1);
+    document.getElementById('s-above-pct').textContent = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год.';
+    const ratioP  = Math.min(1, annProfit / (annRevenue * 0.5));
+    const pnlCard = document.getElementById('card-pnl');
+    pnlCard.style.background     = `rgb(${Math.round(255-ratioP*119)},${Math.round(255-ratioP*117)},${Math.round(255-ratioP*229)})`;
+    pnlCard.style.borderTopColor = '#1a8a1a';
+    pnlCard.querySelector('.stat-val').style.color = ratioP > 0.3 ? '#fff' : '#1a8a1a';
+
+    // Loss card (red gradient)
+    document.getElementById('s-below').textContent     = (annLoss / 1e6).toFixed(1);
+    document.getElementById('s-below-pct').textContent = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
 
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
