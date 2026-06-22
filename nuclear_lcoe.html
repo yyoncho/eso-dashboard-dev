@@ -202,7 +202,7 @@ header {
       <div class="preset-strip">
         <button class="preset-btn active" data-preset="kozloduy" onclick="loadPreset(this)">АЕЦ Козлодуй</button>
         <button class="preset-btn" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
-        <button class="preset-btn" data-preset="epr" onclick="loadPreset(this)">EPR (Финландия)</button>
+        <button class="preset-btn" data-preset="vogtle" onclick="loadPreset(this)">Vogtle (САЩ)</button>
       </div>
 
       <div class="param-row">
@@ -327,7 +327,7 @@ const BASE = location.hostname === 'localhost'
 const PRESETS = {
   kozloduy: { overnightBn: 8.28, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 12 },
   ap1000:   { overnightBn: 8.60, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 10 },
-  epr:      { overnightBn: 8.21, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
+  vogtle:   { overnightBn: 13.20, opex: 45, mw: 1117, life: 60, wacc: 4.0, cf: 90, constr: 10 },
 };
 
 function openModal()  { document.getElementById('modal').classList.add('open'); }
