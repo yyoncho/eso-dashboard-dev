@@ -235,8 +235,7 @@ header {
           <div class="brow derived"><span>▶ Overnight CAPEX (изчислен)</span><span id="b-overnight">—</span></div>
           <div class="brow"><span>Фактор на амортизация (CRF)</span><span id="b-crf">—</span></div>
           <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
-          <div class="brow"><span>Fixed O&M компонент</span><span id="b-fom-lcoe">—</span></div>
-          <div class="brow"><span>Variable O&M</span><span id="b-vom-lcoe">—</span></div>
+          <div class="brow"><span>OPEX компонент</span><span id="b-fom-lcoe">—</span></div>
           <div class="brow total"><span>Общ LCOE</span><span id="b-total-lcoe">—</span></div>
         </div>
       </div>
@@ -277,12 +276,8 @@ header {
         </div>
 
         <div class="param-row">
-          <label>Fixed OPEX (EUR/kW/год.)</label>
-          <input type="number" id="p-fopex" value="135" min="20" max="500" step="5" oninput="recalc()">
-        </div>
-        <div class="param-row">
-          <label>Variable OPEX (EUR/MWh)</label>
-          <input type="number" id="p-vopex" value="4.5" min="0" max="30" step="0.5" oninput="recalc()">
+          <label>OPEX (EUR/MWh)</label>
+          <input type="number" id="p-opex" value="45" min="5" max="150" step="1" oninput="recalc()">
         </div>
         <div class="param-row">
           <label>Мощност (MW)</label>
@@ -328,9 +323,9 @@ const BASE = location.hostname === 'localhost'
 // EPR Finland (Olkiluoto 3): ~€11B for 1600 MW = ~€15B equivalent at current rates
 // SMR optimistic: ~€2.5B for 300 MW
 const PRESETS = {
-  ap1000: { totalBn: 11.0, fopex: 135, vopex: 4.5, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
-  epr:    { totalBn: 15.0, fopex: 150, vopex: 5.0, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
-  smr:    { totalBn:  2.5, fopex: 100, vopex: 6.0, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7 },
+  ap1000: { totalBn: 11.0, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
+  epr:    { totalBn: 15.0, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
+  smr:    { totalBn:  2.5, opex: 40, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7 },
 };
 
 function loadPreset(btn) {
@@ -338,8 +333,7 @@ function loadPreset(btn) {
   btn.classList.add('active');
   const p = PRESETS[btn.dataset.preset];
   document.getElementById('cost-slider').value = p.totalBn;
-  document.getElementById('p-fopex').value     = p.fopex;
-  document.getElementById('p-vopex').value     = p.vopex;
+  document.getElementById('p-opex').value      = p.opex;
   document.getElementById('p-mw').value        = p.mw;
   document.getElementById('p-life').value      = p.life;
   document.getElementById('p-wacc').value      = p.wacc;
@@ -353,18 +347,17 @@ function loadPreset(btn) {
 function onCostSlider() { recalc(); }
 
 // ── LCOE engine (input: overnight EUR/kW) ────────────────────────────────────
-function calcFromOvernight(overnight, fopex, vopex, life, waccPct, cfPct, constrYr) {
-  const r        = waccPct / 100;
-  const cf       = cfPct / 100;
+function calcFromOvernight(overnight, opex, life, waccPct, cfPct, constrYr) {
+  const r         = waccPct / 100;
+  const cf        = cfPct / 100;
   const idcFactor = Math.pow(1 + r, constrYr / 2) - 1;
-  const idc      = overnight * idcFactor;
-  const capTotal = overnight + idc;
-  const crf      = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
-  const annHrs   = cf * 8760;
-  const lcoeCap  = (capTotal * crf / annHrs) * 1000;  // EUR/MWh
-  const lcoeFom  = (fopex / annHrs) * 1000;           // EUR/MWh
-  return { overnight, idc, idcFactor, capTotal, crf, lcoeCap, lcoeFom, lcoeVom: vopex,
-           lcoe: lcoeCap + lcoeFom + vopex };
+  const idc       = overnight * idcFactor;
+  const capTotal  = overnight + idc;
+  const crf       = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
+  const annHrs    = cf * 8760;
+  const lcoeCap   = (capTotal * crf / annHrs) * 1000;  // EUR/MWh
+  return { overnight, idc, idcFactor, capTotal, crf, lcoeCap, lcoeOpex: opex,
+           lcoe: lcoeCap + opex };
 }
 
 // Derive overnight from total financed cost (reverse of IDC formula)
@@ -407,8 +400,7 @@ function fmtBn(v)  { return v.toFixed(2) + ' Млрд. EUR'; }
 // ── Recalc ────────────────────────────────────────────────────────────────────
 function recalc() {
   const totalBn = +document.getElementById('cost-slider').value;
-  const fopex   = +document.getElementById('p-fopex').value;
-  const vopex   = +document.getElementById('p-vopex').value;
+  const opex    = +document.getElementById('p-opex').value;
   const mw      = +document.getElementById('p-mw').value;
   const life    = +document.getElementById('p-life').value;
   const wacc    = +document.getElementById('p-wacc').value;
@@ -416,7 +408,7 @@ function recalc() {
   const constr  = +document.getElementById('p-constr').value;
 
   const overnight = overnightFromTotal(totalBn, mw, wacc, constr);
-  const r = calcFromOvernight(overnight, fopex, vopex, life, wacc, cf, constr);
+  const r = calcFromOvernight(overnight, opex, life, wacc, cf, constr);
 
   // Banner readout
   document.getElementById('cr-total').textContent    = totalBn.toFixed(2);
@@ -428,9 +420,8 @@ function recalc() {
   document.getElementById('b-idc').textContent     = '−' + (r.idc * mw / 1e6).toFixed(0) + ' М EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
   document.getElementById('b-overnight').textContent = overnight.toFixed(0) + ' EUR/kW  (' + (overnight * mw / 1e6).toFixed(0) + ' М EUR)';
   document.getElementById('b-crf').textContent     = (r.crf * 100).toFixed(2) + '%';
-  document.getElementById('b-cap-lcoe').textContent = r.lcoeCap.toFixed(1) + ' EUR/MWh';
-  document.getElementById('b-fom-lcoe').textContent = r.lcoeFom.toFixed(1) + ' EUR/MWh';
-  document.getElementById('b-vom-lcoe').textContent = r.lcoeVom.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-cap-lcoe').textContent  = r.lcoeCap.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-fom-lcoe').textContent  = r.lcoeOpex.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-total-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
 
   // Stat cards
