@@ -235,7 +235,7 @@ header {
     <div style="margin-bottom:2px">
       <div class="slider-row" style="margin:0 0 8px">
         <label>Общо: <strong id="cr-total">11.0</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">(без лихви: <span id="cr-overnight">—</span> Млрд.)</span></label>
-        <input type="range" id="cost-slider" min="1" max="15" step="0.25" value="9.48" oninput="onCostSlider()">
+        <input type="range" id="cost-slider" min="1" max="15" step="0.25" value="8.28" oninput="onCostSlider()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
@@ -310,7 +310,7 @@ header {
   <!-- Bottom note -->
   <div class="bottom-note">
     <strong>Източници на стойностите по подразбиране:</strong>
-    Общият разход с финансиране е базиран на <strong>полския проект AP1000</strong> (~$12 млрд. ≈ €11 млрд. на блок при текущ курс).
+    Общият разход с финансиране е базиран на <strong>полския проект AP1000</strong> (~$12 млрд. ≈ €10.47 млрд. на блок при курс 1 USD = 0.873 EUR).
     OPEX е по публично достъпни данни на <strong>АЕЦ Козлодуй</strong>.
     Методологията следва <strong>Lazard LCOE</strong> с IDC изчислен при средно усвояване на капитала по време на строителството.
   </div>
@@ -325,8 +325,8 @@ const BASE = location.hostname === 'localhost'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
 const PRESETS = {
-  kozloduy: { overnightBn: 9.48, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 12 },
-  ap1000:   { overnightBn: 9.86, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 10 },
+  kozloduy: { overnightBn: 8.28, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 12 },
+  ap1000:   { overnightBn: 8.60, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 10 },
   epr:      { overnightBn: 8.21, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
 };
 
