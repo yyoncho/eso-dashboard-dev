@@ -14,7 +14,7 @@ header {
   position: sticky; top: 0; z-index: 100;
 }
 .header-inner {
-  max-width: 1300px; margin: 0 auto; padding: 10px 20px;
+  max-width: 1000px; margin: 0 auto; padding: 10px 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
 }
 .logo-area { display: flex; align-items: center; gap: 14px; }
@@ -29,12 +29,12 @@ header {
 .back-link:hover { color: #ffd700; }
 #data-status { font-size: 0.72rem; color: rgba(255,255,255,0.65); margin-top: 3px; }
 
-.content { max-width: 1300px; margin: 0 auto; padding: 14px 20px 30px; }
+.content { max-width: 1000px; margin: 0 auto; padding: 14px 20px 30px; }
 
 /* ── Total cost slider banner ── */
 .cost-banner {
   background: #fff; border: 1px solid #c5d8ee; border-radius: 4px;
-  padding: 14px 20px 12px; margin-bottom: 14px;
+  padding: 14px 20px 12px; margin-bottom: 14px; position: relative;
 }
 .cost-banner-title {
   font-size: 0.68rem; color: #5a7090; text-transform: uppercase;
@@ -53,9 +53,70 @@ header {
 .cost-readout-secondary { font-size: 0.88rem; color: #5a7090; }
 .cost-readout-secondary strong { color: #1a2233; }
 
+/* ── Gear button ── */
+.gear-btn {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: 1px solid #c5d8ee; border-radius: 50%;
+  width: 32px; height: 32px; cursor: pointer; font-size: 1.05rem; color: #5a7090;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.gear-btn:hover { background: #eef3f8; color: #004494; border-color: #004494; }
+
+/* ── Settings modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,20,60,0.38);
+  z-index: 500; align-items: flex-start; justify-content: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #fff; border-left: 1px solid #c5d8ee; width: 340px; min-height: 100vh;
+  padding: 0; box-shadow: -4px 0 20px rgba(0,0,0,0.15); overflow-y: auto;
+}
+.modal-header {
+  background: #004494; color: #fff; font-size: 0.8rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0;
+}
+.modal-close {
+  background: none; border: none; color: #fff; font-size: 1.2rem;
+  cursor: pointer; line-height: 1; padding: 0 4px;
+}
+.modal-body { padding: 14px 16px; }
+
+/* ── Preset buttons ── */
+.preset-strip { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.preset-btn {
+  padding: 4px 10px; font-size: 0.75rem; border: 1px solid #b0c8e0;
+  border-radius: 3px; background: #f0f5fc; color: #2a4060; cursor: pointer; transition: background 0.12s;
+}
+.preset-btn:hover { background: #d8e8f8; }
+.preset-btn.active { background: #004494; color: #fff; border-color: #004494; }
+
+/* ── Param rows ── */
+.param-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 8px;
+}
+.param-row label { font-size: 0.78rem; color: #3a5070; flex: 1; }
+.param-row input[type="number"] {
+  width: 90px; padding: 4px 6px; border: 1px solid #b0c8e0;
+  border-radius: 3px; font-size: 0.85rem; text-align: right; color: #1a2233;
+}
+.param-row input:focus { outline: 2px solid #004494; }
+.param-derived {
+  width: 90px; text-align: right; font-size: 0.85rem; font-weight: 600;
+  color: #004494; padding: 4px 6px;
+}
+.slider-row { margin: 10px 0 6px; }
+.slider-row label { font-size: 0.78rem; color: #3a5070; display: block; margin-bottom: 4px; }
+.slider-row input[type="range"] { width: 100%; accent-color: #004494; }
+.divider { margin: 10px 0; border: none; border-top: 1px solid #d0e0f0; }
+
 /* ── Stat cards ── */
 .stat-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px; margin-bottom: 14px;
 }
 .stat-card {
@@ -71,49 +132,13 @@ header {
 .stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
 .stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
 
-/* ── Two columns ── */
-.main-cols { display: grid; grid-template-columns: 1fr 360px; gap: 12px; }
-@media (max-width: 860px) { .main-cols { grid-template-columns: 1fr; } }
-
+/* ── Panels ── */
 .panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
 .panel + .panel { margin-top: 10px; }
 .panel-header {
   background: #004494; color: #fff; font-size: 0.75rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em; padding: 7px 12px;
 }
-
-/* ── Params pane ── */
-.params-body { padding: 12px 14px; }
-.preset-strip { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-.preset-btn {
-  padding: 4px 10px; font-size: 0.75rem; border: 1px solid #b0c8e0;
-  border-radius: 3px; background: #f0f5fc; color: #2a4060; cursor: pointer; transition: background 0.12s;
-}
-.preset-btn:hover { background: #d8e8f8; }
-.preset-btn.active { background: #004494; color: #fff; border-color: #004494; }
-
-.param-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin-bottom: 8px;
-}
-.param-row label { font-size: 0.78rem; color: #3a5070; flex: 1; }
-.param-row input[type="number"] {
-  width: 90px; padding: 4px 6px; border: 1px solid #b0c8e0;
-  border-radius: 3px; font-size: 0.85rem; text-align: right; color: #1a2233;
-}
-.param-row input:focus { outline: 2px solid #004494; }
-.param-derived {
-  width: 90px; text-align: right; font-size: 0.85rem; font-weight: 600;
-  color: #004494; padding: 4px 6px;
-}
-
-.slider-row { margin: 10px 0 6px; }
-.slider-row label { font-size: 0.78rem; color: #3a5070; display: block; margin-bottom: 4px; }
-.slider-row input[type="range"] { width: 100%; accent-color: #004494; }
-
-.divider { margin: 10px 0; border: none; border-top: 1px solid #d0e0f0; }
-
-/* ── LCOE breakdown ── */
 .breakdown-body { padding: 12px 14px; }
 .brow {
   display: flex; justify-content: space-between; align-items: center;
@@ -131,10 +156,8 @@ header {
 }
 .brow.total span { color: #003070 !important; }
 
-/* ── Price panel ── */
 .price-panel-body { padding: 12px 14px; }
 .no-data-msg { font-size: 0.8rem; color: #888; font-style: italic; }
-.price-stats  { }
 .price-stat-row {
   display: flex; justify-content: space-between;
   font-size: 0.82rem; color: #3a5070; padding: 3px 0;
@@ -142,6 +165,12 @@ header {
 }
 .price-stat-row:last-child { border-bottom: none; }
 .price-stat-row span:last-child { font-weight: 600; color: #1a2233; }
+
+/* ── Bottom note ── */
+.bottom-note {
+  margin-top: 18px; font-size: 0.75rem; color: #6a80a0; line-height: 1.6;
+  border-top: 1px solid #d0dcea; padding-top: 12px;
+}
 </style>
 </head>
 <body>
@@ -162,18 +191,70 @@ header {
   </div>
 </header>
 
+<!-- Settings modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      Параметри на проекта
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="preset-strip">
+        <button class="preset-btn active" data-preset="kozloduy" onclick="loadPreset(this)">АЕЦ Козлодуй</button>
+        <button class="preset-btn" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
+        <button class="preset-btn" data-preset="epr" onclick="loadPreset(this)">EPR (Финландия)</button>
+      </div>
+
+      <div class="param-row">
+        <label>Overnight CAPEX (изчислен)</label>
+        <span class="param-derived" id="p-capex-display">—</span>
+      </div>
+      <div class="param-row">
+        <label>OPEX (EUR/MWh)</label>
+        <input type="number" id="p-opex" value="45" min="5" max="150" step="1" oninput="recalc()">
+      </div>
+      <div class="param-row">
+        <label>Мощност (MW)</label>
+        <input type="number" id="p-mw" value="1000" min="100" max="5000" step="100" oninput="recalc()">
+      </div>
+      <div class="param-row">
+        <label>Срок на живот (год.)</label>
+        <input type="number" id="p-life" value="60" min="20" max="80" step="5" oninput="recalc()">
+      </div>
+      <div class="param-row">
+        <label>WACC (%)</label>
+        <input type="number" id="p-wacc" value="7.0" min="2" max="15" step="0.5" oninput="recalc()">
+      </div>
+
+      <hr class="divider">
+
+      <div class="slider-row">
+        <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
+        <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
+               oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
+      </div>
+      <div class="slider-row">
+        <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
+        <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
+               oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="content">
 
   <!-- Total financed cost slider -->
   <div class="cost-banner">
+    <button class="gear-btn" onclick="openModal()" title="Параметри">⚙</button>
     <div class="cost-banner-title">Общ разход с финансиране — обща стойност на проекта след лихви</div>
     <div class="cost-slider-row">
       <span class="cost-bound">1 Млрд.</span>
-      <input type="range" id="cost-slider" min="1" max="30" step="0.25" value="14" oninput="onCostSlider()">
-      <span class="cost-bound">30 Млрд. EUR</span>
+      <input type="range" id="cost-slider" min="1" max="20" step="0.25" value="11" oninput="onCostSlider()">
+      <span class="cost-bound">20 Млрд. EUR</span>
     </div>
     <div class="cost-readout">
-      <span class="cost-readout-main" id="cr-total">14.0</span>
+      <span class="cost-readout-main" id="cr-total">11.0</span>
       <span class="cost-readout-unit">Млрд. EUR</span>
       <span class="cost-readout-sep">→</span>
       <span class="cost-readout-secondary">Overnight: <strong id="cr-overnight">—</strong> EUR/kW</span>
@@ -182,9 +263,9 @@ header {
     </div>
   </div>
 
-  <!-- Note -->
+  <!-- Warning note -->
   <div style="background:#fffbe6;border:1px solid #e8d84a;border-left:4px solid #c8a800;border-radius:4px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;color:#5a4800;line-height:1.5">
-    <strong>⚠ Бележка:</strong> Калкулациите предполагат <strong>замяна на съществуващите мощности</strong> — т.е. новите блокове заместват изведените. При <strong>добавяне на два нови блока към съществуващите</strong> финансовият резултат ще бъде значително по-лош: пазарът ще е наситен с допълнителна ядрена мощност, цените ще паднат и себестойността ще остане непокрита за много повече часове.
+    <strong>⚠ Бележка:</strong> Калкулациите предполагат <strong>замяна на съществуващите мощности</strong> — новите блокове заместват изведените. При добавяне на нови блокове към съществуващите финансовият резултат ще бъде значително по-лош: пазарът ще е наситен с допълнителна ядрена мощност, цените ще паднат и себестойността ще остане непокрита за много повече часове.
   </div>
 
   <!-- Stat cards -->
@@ -207,13 +288,13 @@ header {
       <div class="stat-sub" id="s-capex-nointerest-sub"></div>
     </div>
     <div class="stat-card green" id="card-above">
-      <div class="stat-label">Часове над себестойност (LCOE)</div>
+      <div class="stat-label">Часове над себестойност</div>
       <div class="stat-val" id="s-above">—</div>
       <div class="stat-unit">ч. / 2 год.</div>
       <div class="stat-sub" id="s-above-pct"></div>
     </div>
     <div class="stat-card red" id="card-below">
-      <div class="stat-label">Часове под себестойност (LCOE)</div>
+      <div class="stat-label">Часове под себестойност</div>
       <div class="stat-val" id="s-below">—</div>
       <div class="stat-unit">ч. / 2 год.</div>
       <div class="stat-sub" id="s-below-pct"></div>
@@ -230,94 +311,46 @@ header {
     </div>
   </div>
 
-  <div class="main-cols">
-
-    <!-- Left column -->
-    <div>
-      <div class="panel">
-        <div class="panel-header">Разбивка на себестойността (LCOE — Lazard методология)</div>
-        <div class="breakdown-body">
-          <div class="brow derived"><span>▶ Общ разход с финансиране</span><span id="b-total-financed">—</span></div>
-          <div class="brow"><span>− Лихви по строителство (IDC)</span><span id="b-idc">—</span></div>
-          <div class="brow derived"><span>▶ Overnight CAPEX (изчислен)</span><span id="b-overnight">—</span></div>
-          <div class="brow"><span>Фактор на амортизация (CRF)</span><span id="b-crf">—</span></div>
-          <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
-          <div class="brow"><span>OPEX компонент</span><span id="b-fom-lcoe">—</span></div>
-          <div class="brow total"><span>Обща себестойност (LCOE)</span><span id="b-total-lcoe">—</span></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-header">Пазарни цени — BG (Ember hourly, последните 2 год.)</div>
-        <div class="price-panel-body">
-          <div class="no-data-msg" id="price-no-data">Зарежда данни от data branch…</div>
-          <div class="price-stats" id="price-stats" style="display:none">
-            <div class="price-stat-row"><span>Средна цена</span><span id="ps-avg">—</span></div>
-            <div class="price-stat-row"><span>Медианна цена</span><span id="ps-med">—</span></div>
-            <div class="price-stat-row"><span>Минимална</span><span id="ps-min">—</span></div>
-            <div class="price-stat-row"><span>Максимална</span><span id="ps-max">—</span></div>
-            <div class="price-stat-row"><span>Часове с цена &gt; 100 EUR/MWh</span><span id="ps-gt100">—</span></div>
-            <div class="price-stat-row"><span>Часове с цена &gt; 150 EUR/MWh</span><span id="ps-gt150">—</span></div>
-            <div class="price-stat-row"><span>Часове с отрицателна цена</span><span id="ps-neg">—</span></div>
-            <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
-          </div>
-        </div>
-      </div>
+  <!-- Breakdown -->
+  <div class="panel">
+    <div class="panel-header">Разбивка на себестойността (LCOE — Lazard методология)</div>
+    <div class="breakdown-body">
+      <div class="brow derived"><span>▶ Общ разход с финансиране</span><span id="b-total-financed">—</span></div>
+      <div class="brow"><span>− Лихви по строителство (IDC)</span><span id="b-idc">—</span></div>
+      <div class="brow derived"><span>▶ Overnight CAPEX (изчислен)</span><span id="b-overnight">—</span></div>
+      <div class="brow"><span>Фактор на амортизация (CRF)</span><span id="b-crf">—</span></div>
+      <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
+      <div class="brow"><span>OPEX компонент</span><span id="b-fom-lcoe">—</span></div>
+      <div class="brow total"><span>Обща себестойност (LCOE)</span><span id="b-total-lcoe">—</span></div>
     </div>
-
-    <!-- Right: parameters -->
-    <div class="panel" style="align-self:start">
-      <div class="panel-header">Параметри на проекта</div>
-      <div class="params-body">
-
-        <div class="preset-strip">
-          <button class="preset-btn active" data-preset="kozloduy" onclick="loadPreset(this)">АЕЦ Козлодуй</button>
-          <button class="preset-btn" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
-          <button class="preset-btn" data-preset="epr" onclick="loadPreset(this)">EPR (Финландия)</button>
-        </div>
-        <div style="font-size:0.7rem;color:#6a80a0;margin-bottom:10px;line-height:1.5;padding:6px 8px;background:#f5f8fc;border-radius:3px;border-left:3px solid #b0c8e0">
-          Стойностите по подразбиране са базирани на <strong>полския проект AP1000</strong> (~$12 млрд. на блок → ~€7 млрд., 2 блока = €14 млрд.). OPEX е по публични данни на <strong>АЕЦ Козлодуй</strong>.
-        </div>
-
-        <div class="param-row">
-          <label>Overnight CAPEX (изчислен)</label>
-          <span class="param-derived" id="p-capex-display">—</span>
-        </div>
-
-        <div class="param-row">
-          <label>OPEX (EUR/MWh)</label>
-          <input type="number" id="p-opex" value="45" min="5" max="150" step="1" oninput="recalc()">
-        </div>
-        <div class="param-row">
-          <label>Мощност (MW)</label>
-          <input type="number" id="p-mw" value="2000" min="100" max="5000" step="100" oninput="recalc()">
-        </div>
-        <div class="param-row">
-          <label>Срок на живот (год.)</label>
-          <input type="number" id="p-life" value="60" min="20" max="80" step="5" oninput="recalc()">
-        </div>
-        <div class="param-row">
-          <label>WACC (%)</label>
-          <input type="number" id="p-wacc" value="7.0" min="2" max="15" step="0.5" oninput="recalc()">
-        </div>
-
-        <hr class="divider">
-
-        <div class="slider-row">
-          <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
-          <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
-                 oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
-        </div>
-        <div class="slider-row">
-          <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
-          <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
-                 oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
-        </div>
-
-      </div>
-    </div>
-
   </div>
+
+  <!-- Market prices -->
+  <div class="panel">
+    <div class="panel-header">Пазарни цени — BG (Ember hourly, последните 2 год.)</div>
+    <div class="price-panel-body">
+      <div class="no-data-msg" id="price-no-data">Зарежда данни от data branch…</div>
+      <div id="price-stats" style="display:none">
+        <div class="price-stat-row"><span>Средна цена</span><span id="ps-avg">—</span></div>
+        <div class="price-stat-row"><span>Медианна цена</span><span id="ps-med">—</span></div>
+        <div class="price-stat-row"><span>Минимална</span><span id="ps-min">—</span></div>
+        <div class="price-stat-row"><span>Максимална</span><span id="ps-max">—</span></div>
+        <div class="price-stat-row"><span>Часове с цена &gt; 100 EUR/MWh</span><span id="ps-gt100">—</span></div>
+        <div class="price-stat-row"><span>Часове с цена &gt; 150 EUR/MWh</span><span id="ps-gt150">—</span></div>
+        <div class="price-stat-row"><span>Часове с отрицателна цена</span><span id="ps-neg">—</span></div>
+        <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom note -->
+  <div class="bottom-note">
+    <strong>Източници на стойностите по подразбиране:</strong>
+    Общият разход с финансиране е базиран на <strong>полския проект AP1000</strong> (~$12 млрд. ≈ €11 млрд. на блок при текущ курс).
+    OPEX е по публично достъпни данни на <strong>АЕЦ Козлодуй</strong>.
+    Методологията следва <strong>Lazard LCOE</strong> с IDC изчислен при средно усвояване на капитала по време на строителството.
+  </div>
+
 </div>
 
 <script>
@@ -328,10 +361,13 @@ const BASE = location.hostname === 'localhost'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
 const PRESETS = {
-  kozloduy: { totalBn: 14.0, opex: 45, mw: 2000, life: 60, wacc: 7.0, cf: 90, constr: 12 },
+  kozloduy: { totalBn: 11.0, opex: 45, mw: 1000, life: 60, wacc: 7.0, cf: 90, constr: 12 },
   ap1000:   { totalBn: 11.0, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
   epr:      { totalBn: 15.0, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
 };
+
+function openModal()  { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
 function loadPreset(btn) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
@@ -367,11 +403,9 @@ function calcFromOvernight(overnight, opex, life, waccPct, cfPct, constrYr) {
 function overnightFromTotal(totalBnEur, mw, waccPct, constrYr) {
   const r         = waccPct / 100;
   const idcFactor = Math.pow(1 + r, constrYr / 2) - 1;
-  const totalPerKw = (totalBnEur * 1e9) / (mw * 1000);
-  return totalPerKw / (1 + idcFactor);
+  return (totalBnEur * 1e9) / (mw * 1000) / (1 + idcFactor);
 }
 
-// ── Price data ────────────────────────────────────────────────────────────────
 let priceHours = null;
 
 function rollingWindow(data) {
@@ -400,7 +434,6 @@ function computePriceStats(hours) {
 function fmtEur(v) { return v.toFixed(1) + ' EUR/MWh'; }
 function fmtBn(v)  { return v.toFixed(2) + ' Млрд. EUR'; }
 
-// ── Recalc ────────────────────────────────────────────────────────────────────
 function recalc() {
   const totalBn = +document.getElementById('cost-slider').value;
   const opex    = +document.getElementById('p-opex').value;
@@ -410,61 +443,54 @@ function recalc() {
   const cf      = +document.getElementById('p-cf').value;
   const constr  = +document.getElementById('p-constr').value;
 
-  const overnight = overnightFromTotal(totalBn, mw, wacc, constr);
-  const r = calcFromOvernight(overnight, opex, life, wacc, cf, constr);
+  const overnight   = overnightFromTotal(totalBn, mw, wacc, constr);
+  const r           = calcFromOvernight(overnight, opex, life, wacc, cf, constr);
   const overnightBn = overnight * mw * 1000 / 1e9;
-  const idcBn = r.idc * mw * 1000 / 1e9;
+  const idcBn       = r.idc * mw * 1000 / 1e9;
 
-  // Banner readout
   document.getElementById('cr-total').textContent     = totalBn.toFixed(2);
   document.getElementById('cr-overnight').textContent = overnight.toFixed(0);
   document.getElementById('cr-lcoe').textContent      = r.lcoe.toFixed(1);
 
-  // Breakdown
   document.getElementById('b-total-financed').textContent = fmtBn(totalBn);
-  document.getElementById('b-idc').textContent      = '−' + idcBn.toFixed(2) + ' Млрд. EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
-  document.getElementById('b-overnight').textContent = overnight.toFixed(0) + ' EUR/kW  (' + overnightBn.toFixed(2) + ' Млрд. EUR)';
-  document.getElementById('b-crf').textContent      = (r.crf * 100).toFixed(2) + '%';
-  document.getElementById('b-cap-lcoe').textContent  = r.lcoeCap.toFixed(1) + ' EUR/MWh';
-  document.getElementById('b-fom-lcoe').textContent  = r.lcoeOpex.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-idc').textContent       = '−' + idcBn.toFixed(2) + ' Млрд. EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
+  document.getElementById('b-overnight').textContent  = overnight.toFixed(0) + ' EUR/kW  (' + overnightBn.toFixed(2) + ' Млрд. EUR)';
+  document.getElementById('b-crf').textContent       = (r.crf * 100).toFixed(2) + '%';
+  document.getElementById('b-cap-lcoe').textContent   = r.lcoeCap.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-fom-lcoe').textContent   = r.lcoeOpex.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-total-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
 
-  // Stat cards
-  document.getElementById('s-lcoe').textContent          = r.lcoe.toFixed(1);
-  document.getElementById('s-overnight').textContent     = overnight.toFixed(0);
-  document.getElementById('s-overnight-bn').textContent  = overnightBn.toFixed(2) + ' Млрд. за ' + mw + ' MW';
+  document.getElementById('s-lcoe').textContent             = r.lcoe.toFixed(1);
+  document.getElementById('s-overnight').textContent        = overnight.toFixed(0);
+  document.getElementById('s-overnight-bn').textContent     = overnightBn.toFixed(2) + ' Млрд. EUR';
   document.getElementById('s-capex-nointerest').textContent = overnightBn.toFixed(2);
   document.getElementById('s-capex-nointerest-sub').textContent = overnight.toFixed(0) + ' EUR/kW  IDC: ' + idcBn.toFixed(2) + ' Млрд.';
-  document.getElementById('p-capex-display').textContent  = overnight.toFixed(0) + ' EUR/kW';
+  document.getElementById('p-capex-display').textContent    = overnight.toFixed(0) + ' EUR/kW';
 
-  // Profitability
-  let marketFitPct = 0;
   if (priceHours && priceHours.length) {
-    const cfFrac = cf / 100;
-    const total  = priceHours.length;
-    const above  = priceHours.filter(h => h.p >= r.lcoe).length;
-    const below  = total - above;
-    marketFitPct = above / total * 100;
+    const cfFrac   = cf / 100;
+    const total    = priceHours.length;
+    const above    = priceHours.filter(h => h.p >= r.lcoe).length;
+    const below    = total - above;
     const totalEur = priceHours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
-    const span   = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
-    const annEur = totalEur / span;
+    const span     = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
+    const annEur   = totalEur / span;
 
     document.getElementById('s-above').textContent     = above.toLocaleString('bg-BG');
     document.getElementById('s-below').textContent     = below.toLocaleString('bg-BG');
-    document.getElementById('s-above-pct').textContent = (marketFitPct).toFixed(0) + '% от часовете';
+    document.getElementById('s-above-pct').textContent = (above / total * 100).toFixed(0) + '% от часовете';
     document.getElementById('s-below-pct').textContent = (below / total * 100).toFixed(0) + '% от часовете';
-    document.getElementById('s-pnl').textContent  = (annEur / 1e6).toFixed(1);
+    document.getElementById('s-pnl').textContent       = (annEur / 1e6).toFixed(1);
 
-    // Gradient P&L card
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
-    const ratio = Math.min(1, Math.abs(annEur) / (annRevenue * 0.5));
-    const pnlCard = document.getElementById('card-pnl');
+    const ratio      = Math.min(1, Math.abs(annEur) / (annRevenue * 0.5));
+    const pnlCard    = document.getElementById('card-pnl');
     if (annEur >= 0) {
-      pnlCard.style.background = `rgb(${Math.round(255 - ratio*119)},${Math.round(255 - ratio*117)},${Math.round(255 - ratio*229)})`;
+      pnlCard.style.background     = `rgb(${Math.round(255-ratio*119)},${Math.round(255-ratio*117)},${Math.round(255-ratio*229)})`;
       pnlCard.style.borderTopColor = '#1a8a1a';
       pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#1a8a1a';
     } else {
-      pnlCard.style.background = `rgb(255,${Math.round(255 - ratio*221)},${Math.round(255 - ratio*255)})`;
+      pnlCard.style.background     = `rgb(255,${Math.round(255-ratio*221)},${Math.round(255-ratio*255)})`;
       pnlCard.style.borderTopColor = '#cc2200';
       pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : '#cc2200';
     }
@@ -472,10 +498,8 @@ function recalc() {
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
   }
-
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   recalc();
   try {
