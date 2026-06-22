@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ядрена АЕЦ — LCOE Анализ</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; }
+
+header {
+  background: linear-gradient(180deg, #004494 0%, #003070 100%);
+  color: #fff;
+  border-bottom: 3px solid #ffd700;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-inner {
+  max-width: 1400px; margin: 0 auto; padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.logo-area { display: flex; align-items: center; gap: 14px; }
+.logo-circle {
+  width: 48px; height: 48px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 0.75rem; color: #003070; flex-shrink: 0; letter-spacing: -0.02em;
+}
+.logo-text h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.03em; }
+.logo-text p  { font-size: 0.68rem; opacity: 0.6; margin-top: 2px; }
+.back-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.8rem; }
+.back-link:hover { color: #ffd700; }
+#data-status { font-size: 0.72rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+.content { max-width: 1400px; margin: 0 auto; padding: 14px 20px 30px; }
+
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px; margin-bottom: 14px;
+}
+.stat-card {
+  background: #fff; border: 1px solid #c5d8ee; border-top: 4px solid #004494;
+  border-radius: 4px; padding: 8px 10px 7px;
+}
+.stat-card.green  { border-top-color: #1a8a1a; }
+.stat-card.red    { border-top-color: #cc2200; }
+.stat-card.orange { border-top-color: #e07000; }
+.stat-card.purple { border-top-color: #7b3fa0; }
+.stat-label { font-size: 0.62rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-val   { font-size: 1.35rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
+.stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
+.stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
+
+.main-cols {
+  display: grid; grid-template-columns: 1fr 360px; gap: 12px;
+}
+@media (max-width: 900px) { .main-cols { grid-template-columns: 1fr; } }
+
+.panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
+.panel + .panel { margin-top: 10px; }
+.panel-header {
+  background: #004494; color: #fff; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; padding: 7px 12px;
+}
+
+/* ── Parameters pane ── */
+.params-body { padding: 12px 14px; }
+.param-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 8px;
+}
+.param-row label { font-size: 0.78rem; color: #3a5070; flex: 1; }
+.param-row input[type="number"] {
+  width: 90px; padding: 4px 6px; border: 1px solid #b0c8e0;
+  border-radius: 3px; font-size: 0.85rem; text-align: right; color: #1a2233;
+}
+.param-row input[type="number"]:focus { outline: 2px solid #004494; border-color: #004494; }
+
+.slider-row { margin: 10px 0 6px; }
+.slider-row label { font-size: 0.78rem; color: #3a5070; display: block; margin-bottom: 4px; }
+.slider-row input[type="range"] { width: 100%; accent-color: #004494; }
+
+.lcoe-breakdown {
+  margin-top: 14px; border-top: 1px solid #d0e0f0; padding-top: 10px;
+}
+.lcoe-calc-title { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.lcoe-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.8rem; color: #3a5070; padding: 2px 0;
+}
+.lcoe-row span:last-child { font-weight: 600; color: #1a2233; }
+.lcoe-total {
+  border-top: 1px solid #c5d8ee; margin-top: 4px; padding-top: 4px;
+  font-weight: 700; color: #003070 !important; font-size: 0.88rem;
+}
+.lcoe-total span { color: #003070 !important; }
+
+.section-divider {
+  margin: 10px 0; border: none; border-top: 1px solid #d0e0f0;
+}
+
+/* ── Sensitivity slider ── */
+.sens-body { padding: 12px 16px; }
+.sens-body label { font-size: 0.78rem; color: #3a5070; display: block; margin-bottom: 4px; }
+.slider-bounds { display: flex; align-items: center; gap: 10px; }
+.slider-bounds span { font-size: 0.72rem; color: #7a8aaa; white-space: nowrap; }
+.slider-bounds input[type="range"] { flex: 1; accent-color: #7b3fa0; }
+.sens-result { text-align: center; font-size: 0.82rem; color: #1a2233; margin-top: 6px; }
+.sens-result strong { font-size: 1.05rem; color: #7b3fa0; }
+
+.chart-wrap { padding: 8px 6px 4px; }
+
+.preset-strip {
+  display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.preset-btn {
+  padding: 4px 10px; font-size: 0.75rem; border: 1px solid #b0c8e0;
+  border-radius: 3px; background: #f0f5fc; color: #2a4060; cursor: pointer;
+  transition: background 0.12s;
+}
+.preset-btn:hover { background: #d8e8f8; }
+.preset-btn.active { background: #004494; color: #fff; border-color: #004494; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-circle">АЕЦ<br>LCOE</div>
+      <div class="logo-text">
+        <h1>Ядрена АЕЦ — LCOE Анализ</h1>
+        <p>Икономически анализ на нова ядрена мощност при реални пазарни цени — неофициален</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <a href="index.html" class="back-link">← Мрежов монитор</a>
+      <div id="data-status">Зарежда данни…</div>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Изчислен LCOE</div>
+      <div class="stat-val" id="s-lcoe">—</div>
+      <div class="stat-unit">EUR/MWh</div>
+    </div>
+    <div class="stat-card green" id="card-above">
+      <div class="stat-label">Часове над LCOE</div>
+      <div class="stat-val" id="s-above">—</div>
+      <div class="stat-unit">ч. / 2 год.</div>
+      <div class="stat-sub" id="s-above-pct"></div>
+    </div>
+    <div class="stat-card red" id="card-below">
+      <div class="stat-label">Часове под LCOE</div>
+      <div class="stat-val" id="s-below">—</div>
+      <div class="stat-unit">ч. / 2 год.</div>
+      <div class="stat-sub" id="s-below-pct"></div>
+    </div>
+    <div class="stat-card orange" id="card-pnl">
+      <div class="stat-label">Годишен П&Л</div>
+      <div class="stat-val" id="s-pnl">—</div>
+      <div class="stat-unit">М EUR / год.</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">П&Л за 2 год.</div>
+      <div class="stat-val" id="s-pnl2">—</div>
+      <div class="stat-unit">М EUR</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Средна цена (2г.)</div>
+      <div class="stat-val" id="s-avg-price">—</div>
+      <div class="stat-unit">EUR/MWh</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Данни до</div>
+      <div class="stat-val" id="s-updated" style="font-size:0.95rem">—</div>
+      <div class="stat-unit">Ember hourly</div>
+    </div>
+  </div>
+
+  <div class="main-cols">
+
+    <!-- ── Left column: charts ── -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">Месечни средни цени vs LCOE — последните 24 месеца</div>
+        <div class="chart-wrap"><div id="chart-monthly" style="height:280px"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Годишен П&Л (MW × CF × Δцена) по години</div>
+        <div class="chart-wrap"><div id="chart-yearly" style="height:180px"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Анализ на чувствителност — LCOE сценарий</div>
+        <div class="sens-body">
+          <label>Преместете плъзгача за да видите как П&Л се мени при различен LCOE:</label>
+          <div class="slider-bounds">
+            <span>40</span>
+            <input type="range" id="lcoe-slider" min="40" max="300" step="1" value="100">
+            <span>300 EUR/MWh</span>
+          </div>
+          <div class="sens-result">
+            Сценарий LCOE: <strong id="slider-lcoe-val">—</strong> EUR/MWh
+            &nbsp;→&nbsp; Годишен П&Л: <strong id="slider-pnl-val">—</strong> М EUR/год.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right column: parameters ── -->
+    <div class="panel" style="align-self:start">
+      <div class="panel-header">Параметри на проекта</div>
+      <div class="params-body">
+
+        <div class="preset-strip">
+          <button class="preset-btn active" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
+          <button class="preset-btn" data-preset="epr" onclick="loadPreset(this)">EPR (Финландия)</button>
+          <button class="preset-btn" data-preset="smr" onclick="loadPreset(this)">SMR (оптимист.)</button>
+        </div>
+
+        <div class="param-row">
+          <label>CAPEX (EUR/kW overnight)</label>
+          <input type="number" id="p-capex" value="7000" min="500" max="20000" step="100" oninput="recalc()">
+        </div>
+        <div class="param-row">
+          <label>Fixed OPEX (EUR/kW/год.)</label>
+          <input type="number" id="p-fopex" value="135" min="20" max="500" step="5" oninput="recalc()">
+        </div>
+        <div class="param-row">
+          <label>Variable OPEX (EUR/MWh)</label>
+          <input type="number" id="p-vopex" value="4.5" min="0" max="30" step="0.5" oninput="recalc()">
+        </div>
+        <div class="param-row">
+          <label>Мощност (MW)</label>
+          <input type="number" id="p-mw" value="1000" min="100" max="5000" step="100" oninput="recalc()">
+        </div>
+        <div class="param-row">
+          <label>Срок на живот (год.)</label>
+          <input type="number" id="p-life" value="60" min="20" max="80" step="5" oninput="recalc()">
+        </div>
+        <div class="param-row">
+          <label>WACC (%)</label>
+          <input type="number" id="p-wacc" value="8.0" min="2" max="15" step="0.5" oninput="recalc()">
+        </div>
+
+        <hr class="section-divider">
+
+        <div class="slider-row">
+          <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
+          <input type="range" id="p-cf" min="50" max="100" step="1" value="90" oninput="onCfChange()">
+        </div>
+        <div class="slider-row">
+          <label>Строителство: <strong id="lbl-constr">10 год.</strong></label>
+          <input type="range" id="p-constr" min="5" max="20" step="1" value="10" oninput="onConstrChange()">
+        </div>
+
+        <hr class="section-divider">
+
+        <div class="lcoe-breakdown">
+          <div class="lcoe-calc-title">LCOE разбивка (Lazard методология)</div>
+          <div class="lcoe-row"><span>Overnight CAPEX + IDC</span><span id="b-cap-total">—</span></div>
+          <div class="lcoe-row"><span>Амортизация (CRF)</span><span id="b-crf">—</span></div>
+          <div class="lcoe-row"><span>Капиталов компонент</span><span id="b-cap-lcoe">— EUR/MWh</span></div>
+          <div class="lcoe-row"><span>Fixed O&M компонент</span><span id="b-fom-lcoe">— EUR/MWh</span></div>
+          <div class="lcoe-row"><span>Variable O&M</span><span id="b-vom-lcoe">— EUR/MWh</span></div>
+          <div class="lcoe-row lcoe-total"><span>Общ LCOE</span><span id="b-total-lcoe">—</span></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const BASE = location.hostname === 'localhost'
+  ? ''
+  : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+
+// ── Presets ──────────────────────────────────────────────────────────────────
+const PRESETS = {
+  ap1000: { capex: 7000, fopex: 135, vopex: 4.5, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10,
+             label: 'AP1000 (Полша) — Westinghouse' },
+  epr:    { capex: 9500, fopex: 150, vopex: 5.0, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14,
+             label: 'EPR (Финландия/Олкилуото)' },
+  smr:    { capex: 5000, fopex: 100, vopex: 6.0, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7,
+             label: 'SMR — оптимистичен сценарий' },
+};
+
+function loadPreset(btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const p = PRESETS[btn.dataset.preset];
+  document.getElementById('p-capex').value = p.capex;
+  document.getElementById('p-fopex').value = p.fopex;
+  document.getElementById('p-vopex').value = p.vopex;
+  document.getElementById('p-mw').value    = p.mw;
+  document.getElementById('p-life').value  = p.life;
+  document.getElementById('p-wacc').value  = p.wacc;
+  document.getElementById('p-cf').value    = p.cf;
+  document.getElementById('p-constr').value = p.constr;
+  document.getElementById('lbl-cf').textContent = p.cf + '%';
+  document.getElementById('lbl-constr').textContent = p.constr + ' год.';
+  recalc();
+}
+
+function onCfChange() {
+  const v = +document.getElementById('p-cf').value;
+  document.getElementById('lbl-cf').textContent = v + '%';
+  recalc();
+}
+function onConstrChange() {
+  const v = +document.getElementById('p-constr').value;
+  document.getElementById('lbl-constr').textContent = v + ' год.';
+  recalc();
+}
+
+// ── LCOE engine ──────────────────────────────────────────────────────────────
+function calcLCOE(capex, fopex, vopex, life, waccPct, cfPct, constrYr) {
+  const r  = waccPct / 100;
+  const cf = cfPct  / 100;
+  // Interest During Construction: assume uniform draw, effective mid-point compounding
+  const idc_factor = Math.pow(1 + r, constrYr / 2) - 1;
+  const capex_total = capex * (1 + idc_factor);        // EUR/kW (with IDC)
+  // Capital Recovery Factor
+  const crf = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
+  const ann_cap  = capex_total * crf;                  // EUR/kW/yr
+  const ann_hrs  = cf * 8760;                          // h/yr
+  const lcoe_cap = ann_cap / ann_hrs * 1000;           // EUR/MWh (×1000: kW→MW basis cancel)
+  // ↑ capex is EUR/kW, ann_hrs is h/yr → lcoe_cap = EUR/kW/yr / (h/yr) = EUR/kWh × 1000 = EUR/MWh
+  const lcoe_fom = (fopex / ann_hrs) * 1000;          // EUR/MWh
+  const lcoe     = lcoe_cap + lcoe_fom + vopex;
+  return { capex_total, crf, lcoe_cap, lcoe_fom, lcoe_vom: vopex, lcoe };
+}
+
+// ── Price data ────────────────────────────────────────────────────────────────
+let priceData = null;  // {t: [unix], p: [eur/mwh]}
+
+// Returns data for the rolling 2-year window
+function rollingWindow() {
+  if (!priceData) return [];
+  const now    = Date.now() / 1000;
+  const cutoff = now - 2 * 365.25 * 86400;
+  const res = [];
+  for (let i = 0; i < priceData.t.length; i++) {
+    if (priceData.t[i] >= cutoff) {
+      res.push({ t: priceData.t[i], p: priceData.p[i] });
+    }
+  }
+  return res;
+}
+
+// Monthly buckets from rolling window
+function monthlyAvg(hours) {
+  const months = {};
+  for (const h of hours) {
+    const d   = new Date(h.t * 1000);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (!months[key]) months[key] = [];
+    months[key].push(h.p);
+  }
+  return Object.entries(months)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, ps]) => ({ month: k, avg: ps.reduce((s, v) => s + v, 0) / ps.length }));
+}
+
+// Yearly P&L (EUR total) for a given LCOE and plant MW/CF
+function yearlyPnL(hours, lcoe, mw, cfPct) {
+  const cf = cfPct / 100;
+  const byYear = {};
+  for (const h of hours) {
+    const y = new Date(h.t * 1000).getUTCFullYear();
+    if (!byYear[y]) byYear[y] = 0;
+    byYear[y] += (h.p - lcoe) * mw * cf * 1;  // 1h intervals × MW × CF = MWh
+  }
+  return Object.entries(byYear).sort(([a], [b]) => +a - +b)
+    .map(([yr, eur]) => ({ yr: +yr, eur }));
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const PLOTLY_CFG = { displayModeBar: false, responsive: true };
+const PLOTLY_LAY_BASE = { margin: { l: 50, r: 10, t: 20, b: 40 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff',
+  font: { family: 'Arial', size: 11, color: '#3a5070' },
+  xaxis: { tickfont: { size: 10 }, gridcolor: '#e8f0f8' },
+  yaxis: { gridcolor: '#e8f0f8' } };
+
+let lcoeForSlider = 100;
+
+function renderMonthly(months, lcoe) {
+  const colors = months.map(m => m.avg >= lcoe ? '#2a9a2a' : '#cc3300');
+  const trace = {
+    x: months.map(m => m.month), y: months.map(m => +m.avg.toFixed(1)),
+    type: 'bar', marker: { color: colors },
+    name: 'Средна цена', hovertemplate: '%{x}: %{y:.1f} EUR/MWh<extra></extra>',
+  };
+  const lcoe_line = {
+    x: [months[0]?.month, months[months.length - 1]?.month],
+    y: [lcoe, lcoe],
+    type: 'scatter', mode: 'lines',
+    line: { color: '#cc0000', width: 2, dash: 'dash' },
+    name: `LCOE ${lcoe.toFixed(0)} EUR/MWh`,
+    hovertemplate: `LCOE: ${lcoe.toFixed(0)} EUR/MWh<extra></extra>`,
+  };
+  Plotly.react('chart-monthly', [trace, lcoe_line], {
+    ...PLOTLY_LAY_BASE,
+    yaxis: { ...PLOTLY_LAY_BASE.yaxis, title: { text: 'EUR/MWh', font: { size: 10 } } },
+    legend: { orientation: 'h', y: -0.18, font: { size: 10 } },
+    margin: { l: 50, r: 10, t: 20, b: 60 },
+  }, PLOTLY_CFG);
+}
+
+function renderYearly(yrPnL) {
+  const colors = yrPnL.map(d => d.eur >= 0 ? '#2a9a2a' : '#cc3300');
+  const mEur   = yrPnL.map(d => +(d.eur / 1e6).toFixed(1));
+  Plotly.react('chart-yearly', [{
+    x: yrPnL.map(d => String(d.yr)), y: mEur,
+    type: 'bar', marker: { color: colors },
+    hovertemplate: '%{x}: %{y:.1f} М EUR<extra></extra>',
+  }], {
+    ...PLOTLY_LAY_BASE,
+    yaxis: { ...PLOTLY_LAY_BASE.yaxis, title: { text: 'М EUR', font: { size: 10 } },
+      zerolinecolor: '#888', zerolinewidth: 1 },
+    margin: { l: 55, r: 10, t: 10, b: 40 },
+  }, PLOTLY_CFG);
+}
+
+function fmt(n, dec = 1) { return n.toFixed(dec).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+function updateStats(hours, lcoe, mw, cfPct) {
+  const cf   = cfPct / 100;
+  const above = hours.filter(h => h.p >= lcoe).length;
+  const below = hours.filter(h => h.p <  lcoe).length;
+  const total = hours.length;
+  const totalEur = hours.reduce((s, h) => s + (h.p - lcoe) * mw * cf, 0);
+  // hours covers 2 years; scale to per year
+  const totalYears = (hours[hours.length - 1]?.t - hours[0]?.t) / (365.25 * 86400) || 2;
+  const annualEur  = totalEur / totalYears;
+  const avgPrice   = total ? hours.reduce((s, h) => s + h.p, 0) / total : 0;
+
+  document.getElementById('s-lcoe').textContent   = lcoe.toFixed(1);
+  document.getElementById('s-above').textContent  = above.toLocaleString('bg-BG');
+  document.getElementById('s-below').textContent  = below.toLocaleString('bg-BG');
+  document.getElementById('s-above-pct').textContent = total ? `${(above / total * 100).toFixed(0)}% от часовете` : '';
+  document.getElementById('s-below-pct').textContent = total ? `${(below / total * 100).toFixed(0)}% от часовете` : '';
+  document.getElementById('s-pnl').textContent    = (annualEur / 1e6).toFixed(1);
+  document.getElementById('s-pnl2').textContent   = (totalEur  / 1e6).toFixed(1);
+  document.getElementById('s-avg-price').textContent = avgPrice.toFixed(1);
+
+  // colour P&L card
+  const pnlCard = document.getElementById('card-pnl');
+  pnlCard.classList.toggle('green', annualEur >= 0);
+  pnlCard.classList.toggle('red',   annualEur <  0);
+  pnlCard.classList.remove('orange');
+  if (annualEur >= 0) pnlCard.style.borderTopColor = '';
+  else pnlCard.style.borderTopColor = '';
+}
+
+function updateBreakdown({ capex_total, crf, lcoe_cap, lcoe_fom, lcoe_vom, lcoe }) {
+  document.getElementById('b-cap-total').textContent = fmt(capex_total, 0) + ' EUR/kW';
+  document.getElementById('b-crf').textContent        = (crf * 100).toFixed(2) + '%';
+  document.getElementById('b-cap-lcoe').textContent  = lcoe_cap.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-fom-lcoe').textContent  = lcoe_fom.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-vom-lcoe').textContent  = lcoe_vom.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-total-lcoe').textContent = lcoe.toFixed(1) + ' EUR/MWh';
+}
+
+function updateSensPanel(lcoe, mw, cfPct) {
+  const hours = rollingWindow();
+  const cf = cfPct / 100;
+  const sliderLcoe = +document.getElementById('lcoe-slider').value;
+  const totalEur   = hours.reduce((s, h) => s + (h.p - sliderLcoe) * mw * cf, 0);
+  const totalYears = (hours[hours.length - 1]?.t - hours[0]?.t) / (365.25 * 86400) || 2;
+  const annEur     = totalEur / totalYears;
+  document.getElementById('slider-lcoe-val').textContent = sliderLcoe;
+  document.getElementById('slider-pnl-val').textContent  = (annEur / 1e6).toFixed(1);
+}
+
+// ── Main recalc ───────────────────────────────────────────────────────────────
+function recalc() {
+  const capex  = +document.getElementById('p-capex').value;
+  const fopex  = +document.getElementById('p-fopex').value;
+  const vopex  = +document.getElementById('p-vopex').value;
+  const mw     = +document.getElementById('p-mw').value;
+  const life   = +document.getElementById('p-life').value;
+  const wacc   = +document.getElementById('p-wacc').value;
+  const cf     = +document.getElementById('p-cf').value;
+  const constr = +document.getElementById('p-constr').value;
+
+  const res  = calcLCOE(capex, fopex, vopex, life, wacc, cf, constr);
+  const lcoe = res.lcoe;
+  lcoeForSlider = lcoe;
+
+  updateBreakdown(res);
+
+  // Sync slider to new LCOE
+  document.getElementById('lcoe-slider').value = Math.round(lcoe);
+
+  const hours  = rollingWindow();
+  const months = monthlyAvg(hours);
+  const yrPnL  = yearlyPnL(hours, lcoe, mw, cf);
+
+  if (months.length) renderMonthly(months, lcoe);
+  if (yrPnL.length)  renderYearly(yrPnL);
+  updateStats(hours, lcoe, mw, cf);
+  updateSensPanel(lcoe, mw, cf);
+}
+
+// ── Slider handler ─────────────────────────────────────────────────────────────
+document.getElementById('lcoe-slider').addEventListener('input', function () {
+  const mw = +document.getElementById('p-mw').value;
+  const cf = +document.getElementById('p-cf').value;
+  updateSensPanel(+this.value, mw, cf);
+});
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('data-status').textContent = 'Зарежда Ember данни…';
+  try {
+    const url = BASE ? `${BASE}/ember-bg-prices.json` : '/data/ember-bg-prices.json';
+    const r   = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    priceData = await r.json();
+    const updated = priceData.updated
+      ? new Date(priceData.updated).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '—';
+    document.getElementById('data-status').textContent = `Ember данни от: ${updated}`;
+    document.getElementById('s-updated').textContent = updated;
+  } catch (e) {
+    document.getElementById('data-status').textContent = `Грешка: ${e.message}`;
+    console.error('Failed to load ember-bg-prices.json', e);
+  }
+  recalc();
+}
+
+init();
+</script>
+</body>
+</html>
