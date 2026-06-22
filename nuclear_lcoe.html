@@ -238,19 +238,19 @@ header {
         <input type="range" id="cost-slider" min="1" max="15" step="0.25" value="7.33" oninput="onCostSlider()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
-        <label>Лихвен процент: <strong id="lbl-wacc">5%</strong></label>
-        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="5"
-               oninput="document.getElementById('lbl-wacc').textContent=this.value+'%'; recalc()">
-      </div>
-      <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
         <input type="range" id="p-cf" min="30" max="100" step="1" value="90"
                oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
       </div>
-      <div class="slider-row" style="margin:0 0 12px">
+      <div class="slider-row" style="margin:0 0 8px">
         <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
         <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
+      </div>
+      <div class="slider-row" style="margin:0 0 12px">
+        <label>Лихвен процент: <strong id="lbl-wacc">5%</strong></label>
+        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="5"
+               oninput="document.getElementById('lbl-wacc').textContent=this.value+'%'; recalc()">
       </div>
       <div id="banner-net" style="border-radius:4px;padding:10px 14px;border:1px solid #ccc;display:flex;gap:16px;align-items:center">
         <div style="flex:1;text-align:center">
