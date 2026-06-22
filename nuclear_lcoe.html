@@ -290,13 +290,13 @@ header {
     <div class="stat-card green" id="card-above">
       <div class="stat-label">Часове над себестойност</div>
       <div class="stat-val" id="s-above">—</div>
-      <div class="stat-unit">ч. / 2 год.</div>
+      <div class="stat-unit">ч. / год.</div>
       <div class="stat-sub" id="s-above-pct"></div>
     </div>
     <div class="stat-card red" id="card-below">
-      <div class="stat-label">Часове под себестойност</div>
+      <div class="stat-label">Загуба (ч. под себестойност)</div>
       <div class="stat-val" id="s-below">—</div>
-      <div class="stat-unit">ч. / 2 год.</div>
+      <div class="stat-unit">М EUR / год.</div>
       <div class="stat-sub" id="s-below-pct"></div>
     </div>
     <div class="stat-card" id="card-pnl">
@@ -475,11 +475,13 @@ function recalc() {
     const totalEur = priceHours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
     const span     = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
     const annEur   = totalEur / span;
+    const lossEur  = priceHours.reduce((s, h) => h.p < r.lcoe ? s + (h.p - r.lcoe) * mw * cfFrac : s, 0);
+    const annLoss  = lossEur / span;
 
-    document.getElementById('s-above').textContent     = above.toLocaleString('bg-BG');
-    document.getElementById('s-below').textContent     = below.toLocaleString('bg-BG');
+    document.getElementById('s-above').textContent     = Math.round(above / span).toLocaleString('bg-BG');
     document.getElementById('s-above-pct').textContent = (above / total * 100).toFixed(0) + '% от часовете';
-    document.getElementById('s-below-pct').textContent = (below / total * 100).toFixed(0) + '% от часовете';
+    document.getElementById('s-below').textContent     = (annLoss / 1e6).toFixed(1);
+    document.getElementById('s-below-pct').textContent = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
     document.getElementById('s-pnl').textContent       = (annEur / 1e6).toFixed(1);
 
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
