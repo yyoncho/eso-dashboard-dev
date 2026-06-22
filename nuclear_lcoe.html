@@ -260,7 +260,7 @@ header {
         </div>
         <div style="width:1px;background:#d0dcea;align-self:stretch"></div>
         <div style="flex:1;text-align:center">
-          <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">Нетен резултат</div>
+          <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">—</div>
           <div style="font-size:1.7rem;font-weight:700;line-height:1.1" id="br-net">—</div>
           <div style="font-size:0.7rem;margin-top:2px" id="br-net-sub">М EUR / год.</div>
           <div style="font-size:0.68rem;margin-top:4px;color:#5a7090" id="br-hours-above"></div>
@@ -444,7 +444,8 @@ function recalc() {
     const bannerNet = document.getElementById('banner-net');
     bannerNet.style.background  = isPos ? '#f0f8f0' : '#fff0ee';
     bannerNet.style.borderColor = isPos ? '#a0d0a0' : '#d0a0a0';
-    document.getElementById('br-net-label').style.color = isPos ? '#3a7040' : '#7a2a20';
+    document.getElementById('br-net-label').textContent  = isPos ? 'Годишна печалба' : 'Годишна загуба';
+    document.getElementById('br-net-label').style.color  = isPos ? '#3a7040' : '#7a2a20';
     document.getElementById('br-net').textContent       = netMn.toFixed(1);
     document.getElementById('br-net').style.color       = col;
     document.getElementById('br-net-sub').style.color   = isPos ? '#5a8060' : '#805050';
