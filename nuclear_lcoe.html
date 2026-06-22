@@ -221,11 +221,6 @@ header {
         <label>Срок на живот (год.)</label>
         <input type="number" id="p-life" value="60" min="20" max="80" step="5" oninput="recalc()">
       </div>
-      <div class="param-row">
-        <label>WACC (%)</label>
-        <input type="number" id="p-wacc" value="7.0" min="2" max="15" step="0.5" oninput="recalc()">
-      </div>
-
       <hr class="divider">
 
     </div>
@@ -239,8 +234,13 @@ header {
     <button class="gear-btn" onclick="openModal()" title="Параметри">⚙</button>
     <div style="margin-bottom:2px">
       <div class="slider-row" style="margin:0 0 8px">
-        <label><strong id="cr-total">11.0</strong> Млрд. EUR</label>
+        <label><strong id="cr-overnight">11.0</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">overnight &nbsp;→&nbsp; общо: <strong id="cr-total">—</strong> Млрд.</span></label>
         <input type="range" id="cost-slider" min="1" max="20" step="0.25" value="11" oninput="onCostSlider()">
+      </div>
+      <div class="slider-row" style="margin:0 0 8px">
+        <label>Лихвен процент: <strong id="lbl-wacc">7%</strong></label>
+        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="7"
+               oninput="document.getElementById('lbl-wacc').textContent=this.value+'%'; recalc()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
@@ -344,6 +344,7 @@ function loadPreset(btn) {
   document.getElementById('p-wacc').value      = p.wacc;
   document.getElementById('p-cf').value        = p.cf;
   document.getElementById('p-constr').value    = p.constr;
+  document.getElementById('lbl-wacc').textContent   = p.wacc + '%';
   document.getElementById('lbl-cf').textContent     = p.cf + '%';
   document.getElementById('lbl-constr').textContent = p.constr + ' год.';
   recalc();
@@ -413,7 +414,8 @@ function recalc() {
   const idcBn       = r.idc * mw * 1000 / 1e9;
   const totalBn     = r.capTotal * mw * 1000 / 1e9;
 
-  document.getElementById('cr-total').textContent = overnightBn.toFixed(2);
+  document.getElementById('cr-overnight').textContent = overnightBn.toFixed(2);
+  document.getElementById('cr-total').textContent     = totalBn.toFixed(2);
   if (document.getElementById('br-lcoe')) document.getElementById('br-lcoe').textContent = r.lcoe.toFixed(1);
 
   document.getElementById('b-overnight').textContent      = overnight.toFixed(0) + ' EUR/kW  (' + overnightBn.toFixed(2) + ' Млрд. EUR)';
