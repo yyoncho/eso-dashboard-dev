@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ядрена АЕЦ — LCOE Анализ</title>
+<title>Ядрена АЕЦ — Себестойност</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; }
@@ -148,9 +148,9 @@ header {
 <header>
   <div class="header-inner">
     <div class="logo-area">
-      <div class="logo-circle">АЕЦ<br>LCOE</div>
+      <div class="logo-circle">АЕЦ<br>СС</div>
       <div class="logo-text">
-        <h1>Ядрена АЕЦ — LCOE Анализ</h1>
+        <h1>Ядрена АЕЦ — Себестойност (LCOE)</h1>
         <p>Икономически анализ на нова ядрена мощност при реални пазарни цени — неофициален</p>
       </div>
     </div>
@@ -177,14 +177,14 @@ header {
       <span class="cost-readout-sep">→</span>
       <span class="cost-readout-secondary">Overnight: <strong id="cr-overnight">—</strong> EUR/kW</span>
       <span class="cost-readout-sep">→</span>
-      <span class="cost-readout-secondary">LCOE: <strong id="cr-lcoe">—</strong> EUR/MWh</span>
+      <span class="cost-readout-secondary">Себестойност (LCOE): <strong id="cr-lcoe">—</strong> EUR/MWh</span>
     </div>
   </div>
 
   <!-- Stat cards -->
   <div class="stat-grid">
     <div class="stat-card">
-      <div class="stat-label">Изчислен LCOE</div>
+      <div class="stat-label">Себестойност (LCOE)</div>
       <div class="stat-val" id="s-lcoe">—</div>
       <div class="stat-unit">EUR/MWh</div>
     </div>
@@ -195,13 +195,13 @@ header {
       <div class="stat-sub" id="s-overnight-bn"></div>
     </div>
     <div class="stat-card green" id="card-above">
-      <div class="stat-label">Часове над LCOE</div>
+      <div class="stat-label">Часове над себестойност (LCOE)</div>
       <div class="stat-val" id="s-above">—</div>
       <div class="stat-unit">ч. / 2 год.</div>
       <div class="stat-sub" id="s-above-pct"></div>
     </div>
     <div class="stat-card red" id="card-below">
-      <div class="stat-label">Часове под LCOE</div>
+      <div class="stat-label">Часове под себестойност (LCOE)</div>
       <div class="stat-val" id="s-below">—</div>
       <div class="stat-unit">ч. / 2 год.</div>
       <div class="stat-sub" id="s-below-pct"></div>
@@ -228,7 +228,7 @@ header {
     <!-- Left column -->
     <div>
       <div class="panel">
-        <div class="panel-header">LCOE разбивка (Lazard методология)</div>
+        <div class="panel-header">Разбивка на себестойността (LCOE — Lazard методология)</div>
         <div class="breakdown-body">
           <div class="brow derived"><span>▶ Общ разход с финансиране</span><span id="b-total-financed">—</span></div>
           <div class="brow"><span>− Лихви по строителство (IDC)</span><span id="b-idc">—</span></div>
@@ -236,7 +236,7 @@ header {
           <div class="brow"><span>Фактор на амортизация (CRF)</span><span id="b-crf">—</span></div>
           <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
           <div class="brow"><span>OPEX компонент</span><span id="b-fom-lcoe">—</span></div>
-          <div class="brow total"><span>Общ LCOE</span><span id="b-total-lcoe">—</span></div>
+          <div class="brow total"><span>Обща себестойност (LCOE)</span><span id="b-total-lcoe">—</span></div>
         </div>
       </div>
 
