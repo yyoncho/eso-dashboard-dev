@@ -252,10 +252,18 @@ header {
         <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
       </div>
-      <div id="banner-net" style="border-radius:4px;padding:8px 12px;text-align:center;border:1px solid #ccc">
-        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">Нетен резултат / год.</div>
-        <div style="font-size:1.6rem;font-weight:700;line-height:1.1" id="br-net">—</div>
-        <div style="font-size:0.7rem" id="br-net-sub"></div>
+      <div id="banner-net" style="border-radius:4px;padding:10px 14px;border:1px solid #ccc;display:flex;gap:16px;align-items:center">
+        <div style="flex:1;text-align:center">
+          <div style="font-size:0.62rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em">Себестойност (LCOE)</div>
+          <div style="font-size:1.7rem;font-weight:700;color:#004494;line-height:1.1" id="br-lcoe">—</div>
+          <div style="font-size:0.7rem;color:#7a8aaa">EUR/MWh</div>
+        </div>
+        <div style="width:1px;background:#d0dcea;align-self:stretch"></div>
+        <div style="flex:1;text-align:center">
+          <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">Нетен резултат</div>
+          <div style="font-size:1.7rem;font-weight:700;line-height:1.1" id="br-net">—</div>
+          <div style="font-size:0.7rem" id="br-net-sub">М EUR / год.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -435,6 +443,7 @@ function recalc() {
   const idcBn       = r.idc * mw * 1000 / 1e9;
 
   document.getElementById('cr-total').textContent = totalBn.toFixed(2);
+  if (document.getElementById('br-lcoe')) document.getElementById('br-lcoe').textContent = r.lcoe.toFixed(1);
 
   document.getElementById('b-total-financed').textContent = fmtBn(totalBn);
   document.getElementById('b-idc').textContent       = '−' + idcBn.toFixed(2) + ' Млрд. EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
@@ -483,14 +492,15 @@ function recalc() {
     pnlCard.style.borderTopColor = col;
     pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : col;
 
-    // Banner net box
+    // Banner box
     const bannerNet = document.getElementById('banner-net');
-    bannerNet.style.background   = isPos ? '#f0f8f0' : '#fff0ee';
-    bannerNet.style.borderColor  = isPos ? '#a0d0a0' : '#d0a0a0';
+    bannerNet.style.background  = isPos ? '#f0f8f0' : '#fff0ee';
+    bannerNet.style.borderColor = isPos ? '#a0d0a0' : '#d0a0a0';
+    document.getElementById('br-lcoe').textContent      = r.lcoe.toFixed(1);
     document.getElementById('br-net-label').style.color = isPos ? '#3a7040' : '#7a2a20';
-    document.getElementById('br-net').textContent       = netMn.toFixed(1) + ' М EUR';
+    document.getElementById('br-net').textContent       = netMn.toFixed(1);
     document.getElementById('br-net').style.color       = col;
-    document.getElementById('br-net-sub').textContent   = aboveYr + ' / ' + belowYr;
+    document.getElementById('br-net-sub').textContent   = 'М EUR / год.';
     document.getElementById('br-net-sub').style.color   = isPos ? '#5a8060' : '#805050';
 
     const ps = computePriceStats(priceHours);
