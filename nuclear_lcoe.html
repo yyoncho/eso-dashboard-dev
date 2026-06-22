@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ядрена АЕЦ — Себестойност</title>
+<title>АЕЦ Козлодуй нови мощности — Себестойност</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; }
@@ -21,7 +22,7 @@ header {
 .logo-circle {
   width: 48px; height: 48px; border-radius: 50%; background: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 0.75rem; color: #003070; flex-shrink: 0;
+  font-weight: 900; font-size: 0.7rem; color: #003070; flex-shrink: 0; text-align: center; line-height: 1.2;
 }
 .logo-text h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.03em; }
 .logo-text p  { font-size: 0.68rem; opacity: 0.6; margin-top: 2px; }
@@ -55,7 +56,7 @@ header {
 
 /* ── Stat cards ── */
 .stat-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
   gap: 8px; margin-bottom: 14px;
 }
 .stat-card {
@@ -66,7 +67,6 @@ header {
 .stat-card.green .stat-val { color: #1a8a1a; }
 .stat-card.red    { border-top-color: #cc2200; }
 .stat-card.red .stat-val   { color: #cc2200; }
-.stat-card.purple { border-top-color: #7b3fa0; }
 .stat-label { font-size: 0.62rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; }
 .stat-val   { font-size: 1.35rem; font-weight: 700; color: #1a2233; line-height: 1.1; margin: 2px 0; }
 .stat-unit  { font-size: 0.7rem; color: #7a8aaa; }
@@ -132,6 +132,9 @@ header {
 }
 .brow.total span { color: #003070 !important; }
 
+/* ── Spider ── */
+.spider-body { padding: 12px 14px; display: flex; justify-content: center; }
+
 /* ── Price panel ── */
 .price-panel-body { padding: 12px 14px; }
 .no-data-msg { font-size: 0.8rem; color: #888; font-style: italic; }
@@ -150,9 +153,9 @@ header {
 <header>
   <div class="header-inner">
     <div class="logo-area">
-      <div class="logo-circle">АЕЦ<br>СС</div>
+      <div class="logo-circle">АЕЦ<br>КЗЛ</div>
       <div class="logo-text">
-        <h1>Ядрена АЕЦ — Себестойност (LCOE)</h1>
+        <h1>АЕЦ Козлодуй нови мощности — Себестойност (LCOE)</h1>
         <p>Икономически анализ на нова ядрена мощност при реални пазарни цени — неофициален</p>
       </div>
     </div>
@@ -170,11 +173,11 @@ header {
     <div class="cost-banner-title">Общ разход с финансиране — обща стойност на проекта след лихви</div>
     <div class="cost-slider-row">
       <span class="cost-bound">1 Млрд.</span>
-      <input type="range" id="cost-slider" min="1" max="30" step="0.25" value="11" oninput="onCostSlider()">
+      <input type="range" id="cost-slider" min="1" max="30" step="0.25" value="14" oninput="onCostSlider()">
       <span class="cost-bound">30 Млрд. EUR</span>
     </div>
     <div class="cost-readout">
-      <span class="cost-readout-main" id="cr-total">11.0</span>
+      <span class="cost-readout-main" id="cr-total">14.0</span>
       <span class="cost-readout-unit">Млрд. EUR</span>
       <span class="cost-readout-sep">→</span>
       <span class="cost-readout-secondary">Overnight: <strong id="cr-overnight">—</strong> EUR/kW</span>
@@ -196,6 +199,12 @@ header {
       <div class="stat-unit">EUR/kW</div>
       <div class="stat-sub" id="s-overnight-bn"></div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">CAPEX без лихви</div>
+      <div class="stat-val" id="s-capex-nointerest">—</div>
+      <div class="stat-unit">Млрд. EUR</div>
+      <div class="stat-sub" id="s-capex-nointerest-sub"></div>
+    </div>
     <div class="stat-card green" id="card-above">
       <div class="stat-label">Часове над себестойност (LCOE)</div>
       <div class="stat-val" id="s-above">—</div>
@@ -209,14 +218,9 @@ header {
       <div class="stat-sub" id="s-below-pct"></div>
     </div>
     <div class="stat-card" id="card-pnl">
-      <div class="stat-label">Годишен П&Л</div>
+      <div class="stat-label">Годишна печалба</div>
       <div class="stat-val" id="s-pnl">—</div>
       <div class="stat-unit">М EUR / год.</div>
-    </div>
-    <div class="stat-card purple">
-      <div class="stat-label">П&Л за 2 год.</div>
-      <div class="stat-val" id="s-pnl2">—</div>
-      <div class="stat-unit">М EUR</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Средна цена (2г.)</div>
@@ -239,6 +243,13 @@ header {
           <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
           <div class="brow"><span>OPEX компонент</span><span id="b-fom-lcoe">—</span></div>
           <div class="brow total"><span>Обща себестойност (LCOE)</span><span id="b-total-lcoe">—</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Спайдър — профил на проекта</div>
+        <div class="spider-body">
+          <canvas id="spider-chart" width="420" height="300"></canvas>
         </div>
       </div>
 
@@ -266,12 +277,11 @@ header {
       <div class="params-body">
 
         <div class="preset-strip">
-          <button class="preset-btn active" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
+          <button class="preset-btn active" data-preset="kozloduy" onclick="loadPreset(this)">АЕЦ Козлодуй</button>
+          <button class="preset-btn" data-preset="ap1000" onclick="loadPreset(this)">AP1000 (Полша)</button>
           <button class="preset-btn" data-preset="epr" onclick="loadPreset(this)">EPR (Финландия)</button>
-          <button class="preset-btn" data-preset="smr" onclick="loadPreset(this)">SMR (оптимист.)</button>
         </div>
 
-        <!-- Overnight is derived — shown read-only -->
         <div class="param-row">
           <label>Overnight CAPEX (изчислен)</label>
           <span class="param-derived" id="p-capex-display">—</span>
@@ -283,7 +293,7 @@ header {
         </div>
         <div class="param-row">
           <label>Мощност (MW)</label>
-          <input type="number" id="p-mw" value="1000" min="100" max="5000" step="100" oninput="recalc()">
+          <input type="number" id="p-mw" value="2000" min="100" max="5000" step="100" oninput="recalc()">
         </div>
         <div class="param-row">
           <label>Срок на живот (год.)</label>
@@ -291,7 +301,7 @@ header {
         </div>
         <div class="param-row">
           <label>WACC (%)</label>
-          <input type="number" id="p-wacc" value="8.0" min="2" max="15" step="0.5" oninput="recalc()">
+          <input type="number" id="p-wacc" value="7.0" min="2" max="15" step="0.5" oninput="recalc()">
         </div>
 
         <hr class="divider">
@@ -302,8 +312,8 @@ header {
                  oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
         </div>
         <div class="slider-row">
-          <label>Строителство: <strong id="lbl-constr">10 год.</strong></label>
-          <input type="range" id="p-constr" min="5" max="20" step="1" value="10"
+          <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
+          <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                  oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
         </div>
 
@@ -320,14 +330,10 @@ const BASE = location.hostname === 'localhost'
   ? ''
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
-// Presets store total financed cost (bn EUR) + other params
-// Poland AP1000: ~$12B ≈ €11B per reactor (1000 MW, 10yr build, 8% WACC)
-// EPR Finland (Olkiluoto 3): ~€11B for 1600 MW = ~€15B equivalent at current rates
-// SMR optimistic: ~€2.5B for 300 MW
 const PRESETS = {
-  ap1000: { totalBn: 11.0, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
-  epr:    { totalBn: 15.0, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
-  smr:    { totalBn:  2.5, opex: 40, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7 },
+  kozloduy: { totalBn: 14.0, opex: 45, mw: 2000, life: 60, wacc: 7.0, cf: 90, constr: 12 },
+  ap1000:   { totalBn: 11.0, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
+  epr:      { totalBn: 15.0, opex: 50, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
 };
 
 function loadPreset(btn) {
@@ -348,7 +354,6 @@ function loadPreset(btn) {
 
 function onCostSlider() { recalc(); }
 
-// ── LCOE engine (input: overnight EUR/kW) ────────────────────────────────────
 function calcFromOvernight(overnight, opex, life, waccPct, cfPct, constrYr) {
   const r         = waccPct / 100;
   const cf        = cfPct / 100;
@@ -357,17 +362,92 @@ function calcFromOvernight(overnight, opex, life, waccPct, cfPct, constrYr) {
   const capTotal  = overnight + idc;
   const crf       = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
   const annHrs    = cf * 8760;
-  const lcoeCap   = (capTotal * crf / annHrs) * 1000;  // EUR/MWh
+  const lcoeCap   = (capTotal * crf / annHrs) * 1000;
   return { overnight, idc, idcFactor, capTotal, crf, lcoeCap, lcoeOpex: opex,
            lcoe: lcoeCap + opex };
 }
 
-// Derive overnight from total financed cost (reverse of IDC formula)
 function overnightFromTotal(totalBnEur, mw, waccPct, constrYr) {
   const r         = waccPct / 100;
   const idcFactor = Math.pow(1 + r, constrYr / 2) - 1;
-  const totalPerKw = (totalBnEur * 1e9) / (mw * 1000);  // EUR/kW (total with IDC)
-  return totalPerKw / (1 + idcFactor);                   // EUR/kW overnight
+  const totalPerKw = (totalBnEur * 1e9) / (mw * 1000);
+  return totalPerKw / (1 + idcFactor);
+}
+
+// ── Spider chart ──────────────────────────────────────────────────────────────
+let spiderChart = null;
+
+// Normalize axes (all 0–100, higher = better)
+function spiderScores(preset, marketFitPct) {
+  const p = PRESETS[preset] ?? null;
+  if (!p) return null;
+  const overnight = overnightFromTotal(p.totalBn, p.mw, p.wacc, p.constr);
+  const r = calcFromOvernight(overnight, p.opex, p.mw, p.wacc, p.cf, p.constr);
+  // marketFitPct only available for current config; for others approximate as null → 0
+  return [
+    marketFitPct != null ? marketFitPct : 0,                          // Конкурентност
+    (p.cf - 50) / 50 * 100,                                           // Капацитетен фактор
+    Math.max(0, (20 - p.constr) / 15 * 100),                          // Бърза реализация
+    Math.max(0, (12000 - overnight) / 10000 * 100),                   // Нисък overnight
+    (1 - r.idc / r.capTotal) * 100,                                   // Нисък IDC дял
+  ];
+}
+
+function currentScores(overnight, r, cf, constr, marketFitPct) {
+  return [
+    marketFitPct,
+    (cf - 50) / 50 * 100,
+    Math.max(0, (20 - constr) / 15 * 100),
+    Math.max(0, (12000 - overnight) / 10000 * 100),
+    (1 - r.idc / r.capTotal) * 100,
+  ];
+}
+
+function initSpider() {
+  const ctx = document.getElementById('spider-chart').getContext('2d');
+  spiderChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Конкурентност', 'Капацитетен\nфактор', 'Бърза\nреализация', 'Нисък\novernight', 'Нисък\nIDC дял'],
+      datasets: [
+        {
+          label: 'Текущ',
+          data: [0,0,0,0,0],
+          borderColor: '#ffd700', backgroundColor: 'rgba(255,215,0,0.15)',
+          borderWidth: 2.5, pointBackgroundColor: '#ffd700', pointRadius: 4,
+        },
+        {
+          label: 'AP1000 (Полша)',
+          data: spiderScores('ap1000', null),
+          borderColor: '#4488cc', backgroundColor: 'rgba(68,136,204,0.08)',
+          borderWidth: 1.5, pointBackgroundColor: '#4488cc', pointRadius: 3,
+          borderDash: [4,3],
+        },
+        {
+          label: 'EPR (Финландия)',
+          data: spiderScores('epr', null),
+          borderColor: '#9955cc', backgroundColor: 'rgba(153,85,204,0.06)',
+          borderWidth: 1.5, pointBackgroundColor: '#9955cc', pointRadius: 3,
+          borderDash: [4,3],
+        },
+      ],
+    },
+    options: {
+      animation: false,
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { display: false, stepSize: 25 },
+          grid:       { color: '#d0dcea' },
+          angleLines: { color: '#c0d0e8' },
+          pointLabels: { font: { size: 11 }, color: '#3a5070' },
+        },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14, padding: 10 } },
+      },
+    },
+  });
 }
 
 // ── Price data ────────────────────────────────────────────────────────────────
@@ -411,45 +491,50 @@ function recalc() {
 
   const overnight = overnightFromTotal(totalBn, mw, wacc, constr);
   const r = calcFromOvernight(overnight, opex, life, wacc, cf, constr);
+  const overnightBn = overnight * mw * 1000 / 1e9;
+  const idcBn = r.idc * mw * 1000 / 1e9;
 
   // Banner readout
-  document.getElementById('cr-total').textContent    = totalBn.toFixed(2);
+  document.getElementById('cr-total').textContent     = totalBn.toFixed(2);
   document.getElementById('cr-overnight').textContent = overnight.toFixed(0);
-  document.getElementById('cr-lcoe').textContent     = r.lcoe.toFixed(1);
+  document.getElementById('cr-lcoe').textContent      = r.lcoe.toFixed(1);
 
   // Breakdown
   document.getElementById('b-total-financed').textContent = fmtBn(totalBn);
-  document.getElementById('b-idc').textContent     = '−' + (r.idc * mw / 1e6).toFixed(0) + ' М EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
-  document.getElementById('b-overnight').textContent = overnight.toFixed(0) + ' EUR/kW  (' + (overnight * mw / 1e6).toFixed(0) + ' М EUR)';
-  document.getElementById('b-crf').textContent     = (r.crf * 100).toFixed(2) + '%';
+  document.getElementById('b-idc').textContent      = '−' + idcBn.toFixed(2) + ' Млрд. EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
+  document.getElementById('b-overnight').textContent = overnight.toFixed(0) + ' EUR/kW  (' + overnightBn.toFixed(2) + ' Млрд. EUR)';
+  document.getElementById('b-crf').textContent      = (r.crf * 100).toFixed(2) + '%';
   document.getElementById('b-cap-lcoe').textContent  = r.lcoeCap.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-fom-lcoe').textContent  = r.lcoeOpex.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-total-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
 
   // Stat cards
-  document.getElementById('s-lcoe').textContent         = r.lcoe.toFixed(1);
-  document.getElementById('s-overnight').textContent    = overnight.toFixed(0);
-  document.getElementById('s-overnight-bn').textContent = (overnight * mw / 1e6).toFixed(1) + ' М EUR за ' + mw + ' MW';
-  document.getElementById('p-capex-display').textContent = overnight.toFixed(0) + ' EUR/kW';
+  document.getElementById('s-lcoe').textContent          = r.lcoe.toFixed(1);
+  document.getElementById('s-overnight').textContent     = overnight.toFixed(0);
+  document.getElementById('s-overnight-bn').textContent  = overnightBn.toFixed(2) + ' Млрд. за ' + mw + ' MW';
+  document.getElementById('s-capex-nointerest').textContent = overnightBn.toFixed(2);
+  document.getElementById('s-capex-nointerest-sub').textContent = overnight.toFixed(0) + ' EUR/kW  IDC: ' + idcBn.toFixed(2) + ' Млрд.';
+  document.getElementById('p-capex-display').textContent  = overnight.toFixed(0) + ' EUR/kW';
 
   // Profitability
+  let marketFitPct = 0;
   if (priceHours && priceHours.length) {
     const cfFrac = cf / 100;
     const total  = priceHours.length;
     const above  = priceHours.filter(h => h.p >= r.lcoe).length;
     const below  = total - above;
+    marketFitPct = above / total * 100;
     const totalEur = priceHours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
     const span   = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
     const annEur = totalEur / span;
 
     document.getElementById('s-above').textContent     = above.toLocaleString('bg-BG');
     document.getElementById('s-below').textContent     = below.toLocaleString('bg-BG');
-    document.getElementById('s-above-pct').textContent = total ? (above / total * 100).toFixed(0) + '% от часовете' : '';
-    document.getElementById('s-below-pct').textContent = total ? (below / total * 100).toFixed(0) + '% от часовете' : '';
+    document.getElementById('s-above-pct').textContent = (marketFitPct).toFixed(0) + '% от часовете';
+    document.getElementById('s-below-pct').textContent = (below / total * 100).toFixed(0) + '% от часовете';
     document.getElementById('s-pnl').textContent  = (annEur / 1e6).toFixed(1);
-    document.getElementById('s-pnl2').textContent = (totalEur / 1e6).toFixed(1);
 
-    // Color P&L card: intensity scales with |annEur| relative to annual revenue potential
+    // Gradient P&L card
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
     const ratio = Math.min(1, Math.abs(annEur) / (annRevenue * 0.5));
     const pnlCard = document.getElementById('card-pnl');
@@ -466,10 +551,17 @@ function recalc() {
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
   }
+
+  // Update spider
+  if (spiderChart) {
+    spiderChart.data.datasets[0].data = currentScores(overnight, r, cf, constr, marketFitPct);
+    spiderChart.update();
+  }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
+  initSpider();
   recalc();
   try {
     const url = BASE ? `${BASE}/ember-bg-prices.json` : '/data/ember-bg-prices.json';
