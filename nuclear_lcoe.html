@@ -252,17 +252,10 @@ header {
         <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
       </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1;background:#f0f8f0;border:1px solid #a0d0a0;border-radius:4px;padding:8px 12px;text-align:center" id="banner-profit">
-          <div style="font-size:0.65rem;color:#3a7040;text-transform:uppercase;letter-spacing:0.04em">Печалба / год.</div>
-          <div style="font-size:1.4rem;font-weight:700;color:#1a8a1a;line-height:1.1" id="br-profit">—</div>
-          <div style="font-size:0.7rem;color:#5a8060" id="br-profit-sub"></div>
-        </div>
-        <div style="flex:1;background:#fff0ee;border:1px solid #d0a0a0;border-radius:4px;padding:8px 12px;text-align:center" id="banner-loss">
-          <div style="font-size:0.65rem;color:#7a2a20;text-transform:uppercase;letter-spacing:0.04em">Загуба / год.</div>
-          <div style="font-size:1.4rem;font-weight:700;color:#cc2200;line-height:1.1" id="br-loss">—</div>
-          <div style="font-size:0.7rem;color:#805050" id="br-loss-sub"></div>
-        </div>
+      <div id="banner-net" style="border-radius:4px;padding:8px 12px;text-align:center;border:1px solid #ccc">
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em" id="br-net-label">Нетен резултат / год.</div>
+        <div style="font-size:1.6rem;font-weight:700;line-height:1.1" id="br-net">—</div>
+        <div style="font-size:0.7rem" id="br-net-sub"></div>
       </div>
     </div>
   </div>
@@ -280,17 +273,11 @@ header {
       <div class="stat-unit">EUR/kW</div>
       <div class="stat-sub" id="s-overnight-bn"></div>
     </div>
-    <div class="stat-card green" id="card-pnl">
-      <div class="stat-label">Печалба (ч. над себестойност)</div>
+    <div class="stat-card" id="card-pnl">
+      <div class="stat-label">Нетен резултат</div>
       <div class="stat-val" id="s-pnl">—</div>
       <div class="stat-unit">М EUR / год.</div>
       <div class="stat-sub" id="s-above-pct"></div>
-    </div>
-    <div class="stat-card red" id="card-below">
-      <div class="stat-label">Загуба (ч. под себестойност)</div>
-      <div class="stat-val" id="s-below">—</div>
-      <div class="stat-unit">М EUR / год.</div>
-      <div class="stat-sub" id="s-below-pct"></div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Средна цена (2г.)</div>
@@ -477,29 +464,34 @@ function recalc() {
 
     const annRevenue = mw * cfFrac * 8760 * (computePriceStats(priceHours)?.avg || 100) * 1e6;
 
-    // Profit card (green gradient)
-    const profitMn = annProfit / 1e6;
-    const lossMn   = annLoss   / 1e6;
-    const aboveYr  = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год.';
-    const belowYr  = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год.';
+    const netMn  = (annProfit + annLoss) / 1e6;
+    const aboveYr = Math.round(above / span).toLocaleString('bg-BG') + ' ч./год. над себ.';
+    const belowYr = Math.round(below / span).toLocaleString('bg-BG') + ' ч./год. под себ.';
+    const isPos   = netMn >= 0;
+    const ratio   = Math.min(1, Math.abs(netMn) / (annRevenue / 1e6 * 0.5));
+    const col     = isPos ? '#1a8a1a' : '#cc2200';
 
-    document.getElementById('s-pnl').textContent       = profitMn.toFixed(1);
-    document.getElementById('s-above-pct').textContent = aboveYr;
-    const ratioP  = Math.min(1, annProfit / (annRevenue * 0.5));
+    // Net stat card
     const pnlCard = document.getElementById('card-pnl');
-    pnlCard.style.background     = `rgb(${Math.round(255-ratioP*119)},${Math.round(255-ratioP*117)},${Math.round(255-ratioP*229)})`;
-    pnlCard.style.borderTopColor = '#1a8a1a';
-    pnlCard.querySelector('.stat-val').style.color = ratioP > 0.3 ? '#fff' : '#1a8a1a';
+    document.getElementById('s-pnl').textContent       = netMn.toFixed(1);
+    document.getElementById('s-above-pct').textContent = isPos ? aboveYr : belowYr;
+    if (isPos) {
+      pnlCard.style.background     = `rgb(${Math.round(255-ratio*119)},${Math.round(255-ratio*117)},${Math.round(255-ratio*229)})`;
+    } else {
+      pnlCard.style.background     = `rgb(255,${Math.round(255-ratio*221)},${Math.round(255-ratio*255)})`;
+    }
+    pnlCard.style.borderTopColor = col;
+    pnlCard.querySelector('.stat-val').style.color = ratio > 0.3 ? '#fff' : col;
 
-    // Loss card (red gradient)
-    document.getElementById('s-below').textContent     = lossMn.toFixed(1);
-    document.getElementById('s-below-pct').textContent = belowYr;
-
-    // Banner profit/loss
-    document.getElementById('br-profit').textContent     = profitMn.toFixed(1) + ' М EUR';
-    document.getElementById('br-profit-sub').textContent = aboveYr;
-    document.getElementById('br-loss').textContent       = lossMn.toFixed(1) + ' М EUR';
-    document.getElementById('br-loss-sub').textContent   = belowYr;
+    // Banner net box
+    const bannerNet = document.getElementById('banner-net');
+    bannerNet.style.background   = isPos ? '#f0f8f0' : '#fff0ee';
+    bannerNet.style.borderColor  = isPos ? '#a0d0a0' : '#d0a0a0';
+    document.getElementById('br-net-label').style.color = isPos ? '#3a7040' : '#7a2a20';
+    document.getElementById('br-net').textContent       = netMn.toFixed(1) + ' М EUR';
+    document.getElementById('br-net').style.color       = col;
+    document.getElementById('br-net-sub').textContent   = aboveYr + ' / ' + belowYr;
+    document.getElementById('br-net-sub').style.color   = isPos ? '#5a8060' : '#805050';
 
     const ps = computePriceStats(priceHours);
     if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
