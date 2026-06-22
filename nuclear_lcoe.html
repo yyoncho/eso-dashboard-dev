@@ -31,23 +31,27 @@ header {
 
 .content { max-width: 1300px; margin: 0 auto; padding: 14px 20px 30px; }
 
-/* ── CAPEX banner slider ── */
-.capex-banner {
+/* ── Total cost slider banner ── */
+.cost-banner {
   background: #fff; border: 1px solid #c5d8ee; border-radius: 4px;
   padding: 14px 20px 12px; margin-bottom: 14px;
 }
-.capex-banner-title {
+.cost-banner-title {
   font-size: 0.68rem; color: #5a7090; text-transform: uppercase;
   letter-spacing: 0.05em; margin-bottom: 8px;
 }
-.capex-slider-row { display: flex; align-items: center; gap: 14px; }
-.capex-slider-row input[type="range"] { flex: 1; accent-color: #004494; height: 6px; }
-.capex-bound { font-size: 0.75rem; color: #7a8aaa; white-space: nowrap; }
-.capex-current {
-  text-align: center; margin-top: 6px;
-  font-size: 0.85rem; color: #3a5070;
+.cost-slider-row { display: flex; align-items: center; gap: 14px; }
+.cost-slider-row input[type="range"] { flex: 1; accent-color: #004494; height: 6px; cursor: pointer; }
+.cost-bound { font-size: 0.75rem; color: #7a8aaa; white-space: nowrap; }
+.cost-readout {
+  margin-top: 8px; display: flex; align-items: baseline; justify-content: center;
+  gap: 6px; flex-wrap: wrap;
 }
-.capex-current strong { font-size: 1.4rem; color: #004494; font-weight: 700; }
+.cost-readout-main { font-size: 2rem; font-weight: 700; color: #004494; line-height: 1; }
+.cost-readout-unit { font-size: 0.9rem; color: #5a7090; }
+.cost-readout-sep  { font-size: 1rem; color: #aac0d8; }
+.cost-readout-secondary { font-size: 0.88rem; color: #5a7090; }
+.cost-readout-secondary strong { color: #1a2233; }
 
 /* ── Stat cards ── */
 .stat-grid {
@@ -67,7 +71,7 @@ header {
 .stat-sub   { font-size: 0.72rem; color: #4a6080; margin-top: 3px; }
 
 /* ── Two columns ── */
-.main-cols { display: grid; grid-template-columns: 1fr 380px; gap: 12px; }
+.main-cols { display: grid; grid-template-columns: 1fr 360px; gap: 12px; }
 @media (max-width: 860px) { .main-cols { grid-template-columns: 1fr; } }
 
 .panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; overflow: hidden; }
@@ -97,6 +101,10 @@ header {
   border-radius: 3px; font-size: 0.85rem; text-align: right; color: #1a2233;
 }
 .param-row input:focus { outline: 2px solid #004494; }
+.param-derived {
+  width: 90px; text-align: right; font-size: 0.85rem; font-weight: 600;
+  color: #004494; padding: 4px 6px;
+}
 
 .slider-row { margin: 10px 0 6px; }
 .slider-row label { font-size: 0.78rem; color: #3a5070; display: block; margin-bottom: 4px; }
@@ -106,25 +114,26 @@ header {
 
 /* ── LCOE breakdown ── */
 .breakdown-body { padding: 12px 14px; }
-.breakdown-title { font-size: 0.68rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .brow {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 0.82rem; color: #3a5070; padding: 3px 0;
+  font-size: 0.82rem; color: #3a5070; padding: 4px 0;
   border-bottom: 1px solid #f0f4f8;
 }
 .brow:last-child { border-bottom: none; }
 .brow span:last-child { font-weight: 600; color: #1a2233; }
+.brow.derived { background: #f5f8ff; margin: 0 -14px; padding: 4px 14px; }
+.brow.derived span:first-child { color: #004494; }
+.brow.derived span:last-child  { color: #004494; }
 .brow.total {
   border-top: 2px solid #c5d8ee; margin-top: 4px; padding-top: 6px;
   font-weight: 700; font-size: 0.9rem;
 }
 .brow.total span { color: #003070 !important; }
 
-/* ── Price data panel ── */
+/* ── Price panel ── */
 .price-panel-body { padding: 12px 14px; }
-.price-note { font-size: 0.75rem; color: #5a7090; line-height: 1.5; }
-.no-data-msg { font-size: 0.8rem; color: #888; font-style: italic; margin-top: 6px; }
-.price-stats { margin-top: 10px; }
+.no-data-msg { font-size: 0.8rem; color: #888; font-style: italic; }
+.price-stats  { }
 .price-stat-row {
   display: flex; justify-content: space-between;
   font-size: 0.82rem; color: #3a5070; padding: 3px 0;
@@ -154,15 +163,22 @@ header {
 
 <div class="content">
 
-  <!-- CAPEX slider banner -->
-  <div class="capex-banner">
-    <div class="capex-banner-title">Overnight CAPEX — стойност на строителството (EUR/kW)</div>
-    <div class="capex-slider-row">
-      <span class="capex-bound">1 000</span>
-      <input type="range" id="capex-slider" min="1000" max="15000" step="100" value="7000" oninput="onCapexSlider()">
-      <span class="capex-bound">15 000 EUR/kW</span>
+  <!-- Total financed cost slider -->
+  <div class="cost-banner">
+    <div class="cost-banner-title">Общ разход с финансиране — обща стойност на проекта след лихви</div>
+    <div class="cost-slider-row">
+      <span class="cost-bound">1 Млрд.</span>
+      <input type="range" id="cost-slider" min="1" max="30" step="0.25" value="11" oninput="onCostSlider()">
+      <span class="cost-bound">30 Млрд. EUR</span>
     </div>
-    <div class="capex-current"><strong id="capex-slider-val">7 000</strong> EUR/kW &nbsp;→&nbsp; LCOE: <strong id="capex-slider-lcoe">—</strong> EUR/MWh</div>
+    <div class="cost-readout">
+      <span class="cost-readout-main" id="cr-total">11.0</span>
+      <span class="cost-readout-unit">Млрд. EUR</span>
+      <span class="cost-readout-sep">→</span>
+      <span class="cost-readout-secondary">Overnight: <strong id="cr-overnight">—</strong> EUR/kW</span>
+      <span class="cost-readout-sep">→</span>
+      <span class="cost-readout-secondary">LCOE: <strong id="cr-lcoe">—</strong> EUR/MWh</span>
+    </div>
   </div>
 
   <!-- Stat cards -->
@@ -171,6 +187,12 @@ header {
       <div class="stat-label">Изчислен LCOE</div>
       <div class="stat-val" id="s-lcoe">—</div>
       <div class="stat-unit">EUR/MWh</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Overnight CAPEX</div>
+      <div class="stat-val" id="s-overnight">—</div>
+      <div class="stat-unit">EUR/kW</div>
+      <div class="stat-sub" id="s-overnight-bn"></div>
     </div>
     <div class="stat-card green" id="card-above">
       <div class="stat-label">Часове над LCOE</div>
@@ -199,24 +221,18 @@ header {
       <div class="stat-val" id="s-avg">—</div>
       <div class="stat-unit">EUR/MWh</div>
     </div>
-    <div class="stat-card purple">
-      <div class="stat-label">Общ разход с финансиране</div>
-      <div class="stat-val" id="s-total-cost">—</div>
-      <div class="stat-unit" id="s-total-cost-unit">Млрд. EUR</div>
-      <div class="stat-sub" id="s-total-cost-sub"></div>
-    </div>
   </div>
 
   <div class="main-cols">
 
-    <!-- Left: LCOE breakdown + price data summary -->
+    <!-- Left column -->
     <div>
       <div class="panel">
         <div class="panel-header">LCOE разбивка (Lazard методология)</div>
         <div class="breakdown-body">
-          <div class="brow"><span>Overnight CAPEX</span><span id="b-capex">—</span></div>
-          <div class="brow"><span>+ Лихви по строителство (IDC)</span><span id="b-idc">—</span></div>
-          <div class="brow"><span>= Общ капиталов разход</span><span id="b-cap-total">—</span></div>
+          <div class="brow derived"><span>▶ Общ разход с финансиране</span><span id="b-total-financed">—</span></div>
+          <div class="brow"><span>− Лихви по строителство (IDC)</span><span id="b-idc">—</span></div>
+          <div class="brow derived"><span>▶ Overnight CAPEX (изчислен)</span><span id="b-overnight">—</span></div>
           <div class="brow"><span>Фактор на амортизация (CRF)</span><span id="b-crf">—</span></div>
           <div class="brow"><span>Капиталов компонент</span><span id="b-cap-lcoe">—</span></div>
           <div class="brow"><span>Fixed O&M компонент</span><span id="b-fom-lcoe">—</span></div>
@@ -228,18 +244,16 @@ header {
       <div class="panel">
         <div class="panel-header">Пазарни цени — BG (Ember hourly, последните 2 год.)</div>
         <div class="price-panel-body">
-          <div id="price-stats-wrap">
-            <div class="no-data-msg" id="price-no-data">Зарежда данни от data branch…</div>
-            <div class="price-stats" id="price-stats" style="display:none">
-              <div class="price-stat-row"><span>Средна цена</span><span id="ps-avg">—</span></div>
-              <div class="price-stat-row"><span>Медианна цена</span><span id="ps-med">—</span></div>
-              <div class="price-stat-row"><span>Минимална</span><span id="ps-min">—</span></div>
-              <div class="price-stat-row"><span>Максимална</span><span id="ps-max">—</span></div>
-              <div class="price-stat-row"><span>Часове с цена &gt; 100 EUR/MWh</span><span id="ps-gt100">—</span></div>
-              <div class="price-stat-row"><span>Часове с цена &gt; 150 EUR/MWh</span><span id="ps-gt150">—</span></div>
-              <div class="price-stat-row"><span>Часове с отрицателна цена</span><span id="ps-neg">—</span></div>
-              <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
-            </div>
+          <div class="no-data-msg" id="price-no-data">Зарежда данни от data branch…</div>
+          <div class="price-stats" id="price-stats" style="display:none">
+            <div class="price-stat-row"><span>Средна цена</span><span id="ps-avg">—</span></div>
+            <div class="price-stat-row"><span>Медианна цена</span><span id="ps-med">—</span></div>
+            <div class="price-stat-row"><span>Минимална</span><span id="ps-min">—</span></div>
+            <div class="price-stat-row"><span>Максимална</span><span id="ps-max">—</span></div>
+            <div class="price-stat-row"><span>Часове с цена &gt; 100 EUR/MWh</span><span id="ps-gt100">—</span></div>
+            <div class="price-stat-row"><span>Часове с цена &gt; 150 EUR/MWh</span><span id="ps-gt150">—</span></div>
+            <div class="price-stat-row"><span>Часове с отрицателна цена</span><span id="ps-neg">—</span></div>
+            <div class="price-stat-row"><span>Данни до</span><span id="ps-updated">—</span></div>
           </div>
         </div>
       </div>
@@ -256,10 +270,12 @@ header {
           <button class="preset-btn" data-preset="smr" onclick="loadPreset(this)">SMR (оптимист.)</button>
         </div>
 
+        <!-- Overnight is derived — shown read-only -->
         <div class="param-row">
-          <label>CAPEX (EUR/kW overnight)</label>
-          <input type="number" id="p-capex" value="7000" min="500" max="20000" step="100" oninput="syncSliderFromInput(); recalc()">
+          <label>Overnight CAPEX (изчислен)</label>
+          <span class="param-derived" id="p-capex-display">—</span>
         </div>
+
         <div class="param-row">
           <label>Fixed OPEX (EUR/kW/год.)</label>
           <input type="number" id="p-fopex" value="135" min="20" max="500" step="5" oninput="recalc()">
@@ -285,11 +301,13 @@ header {
 
         <div class="slider-row">
           <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
-          <input type="range" id="p-cf" min="50" max="100" step="1" value="90" oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
+          <input type="range" id="p-cf" min="50" max="100" step="1" value="90"
+                 oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
         </div>
         <div class="slider-row">
           <label>Строителство: <strong id="lbl-constr">10 год.</strong></label>
-          <input type="range" id="p-constr" min="5" max="20" step="1" value="10" oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
+          <input type="range" id="p-constr" min="5" max="20" step="1" value="10"
+                 oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
         </div>
 
       </div>
@@ -305,71 +323,66 @@ const BASE = location.hostname === 'localhost'
   ? ''
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
+// Presets store total financed cost (bn EUR) + other params
+// Poland AP1000: ~$12B ≈ €11B per reactor (1000 MW, 10yr build, 8% WACC)
+// EPR Finland (Olkiluoto 3): ~€11B for 1600 MW = ~€15B equivalent at current rates
+// SMR optimistic: ~€2.5B for 300 MW
 const PRESETS = {
-  ap1000: { capex: 7000,  fopex: 135, vopex: 4.5, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
-  epr:    { capex: 9500,  fopex: 150, vopex: 5.0, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
-  smr:    { capex: 5000,  fopex: 100, vopex: 6.0, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7 },
+  ap1000: { totalBn: 11.0, fopex: 135, vopex: 4.5, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
+  epr:    { totalBn: 15.0, fopex: 150, vopex: 5.0, mw: 1600, life: 60, wacc: 9.0, cf: 88, constr: 14 },
+  smr:    { totalBn:  2.5, fopex: 100, vopex: 6.0, mw:  300, life: 50, wacc: 7.0, cf: 92, constr:  7 },
 };
 
 function loadPreset(btn) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const p = PRESETS[btn.dataset.preset];
-  document.getElementById('p-capex').value  = p.capex;
-  document.getElementById('p-fopex').value  = p.fopex;
-  document.getElementById('p-vopex').value  = p.vopex;
-  document.getElementById('p-mw').value     = p.mw;
-  document.getElementById('p-life').value   = p.life;
-  document.getElementById('p-wacc').value   = p.wacc;
-  document.getElementById('p-cf').value     = p.cf;
-  document.getElementById('p-constr').value = p.constr;
+  document.getElementById('cost-slider').value = p.totalBn;
+  document.getElementById('p-fopex').value     = p.fopex;
+  document.getElementById('p-vopex').value     = p.vopex;
+  document.getElementById('p-mw').value        = p.mw;
+  document.getElementById('p-life').value      = p.life;
+  document.getElementById('p-wacc').value      = p.wacc;
+  document.getElementById('p-cf').value        = p.cf;
+  document.getElementById('p-constr').value    = p.constr;
   document.getElementById('lbl-cf').textContent     = p.cf + '%';
   document.getElementById('lbl-constr').textContent = p.constr + ' год.';
-  syncSliderFromInput();
   recalc();
 }
 
-// Keep CAPEX input and banner slider in sync
-function syncSliderFromInput() {
-  const v = +document.getElementById('p-capex').value;
-  document.getElementById('capex-slider').value = Math.min(15000, Math.max(1000, v));
-  updateCapexLabel(v);
-}
-function onCapexSlider() {
-  const v = +document.getElementById('capex-slider').value;
-  document.getElementById('p-capex').value = v;
-  updateCapexLabel(v);
-  recalc();
-}
-function updateCapexLabel(v) {
-  document.getElementById('capex-slider-val').textContent = v.toLocaleString('bg-BG');
-}
+function onCostSlider() { recalc(); }
 
-// ── LCOE engine ──────────────────────────────────────────────────────────────
-function calcLCOE(capex, fopex, vopex, life, waccPct, cfPct, constrYr) {
-  const r   = waccPct / 100;
-  const cf  = cfPct  / 100;
-  const idc = capex * (Math.pow(1 + r, constrYr / 2) - 1);
-  const capTotal = capex + idc;
-  const crf = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
-  const annCap  = capTotal * crf;
-  const annHrs  = cf * 8760;
-  const lcoeCap = annCap   / annHrs * 1000;
-  const lcoeFom = fopex    / annHrs * 1000;
-  return { capex, idc, capTotal, crf, lcoeCap, lcoeFom, lcoeVom: vopex,
+// ── LCOE engine (input: overnight EUR/kW) ────────────────────────────────────
+function calcFromOvernight(overnight, fopex, vopex, life, waccPct, cfPct, constrYr) {
+  const r        = waccPct / 100;
+  const cf       = cfPct / 100;
+  const idcFactor = Math.pow(1 + r, constrYr / 2) - 1;
+  const idc      = overnight * idcFactor;
+  const capTotal = overnight + idc;
+  const crf      = r * Math.pow(1 + r, life) / (Math.pow(1 + r, life) - 1);
+  const annHrs   = cf * 8760;
+  const lcoeCap  = (capTotal * crf / annHrs) * 1000;  // EUR/MWh
+  const lcoeFom  = (fopex / annHrs) * 1000;           // EUR/MWh
+  return { overnight, idc, idcFactor, capTotal, crf, lcoeCap, lcoeFom, lcoeVom: vopex,
            lcoe: lcoeCap + lcoeFom + vopex };
 }
 
+// Derive overnight from total financed cost (reverse of IDC formula)
+function overnightFromTotal(totalBnEur, mw, waccPct, constrYr) {
+  const r         = waccPct / 100;
+  const idcFactor = Math.pow(1 + r, constrYr / 2) - 1;
+  const totalPerKw = (totalBnEur * 1e9) / (mw * 1000);  // EUR/kW (total with IDC)
+  return totalPerKw / (1 + idcFactor);                   // EUR/kW overnight
+}
+
 // ── Price data ────────────────────────────────────────────────────────────────
-let priceHours = null;  // [{t, p}] filtered to rolling 2yr
+let priceHours = null;
 
 function rollingWindow(data) {
   const cutoff = Date.now() / 1000 - 2 * 365.25 * 86400;
   const res = [];
   for (let i = 0; i < data.t.length; i++) {
-    if (data.t[i] >= cutoff && isFinite(data.p[i])) {
-      res.push({ t: data.t[i], p: data.p[i] });
-    }
+    if (data.t[i] >= cutoff && isFinite(data.p[i])) res.push({ t: data.t[i], p: data.p[i] });
   }
   return res;
 }
@@ -381,83 +394,80 @@ function computePriceStats(hours) {
   return {
     avg:    prices.reduce((s, p) => s + p, 0) / n,
     median: n % 2 ? prices[(n-1)/2] : (prices[n/2-1] + prices[n/2]) / 2,
-    min:    prices[0],
-    max:    prices[n-1],
-    gt100:  prices.filter(p => p > 100).length,
-    gt150:  prices.filter(p => p > 150).length,
-    neg:    prices.filter(p => p < 0).length,
+    min: prices[0], max: prices[n-1],
+    gt100: prices.filter(p => p > 100).length,
+    gt150: prices.filter(p => p > 150).length,
+    neg:   prices.filter(p => p < 0).length,
   };
 }
 
 function fmtEur(v) { return v.toFixed(1) + ' EUR/MWh'; }
-function fmtM(v)   { return (v / 1e6).toFixed(1); }
+function fmtBn(v)  { return v.toFixed(2) + ' Млрд. EUR'; }
 
 // ── Recalc ────────────────────────────────────────────────────────────────────
 function recalc() {
-  const capex  = +document.getElementById('p-capex').value;
-  const fopex  = +document.getElementById('p-fopex').value;
-  const vopex  = +document.getElementById('p-vopex').value;
-  const mw     = +document.getElementById('p-mw').value;
-  const life   = +document.getElementById('p-life').value;
-  const wacc   = +document.getElementById('p-wacc').value;
-  const cf     = +document.getElementById('p-cf').value;
-  const constr = +document.getElementById('p-constr').value;
+  const totalBn = +document.getElementById('cost-slider').value;
+  const fopex   = +document.getElementById('p-fopex').value;
+  const vopex   = +document.getElementById('p-vopex').value;
+  const mw      = +document.getElementById('p-mw').value;
+  const life    = +document.getElementById('p-life').value;
+  const wacc    = +document.getElementById('p-wacc').value;
+  const cf      = +document.getElementById('p-cf').value;
+  const constr  = +document.getElementById('p-constr').value;
 
-  const r = calcLCOE(capex, fopex, vopex, life, wacc, cf, constr);
+  const overnight = overnightFromTotal(totalBn, mw, wacc, constr);
+  const r = calcFromOvernight(overnight, fopex, vopex, life, wacc, cf, constr);
+
+  // Banner readout
+  document.getElementById('cr-total').textContent    = totalBn.toFixed(2);
+  document.getElementById('cr-overnight').textContent = overnight.toFixed(0);
+  document.getElementById('cr-lcoe').textContent     = r.lcoe.toFixed(1);
 
   // Breakdown
-  document.getElementById('b-capex').textContent     = capex.toLocaleString('bg-BG') + ' EUR/kW';
-  document.getElementById('b-idc').textContent       = '+' + r.idc.toFixed(0) + ' EUR/kW';
-  document.getElementById('b-cap-total').textContent = r.capTotal.toFixed(0) + ' EUR/kW';
-  document.getElementById('b-crf').textContent       = (r.crf * 100).toFixed(2) + '%';
-  document.getElementById('b-cap-lcoe').textContent  = r.lcoeCap.toFixed(1) + ' EUR/MWh';
-  document.getElementById('b-fom-lcoe').textContent  = r.lcoeFom.toFixed(1) + ' EUR/MWh';
-  document.getElementById('b-vom-lcoe').textContent  = r.lcoeVom.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-total-financed').textContent = fmtBn(totalBn);
+  document.getElementById('b-idc').textContent     = '−' + (r.idc * mw / 1e6).toFixed(0) + ' М EUR  (' + r.idc.toFixed(0) + ' EUR/kW)';
+  document.getElementById('b-overnight').textContent = overnight.toFixed(0) + ' EUR/kW  (' + (overnight * mw / 1e6).toFixed(0) + ' М EUR)';
+  document.getElementById('b-crf').textContent     = (r.crf * 100).toFixed(2) + '%';
+  document.getElementById('b-cap-lcoe').textContent = r.lcoeCap.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-fom-lcoe').textContent = r.lcoeFom.toFixed(1) + ' EUR/MWh';
+  document.getElementById('b-vom-lcoe').textContent = r.lcoeVom.toFixed(1) + ' EUR/MWh';
   document.getElementById('b-total-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
 
-  // Banner
-  document.getElementById('capex-slider-lcoe').textContent = r.lcoe.toFixed(1);
-  document.getElementById('s-lcoe').textContent = r.lcoe.toFixed(1);
+  // Stat cards
+  document.getElementById('s-lcoe').textContent         = r.lcoe.toFixed(1);
+  document.getElementById('s-overnight').textContent    = overnight.toFixed(0);
+  document.getElementById('s-overnight-bn').textContent = (overnight * mw / 1e6).toFixed(1) + ' М EUR за ' + mw + ' MW';
+  document.getElementById('p-capex-display').textContent = overnight.toFixed(0) + ' EUR/kW';
 
-  // Total cost after financing = capTotal (EUR/kW) × capacity (MW × 1000)
-  const totalCostEur = r.capTotal * mw * 1000;  // EUR
-  const totalCostBn  = totalCostEur / 1e9;
-  document.getElementById('s-total-cost').textContent     = totalCostBn.toFixed(2);
-  document.getElementById('s-total-cost-sub').textContent =
-    `overnight: ${(capex * mw / 1e6).toFixed(0)} М EUR + IDC: ${(r.idc * mw / 1e6).toFixed(0)} М EUR`;
-
-  // Profitability (needs price data)
+  // Profitability
   if (priceHours && priceHours.length) {
     const cfFrac = cf / 100;
-    const hours  = priceHours;
-    const total  = hours.length;
-    const above  = hours.filter(h => h.p >= r.lcoe).length;
+    const total  = priceHours.length;
+    const above  = priceHours.filter(h => h.p >= r.lcoe).length;
     const below  = total - above;
-    const totalEur = hours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
-    const span  = (hours[total - 1].t - hours[0].t) / (365.25 * 86400);
+    const totalEur = priceHours.reduce((s, h) => s + (h.p - r.lcoe) * mw * cfFrac, 0);
+    const span   = (priceHours[total - 1].t - priceHours[0].t) / (365.25 * 86400);
     const annEur = totalEur / span;
 
     document.getElementById('s-above').textContent     = above.toLocaleString('bg-BG');
     document.getElementById('s-below').textContent     = below.toLocaleString('bg-BG');
     document.getElementById('s-above-pct').textContent = total ? (above / total * 100).toFixed(0) + '% от часовете' : '';
     document.getElementById('s-below-pct').textContent = total ? (below / total * 100).toFixed(0) + '% от часовете' : '';
-    document.getElementById('s-pnl').textContent  = fmtM(annEur);
-    document.getElementById('s-pnl2').textContent = fmtM(totalEur);
+    document.getElementById('s-pnl').textContent  = (annEur / 1e6).toFixed(1);
+    document.getElementById('s-pnl2').textContent = (totalEur / 1e6).toFixed(1);
 
     const pnlCard = document.getElementById('card-pnl');
     pnlCard.classList.toggle('green', annEur >= 0);
     pnlCard.classList.toggle('red',   annEur < 0);
 
-    const ps = computePriceStats(hours);
-    document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
+    const ps = computePriceStats(priceHours);
+    if (ps) document.getElementById('s-avg').textContent = ps.avg.toFixed(1);
   }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
-  syncSliderFromInput();
   recalc();
-
   try {
     const url = BASE ? `${BASE}/ember-bg-prices.json` : '/data/ember-bg-prices.json';
     const res = await fetch(url);
@@ -465,11 +475,10 @@ async function init() {
     const data = await res.json();
     priceHours = rollingWindow(data);
 
-    // Price stats panel
     const ps = computePriceStats(priceHours);
     if (ps) {
-      document.getElementById('price-no-data').style.display  = 'none';
-      document.getElementById('price-stats').style.display    = '';
+      document.getElementById('price-no-data').style.display = 'none';
+      document.getElementById('price-stats').style.display   = '';
       document.getElementById('ps-avg').textContent    = fmtEur(ps.avg);
       document.getElementById('ps-med').textContent    = fmtEur(ps.median);
       document.getElementById('ps-min').textContent    = fmtEur(ps.min);
@@ -480,15 +489,13 @@ async function init() {
       document.getElementById('ps-updated').textContent = data.updated
         ? new Date(data.updated).toLocaleDateString('bg-BG') : '—';
     }
-
-    const updated = data.updated
-      ? new Date(data.updated).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '—';
-    document.getElementById('data-status').textContent = `Ember данни от: ${updated}`;
+    document.getElementById('data-status').textContent = data.updated
+      ? 'Ember данни от: ' + new Date(data.updated).toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' })
+      : 'Ember данни заредени';
     recalc();
   } catch (e) {
-    document.getElementById('data-status').textContent = `Цени: ${e.message}`;
-    document.getElementById('price-no-data').textContent = `Неуспешно зареждане: ${e.message}`;
+    document.getElementById('data-status').textContent = 'Цени: ' + e.message;
+    document.getElementById('price-no-data').textContent = 'Неуспешно зареждане: ' + e.message;
   }
 }
 
