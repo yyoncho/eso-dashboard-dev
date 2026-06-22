@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESO — Congestion РО / ГР</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #eef3f8; color: #1a2233; font-size: 14px; margin: 0; }
+    .header {
+      background: linear-gradient(180deg, #004494 0%, #003070 100%);
+      color: #fff; padding: 10px 16px; display: flex; align-items: center;
+      justify-content: space-between; gap: 10px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+    }
+    .header-nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .nav-btn {
+      padding: 4px 10px; background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.35); border-radius: 3px;
+      color: #fff; font-size: 0.78rem; cursor: pointer; transition: background 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; font-weight: 700; }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+    #day-label { color: #ffd700; font-weight: 700; font-size: 0.85rem; min-width: 80px; text-align: center; }
+    input[type=date]#date-picker {
+      padding: 3px 6px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.12); color: #fff; font-size: 0.78rem; cursor: pointer;
+    }
+    .back-link { color: rgba(255,255,255,0.7); font-size: 0.75rem; text-decoration: none; }
+    .back-link:hover { color: #fff; }
+
+    /* Scrubber — sticky under header */
+    #snap-scrubber {
+      display: none; position: sticky; top: 48px; z-index: 99;
+      background: #e8eef8; border-bottom: 1px solid #c5d8ee;
+      padding: 5px 14px; align-items: center; gap: 8px;
+    }
+    #snap-scrubber input[type=range] { flex: 1; }
+    #snap-ts { font-size: 0.75rem; font-weight: 600; color: #004494; white-space: nowrap; min-width: 110px; text-align: right; }
+
+    .past-banner {
+      display: none; background: #fff3cd; border-bottom: 2px solid #e0a800;
+      padding: 5px 16px; font-size: 0.78rem; color: #7a5800; text-align: center;
+    }
+    .past-banner.show { display: block; }
+    .content { padding: 12px 14px; max-width: 960px; margin: 0 auto; }
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .kpi { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 10px; }
+    .kpi-label { font-size: 0.6rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+    .kpi-val { font-size: 1.15rem; font-weight: 700; color: #1a2233; }
+    .kpi-sub { font-size: 0.65rem; color: #7a8aaa; margin-top: 1px; }
+
+    /* Combined spread chart */
+    .panel { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+    .panel-header {
+      background: #004494; color: #fff; padding: 7px 12px;
+      font-size: 0.78rem; font-weight: 700;
+    }
+    .panel-body { padding: 10px 12px; }
+    .chart-wrap { height: 280px; }
+
+    /* Per-border sections */
+    .border-section { background: #fff; border: 1px solid #c5d8ee; border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+    .border-header {
+      background: #1a5aaa; color: #fff; padding: 7px 12px;
+      font-size: 0.78rem; font-weight: 700;
+    }
+    .border-body { padding: 10px 12px; }
+    .live-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+    .live-card { background: #f0f5fb; border-radius: 4px; padding: 7px 10px; }
+    .lc-label { font-size: 0.6rem; color: #5a7090; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .lc-val { font-size: 1rem; font-weight: 700; }
+    .lc-sub { font-size: 0.65rem; color: #7a8aaa; }
+    .border-chart { height: 220px; }
+    .loading { text-align: center; padding: 40px; color: #7a8aaa; }
+
+    @media (max-width: 600px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .live-row { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="index.html" class="back-link">← Табло</a>
+    <span style="font-size:1rem;font-weight:700;">Congestion — РО / ГР</span>
+  </div>
+  <div class="header-nav">
+    <button class="nav-btn" id="prev-btn" onclick="shiftDay(-1)">&#8592;</button>
+    <span id="day-label">—</span>
+    <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
+    <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
+    <input type="date" id="date-picker" onchange="pickDate(this.value)">
+  </div>
+</div>
+
+<div id="snap-scrubber">
+  <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
+  <input type="range" id="snap-slider" min="0" max="0" value="0" oninput="onSnapSlider(this.value)">
+  <span id="snap-ts">—</span>
+</div>
+
+<div class="past-banner" id="past-banner">Исторически ден — не е в реално време</div>
+
+<div class="content">
+  <!-- KPI row -->
+  <div id="summary-kpis" class="kpi-row" style="display:none;">
+    <div class="kpi">
+      <div class="kpi-label">Общо congestion рента</div>
+      <div class="kpi-val" id="kpi-total-eur">—</div>
+      <div class="kpi-sub">EUR / ден</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Congestion РО</div>
+      <div class="kpi-val" id="kpi-ro-eur">—</div>
+      <div class="kpi-sub">EUR / ден</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Congestion ГР</div>
+      <div class="kpi-val" id="kpi-gr-eur">—</div>
+      <div class="kpi-sub">EUR / ден</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Снимки за деня</div>
+      <div class="kpi-val" id="kpi-snaps">—</div>
+      <div class="kpi-sub">5-мин записи</div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">Зареждане…</div>
+
+  <!-- Combined price spread chart -->
+  <div class="panel" id="spread-panel" style="display:none;">
+    <div class="panel-header">Ценова разлика спрямо България (DA) — EUR/MWh</div>
+    <div class="panel-body">
+      <div class="chart-wrap" id="spread-chart"></div>
+    </div>
+  </div>
+
+  <!-- Romania -->
+  <div class="border-section" id="ro-section" style="display:none;">
+    <div class="border-header">🇷🇴 България → Румъния</div>
+    <div class="border-body">
+      <div class="live-row">
+        <div class="live-card">
+          <div class="lc-label">Поток</div>
+          <div class="lc-val" id="ro-flow">—</div>
+          <div class="lc-sub">MW (+ износ)</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Цена РО (DA)</div>
+          <div class="lc-val" id="ro-price">—</div>
+          <div class="lc-sub">EUR/MWh</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Спред РО − БГ</div>
+          <div class="lc-val" id="ro-spread">—</div>
+          <div class="lc-sub">EUR/MWh</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Рента</div>
+          <div class="lc-val" id="ro-rent">—</div>
+          <div class="lc-sub">EUR/h</div>
+        </div>
+      </div>
+      <div class="border-chart" id="ro-chart"></div>
+    </div>
+  </div>
+
+  <!-- Greece -->
+  <div class="border-section" id="gr-section" style="display:none;">
+    <div class="border-header">🇬🇷 България → Гърция</div>
+    <div class="border-body">
+      <div class="live-row">
+        <div class="live-card">
+          <div class="lc-label">Поток</div>
+          <div class="lc-val" id="gr-flow">—</div>
+          <div class="lc-sub">MW (+ износ)</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Цена ГР (DA)</div>
+          <div class="lc-val" id="gr-price">—</div>
+          <div class="lc-sub">EUR/MWh</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Спред ГР − БГ</div>
+          <div class="lc-val" id="gr-spread">—</div>
+          <div class="lc-sub">EUR/MWh</div>
+        </div>
+        <div class="live-card">
+          <div class="lc-label">Рента</div>
+          <div class="lc-val" id="gr-rent">—</div>
+          <div class="lc-sub">EUR/h</div>
+        </div>
+      </div>
+      <div class="border-chart" id="gr-chart"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE       = 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+const REFRESH_MS = 5 * 60 * 1000;
+
+let allDates = [], currentDay = null;
+let _allRecs = [], _bgPd = null, _roPd = null, _grPd = null, _dateStr = '';
+const priceCache = {}, nbrCache = {};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+async function getJSON(url) {
+  const r = await fetch(url + '?_=' + Date.now());
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+async function getJSONL(url) {
+  const r = await fetch(url + '?_=' + Date.now());
+  if (!r.ok) throw new Error(r.status);
+  const text = await r.text();
+  return text.trim().split('\n').filter(Boolean)
+    .map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(Boolean);
+}
+function toUtcMs(r) {
+  if (r.timestamp_utc) return Date.parse(r.timestamp_utc);
+  return Date.parse((r.timestamp || '').replace(' ', 'T') + '+03:00');
+}
+function toSofiaStr(ms) { return new Date(ms).toLocaleString('sv',{timeZone:'Europe/Sofia'}).substring(0,16); }
+function todayStr() { return new Date().toLocaleDateString('sv',{timeZone:'Europe/Sofia'}); }
+function fmt0(v) { return isFinite(v) ? Math.round(v).toLocaleString('bg-BG') : '—'; }
+function fmtEur(v) {
+  if (!isFinite(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs >= 1000) return (v/1000).toFixed(1) + ' хил.€';
+  return Math.round(v) + ' €';
+}
+function rentColor(v) { return v >= 0 ? '#1a8a1a' : '#cc2200'; }
+
+function getPriceAt(pd, tsMs) {
+  if (!pd || !pd.unix_seconds) return NaN;
+  const s = tsMs / 1000, us = pd.unix_seconds;
+  let lo = 0, hi = us.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (us[mid] <= s) lo = mid; else hi = mid - 1; }
+  if (Math.abs(us[lo] - s) > 3600) return NaN;
+  return pd.price[lo];
+}
+
+function getDayPrices(pd, dateStr) {
+  if (!pd || !pd.unix_seconds) return [];
+  const noon = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH = parseInt(noon.toLocaleString('sv-SE',{timeZone:'Europe/Sofia'}).slice(11,13));
+  const s0 = (new Date(dateStr+'T00:00:00Z').getTime() - (sofiaH-12)*3600000) / 1000;
+  const s1 = s0 + 86400;
+  const pts = [];
+  for (let i = 0; i < pd.unix_seconds.length; i++) {
+    const s = pd.unix_seconds[i];
+    if (s >= s0 && s < s1) pts.push({ ts: s*1000, price: pd.price[i] });
+  }
+  return pts;
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+
+async function loadPricePair(dateStr, cc) {
+  const ym = dateStr.slice(0,7), isFirst = dateStr.slice(8,10) === '01';
+  const key = `${cc}-${ym}${isFirst?'+p':''}`;
+  if (nbrCache[key]) return nbrCache[key];
+  const d = await getJSON(`${BASE}/prices-${cc}-${ym}.json`).catch(()=>null);
+  if (!d) return null;
+  if (isFirst) {
+    const prev = new Date(dateStr+'T12:00:00Z');
+    prev.setUTCMonth(prev.getUTCMonth()-1);
+    const ymPrev = prev.toISOString().slice(0,7);
+    try {
+      const dp = await getJSON(`${BASE}/prices-${cc}-${ymPrev}.json`);
+      if (dp && dp.unix_seconds) {
+        const existing = new Set(d.unix_seconds||[]);
+        for (let i=0;i<dp.unix_seconds.length;i++) {
+          if (!existing.has(dp.unix_seconds[i])) {
+            (d.unix_seconds=d.unix_seconds||[]).push(dp.unix_seconds[i]);
+            (d.price=d.price||[]).push(dp.price[i]);
+          }
+        }
+        const paired = d.unix_seconds.map((t,i)=>[t,d.price[i]]).sort((a,b)=>a[0]-b[0]);
+        d.unix_seconds = paired.map(p=>p[0]); d.price = paired.map(p=>p[1]);
+      }
+    } catch(_) {}
+  }
+  return nbrCache[key] = d;
+}
+
+async function loadBgPrices(dateStr) {
+  const ym = dateStr.slice(0,7);
+  if (priceCache[ym]) return priceCache[ym];
+  const d = await getJSON(`${BASE}/prices-${ym}.json`).catch(()=>null);
+  return d ? (priceCache[ym]=d) : null;
+}
+
+// ── Scrubber ─────────────────────────────────────────────────────────────────
+
+function updateScrubber(records) {
+  const el = document.getElementById('snap-scrubber');
+  const slider = document.getElementById('snap-slider');
+  if (records.length > 1) {
+    el.style.display = 'flex';
+    slider.max = records.length - 1;
+    slider.value = records.length - 1;
+  } else {
+    el.style.display = 'none';
+  }
+  updateSnapLabel(records[records.length - 1]);
+}
+
+function updateSnapLabel(snap) {
+  if (!snap) return;
+  const ms = toUtcMs(snap);
+  const el = document.getElementById('snap-ts');
+  if (!isFinite(ms)) { el.textContent = '—'; return; }
+  el.textContent = new Date(ms).toLocaleTimeString('bg-BG',{timeZone:'Europe/Sofia',hour:'2-digit',minute:'2-digit'}) + ' ч.';
+}
+
+function onSnapSlider(val) {
+  const snap = _allRecs[+val];
+  if (!snap) return;
+  updateSnapLabel(snap);
+  updateLiveCards(snap, _bgPd, _roPd, _grPd);
+}
+
+// ── Spread chart (combined RO + GR vs BG) ────────────────────────────────────
+
+function renderSpreadChart(dateStr, bgPd, roPd, grPd) {
+  const bgPts = getDayPrices(bgPd, dateStr);
+  const roPts = getDayPrices(roPd, dateStr);
+  const grPts = getDayPrices(grPd, dateStr);
+
+  // Build spread series aligned to BG price timestamps
+  function spreadSeries(nbrPts) {
+    const nbrMap = {};
+    for (const p of nbrPts) nbrMap[Math.round(p.ts/900000)] = p.price;
+    const xs=[], ys=[];
+    for (const p of bgPts) {
+      const key = Math.round(p.ts/900000);
+      const nbrP = nbrMap[key];
+      if (nbrP != null) { xs.push(toSofiaStr(p.ts)); ys.push(+(nbrP-p.price).toFixed(2)); }
+    }
+    return {xs, ys};
+  }
+
+  const ro = spreadSeries(roPts);
+  const gr = spreadSeries(grPts);
+  const bgXs = bgPts.map(p=>toSofiaStr(p.ts));
+  const bgYs = bgPts.map(p=>p.price);
+
+  // Zero line fill for RO spread
+  const roColors = ro.ys.map(v => v >= 0 ? 'rgba(26,138,26,0.7)' : 'rgba(204,34,0,0.7)');
+
+  const traces = [
+    // BG absolute price on right axis for reference
+    { x: bgXs, y: bgYs, type:'scatter', mode:'lines', name:'БГ цена',
+      yaxis:'y2', line:{color:'#004494',width:1,dash:'dot'},
+      hovertemplate:'БГ %{y:.1f} €/MWh<extra></extra>' },
+    // RO spread bars
+    { x: ro.xs, y: ro.ys, type:'bar', name:'Спред РО−БГ',
+      marker:{color:roColors},
+      hovertemplate:'РО−БГ %{y:+.1f} €/MWh<extra></extra>' },
+    // GR spread line
+    { x: gr.xs, y: gr.ys, type:'scatter', mode:'lines', name:'Спред ГР−БГ',
+      line:{color:'#009933',width:2},
+      hovertemplate:'ГР−БГ %{y:+.1f} €/MWh<extra></extra>' },
+  ];
+
+  const layout = {
+    margin:{t:8,r:55,b:40,l:50}, paper_bgcolor:'#fff', plot_bgcolor:'#fff',
+    legend:{orientation:'h',y:-0.18,font:{size:10}},
+    barmode:'overlay',
+    xaxis:{ type:'category', tickfont:{size:9}, nticks:12 },
+    yaxis:{ title:'Спред €/MWh', titlefont:{size:10}, tickfont:{size:9},
+            zeroline:true, zerolinecolor:'#888', zerolinewidth:1.5 },
+    yaxis2:{ title:'БГ цена €/MWh', titlefont:{size:10}, tickfont:{size:9},
+             overlaying:'y', side:'right', showgrid:false },
+    hovermode:'x unified',
+    shapes:[{ type:'line', x0:0, x1:1, xref:'paper', y0:0, y1:0, yref:'y',
+              line:{color:'#888',width:1,dash:'dot'} }],
+  };
+  Plotly.react(document.getElementById('spread-chart'), traces, layout, {responsive:true, displayModeBar:false});
+}
+
+// ── Per-border flow+rent chart ────────────────────────────────────────────────
+
+function renderBorderChart(elId, pts, bgPd, nbrPd, ccKey) {
+  const W = 15*60*1000, buckets = {};
+  for (const r of pts) {
+    const ms = toUtcMs(r); if (!isFinite(ms)) continue;
+    const bk = Math.floor(ms/W)*W;
+    if (!buckets[bk]) buckets[bk] = [];
+    buckets[bk].push(r);
+  }
+
+  const flowXs=[], flowYs=[], rentXs=[], rentYs=[], rentColors=[];
+  for (const [bk, recs] of Object.entries(buckets).sort((a,b)=>+a[0]-+b[0])) {
+    const bkMs = +bk;
+    const flowMw = recs.reduce((s,r)=>{const v=r[ccKey];return s+(isFinite(v)?v:0);},0)/recs.length;
+    const bgP = getPriceAt(bgPd, bkMs), nbrP = getPriceAt(nbrPd, bkMs);
+    const rentH = isFinite(bgP)&&isFinite(nbrP) ? -flowMw*(nbrP-bgP) : NaN;
+    const xs = toSofiaStr(bkMs);
+    flowXs.push(xs); flowYs.push(Math.round(flowMw));
+    rentXs.push(xs); rentYs.push(isFinite(rentH)?Math.round(rentH):null);
+    rentColors.push(isFinite(rentH)&&rentH>=0?'rgba(26,138,26,0.75)':'rgba(204,34,0,0.75)');
+  }
+
+  const traces = [
+    { x: flowXs, y: flowYs, type:'bar', name:'Поток MW', yaxis:'y2',
+      marker:{color:'rgba(0,68,148,0.25)',line:{color:'rgba(0,68,148,0.5)',width:1}},
+      hovertemplate:'%{y} MW<extra></extra>' },
+    { x: rentXs, y: rentYs, type:'bar', name:'Рента €/h', yaxis:'y',
+      marker:{color:rentColors}, hovertemplate:'%{y} €/h<extra></extra>' },
+  ];
+
+  const layout = {
+    margin:{t:6,r:55,b:36,l:55}, paper_bgcolor:'#fff', plot_bgcolor:'#fff',
+    legend:{orientation:'h',y:-0.22,font:{size:10}},
+    barmode:'overlay',
+    xaxis:{ type:'category', tickfont:{size:9}, nticks:10 },
+    yaxis:{ title:'Рента €/h', titlefont:{size:10}, tickfont:{size:9},
+            zeroline:true, zerolinecolor:'#ccc' },
+    yaxis2:{ title:'Поток MW', titlefont:{size:10}, tickfont:{size:9},
+             overlaying:'y', side:'right', zeroline:true, zerolinecolor:'#dde' },
+    hovermode:'x unified',
+  };
+  Plotly.react(document.getElementById(elId), traces, layout, {responsive:true, displayModeBar:false});
+}
+
+// ── Live cards ────────────────────────────────────────────────────────────────
+
+function updateLiveCards(snap, bgPd, roPd, grPd) {
+  if (!snap) return;
+  const tsMs = toUtcMs(snap);
+  const bgP  = getPriceAt(bgPd, tsMs);
+
+  for (const [ccKey, pd, pfx] of [['RO_mw',roPd,'ro'],['GR_mw',grPd,'gr']]) {
+    const flowMw = snap[ccKey] ?? NaN;
+    const nbrP   = getPriceAt(pd, tsMs);
+    const spread = isFinite(nbrP)&&isFinite(bgP) ? nbrP-bgP : NaN;
+    const rent   = isFinite(spread) ? -flowMw*spread : NaN;
+
+    document.getElementById(pfx+'-flow').textContent   = isFinite(flowMw) ? fmt0(flowMw) : '—';
+    document.getElementById(pfx+'-flow').style.color   = flowMw>0?'#004494':flowMw<0?'#cc6600':'#1a2233';
+    document.getElementById(pfx+'-price').textContent  = isFinite(nbrP) ? nbrP.toFixed(1) : '—';
+    document.getElementById(pfx+'-spread').textContent = isFinite(spread) ? (spread>0?'+':'')+spread.toFixed(1) : '—';
+    document.getElementById(pfx+'-spread').style.color = isFinite(spread) ? (spread>0?'#1a8a1a':'#cc2200') : '#1a2233';
+    document.getElementById(pfx+'-rent').textContent   = isFinite(rent) ? fmt0(rent) : '—';
+    document.getElementById(pfx+'-rent').style.color   = isFinite(rent) ? rentColor(rent) : '#1a2233';
+  }
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────────────
+
+function updateKpis(pts, bgPd, roPd, grPd) {
+  let roEur=0, grEur=0, snapCount=pts.length;
+  const W=15*60*1000, buckets={};
+  for (const r of pts) {
+    const ms=toUtcMs(r); if(!isFinite(ms)) continue;
+    const bk=Math.floor(ms/W)*W;
+    if(!buckets[bk]) buckets[bk]=[];
+    buckets[bk].push(r);
+  }
+  for (const [bk,recs] of Object.entries(buckets)) {
+    const bkMs=+bk, h=15/60;
+    const roMw=recs.reduce((s,r)=>{const v=r.RO_mw;return s+(isFinite(v)?v:0);},0)/recs.length;
+    const grMw=recs.reduce((s,r)=>{const v=r.GR_mw;return s+(isFinite(v)?v:0);},0)/recs.length;
+    const bgP=getPriceAt(bgPd,bkMs), roP=getPriceAt(roPd,bkMs), grP=getPriceAt(grPd,bkMs);
+    if(isFinite(bgP)&&isFinite(roP)) roEur += -roMw*(roP-bgP)*h;
+    if(isFinite(bgP)&&isFinite(grP)) grEur += -grMw*(grP-bgP)*h;
+  }
+  const total=roEur+grEur;
+  document.getElementById('kpi-total-eur').textContent=fmtEur(total);
+  document.getElementById('kpi-total-eur').style.color=rentColor(total);
+  document.getElementById('kpi-ro-eur').textContent=fmtEur(roEur);
+  document.getElementById('kpi-ro-eur').style.color=rentColor(roEur);
+  document.getElementById('kpi-gr-eur').textContent=fmtEur(grEur);
+  document.getElementById('kpi-gr-eur').style.color=rentColor(grEur);
+  document.getElementById('kpi-snaps').textContent=snapCount;
+  document.getElementById('summary-kpis').style.display='grid';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
+function updateNav() {
+  const today=todayStr(), base=currentDay||today, idx=allDates.indexOf(base);
+  document.getElementById('prev-btn').disabled  = idx<=0;
+  document.getElementById('next-btn').disabled  = idx>=allDates.length-1||currentDay===null;
+  document.getElementById('today-btn').classList.toggle('active',currentDay===null);
+  document.getElementById('day-label').textContent=base;
+  const picker=document.getElementById('date-picker');
+  if(allDates.length){picker.min=allDates[0];picker.max=allDates[allDates.length-1];}
+  picker.value=base;
+  document.getElementById('past-banner').classList.toggle('show',currentDay!==null);
+}
+function shiftDay(d) {
+  const base=currentDay||todayStr(), idx=allDates.indexOf(base); if(idx===-1)return;
+  const ni=Math.max(0,Math.min(allDates.length-1,idx+d));
+  currentDay=allDates[ni]===todayStr()?null:allDates[ni]; refresh();
+}
+function goToday(){currentDay=null;refresh();}
+function pickDate(v){currentDay=v===todayStr()?null:v;refresh();}
+
+// ── Main refresh ──────────────────────────────────────────────────────────────
+
+async function refresh() {
+  document.getElementById('loading').style.display='block';
+  document.getElementById('spread-panel').style.display='none';
+  document.getElementById('ro-section').style.display='none';
+  document.getElementById('gr-section').style.display='none';
+  document.getElementById('summary-kpis').style.display='none';
+  document.getElementById('snap-scrubber').style.display='none';
+
+  const idx = await getJSON(`${BASE}/index.json`);
+  allDates = idx.dates || [];
+  updateNav();
+
+  const dateStr = currentDay || todayStr();
+  _dateStr = dateStr;
+
+  let recs=[];
+  try { recs=await getJSONL(currentDay===null?`${BASE}/today.jsonl`:`${BASE}/${dateStr}.jsonl`); } catch(_){}
+
+  let prevRecs=[];
+  try {
+    const prev=new Date(dateStr+'T12:00:00Z'); prev.setUTCDate(prev.getUTCDate()-1);
+    const prevStr=prev.toISOString().slice(0,10);
+    prevRecs=(await getJSONL(`${BASE}/${prevStr}.jsonl`))
+      .filter(r=>{const ms=toUtcMs(r);return isFinite(ms)&&toSofiaStr(ms).slice(0,10)===dateStr;});
+  } catch(_){}
+
+  _allRecs=[...prevRecs,...recs].sort((a,b)=>toUtcMs(a)-toUtcMs(b));
+  const latest=_allRecs.length?_allRecs[_allRecs.length-1]:null;
+
+  [_bgPd,_roPd,_grPd] = await Promise.all([
+    loadBgPrices(dateStr),
+    loadPricePair(dateStr,'ro'),
+    loadPricePair(dateStr,'gr'),
+  ]);
+
+  document.getElementById('loading').style.display='none';
+  document.getElementById('spread-panel').style.display='block';
+  document.getElementById('ro-section').style.display='block';
+  document.getElementById('gr-section').style.display='block';
+
+  updateScrubber(_allRecs);
+  updateLiveCards(latest, _bgPd, _roPd, _grPd);
+  updateKpis(_allRecs, _bgPd, _roPd, _grPd);
+  renderSpreadChart(dateStr, _bgPd, _roPd, _grPd);
+  renderBorderChart('ro-chart', _allRecs, _bgPd, _roPd, 'RO_mw');
+  renderBorderChart('gr-chart', _allRecs, _bgPd, _grPd, 'GR_mw');
+}
+
+refresh();
+setInterval(()=>{if(currentDay===null)refresh();},REFRESH_MS);
+</script>
+</body>
+</html>
