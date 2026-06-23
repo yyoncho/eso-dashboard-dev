@@ -385,7 +385,8 @@ lcoeCap = 12 000 × 0.0826 / (0.90 × 8760) × 1000 ≈ 125.7 EUR/MWh
 LCOE = lcoeCap + OPEX = 125.7 + 45 ≈ 171 EUR/MWh
 
 СРАВНЕНИЕ С ПАЗАРА:
-Средната борсова цена на електроенергия в България за последните 2 години (Day-Ahead, Ember данни) е около 100 EUR/MWh.
+Източник на борсови цени: Ember Climate (ember-climate.org) — часови данни за BG Day-Ahead пазар, последните 2 години.
+Средна BG Day-Ahead цена за последните 2 години: <span id="meth-avg-price">~100</span> EUR/MWh.
 При тази цена централата ще реализира загуба при по-голямата част от пазарните часове.
 
 ВЪПРОС КЪМ AI:
@@ -608,6 +609,7 @@ async function init() {
       document.getElementById('price-no-data').style.display = 'none';
       document.getElementById('price-stats').style.display   = '';
       document.getElementById('ps-avg').textContent    = fmtEur(ps.avg);
+      document.getElementById('meth-avg-price').textContent = Math.round(ps.avg);
       document.getElementById('ps-med').textContent    = fmtEur(ps.median);
       document.getElementById('ps-min').textContent    = fmtEur(ps.min);
       document.getElementById('ps-max').textContent    = fmtEur(ps.max);
