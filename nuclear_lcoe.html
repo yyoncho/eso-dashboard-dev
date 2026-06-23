@@ -221,6 +221,10 @@ header {
         <label>Срок на живот (год.)</label>
         <input type="number" id="p-life" value="60" min="20" max="80" step="5" oninput="recalc()">
       </div>
+      <div class="param-row">
+        <label>WACC (цена на капитала, %)</label>
+        <input type="number" id="p-wacc" value="8" min="2" max="15" step="0.5" oninput="recalc()">
+      </div>
       <hr class="divider">
 
     </div>
@@ -246,11 +250,6 @@ header {
         <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
         <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
-      </div>
-      <div class="slider-row" style="margin:0 0 12px">
-        <label>WACC (цена на капитала): <strong id="lbl-wacc">8%</strong></label>
-        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="8"
-               oninput="document.getElementById('lbl-wacc').textContent=this.value+'%'; recalc()">
       </div>
       <div id="banner-net" style="border-radius:4px;padding:10px 14px;border:1px solid #ccc;display:flex;gap:16px;align-items:center">
         <div style="flex:1;text-align:center">
@@ -344,7 +343,6 @@ function loadPreset(btn) {
   document.getElementById('p-wacc').value      = p.wacc;
   document.getElementById('p-cf').value        = p.cf;
   document.getElementById('p-constr').value    = p.constr;
-  document.getElementById('lbl-wacc').textContent   = p.wacc + '%';
   document.getElementById('lbl-cf').textContent     = p.cf + '%';
   document.getElementById('lbl-constr').textContent = p.constr + ' год.';
   recalc();
