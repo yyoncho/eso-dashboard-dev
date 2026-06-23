@@ -238,8 +238,8 @@ header {
     <button class="gear-btn" onclick="openModal()" title="Параметри">⚙</button>
     <div style="margin-bottom:2px">
       <div class="slider-row" style="margin:0 0 8px">
-        <label>Общо: <strong id="cr-total">12.00</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">(без лихви: <span id="cr-overnight">7.56</span> Млрд.)</span></label>
-        <input type="range" id="cost-slider" min="1" max="15" step="0.01" value="7.56" oninput="onCostSlider()">
+        <label>Общо: <strong id="cr-total">12.00</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">(без лихви: <span id="cr-overnight">8.17</span> Млрд.)</span></label>
+        <input type="range" id="cost-slider" min="1" max="15" step="0.01" value="8.17" oninput="onCostSlider()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
@@ -247,8 +247,8 @@ header {
                oninput="document.getElementById('lbl-cf').textContent=this.value+'%'; recalc()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
-        <label>Строителство: <strong id="lbl-constr">12 год.</strong></label>
-        <input type="range" id="p-constr" min="5" max="20" step="1" value="12"
+        <label>Строителство: <strong id="lbl-constr">10 год.</strong></label>
+        <input type="range" id="p-constr" min="5" max="20" step="1" value="10"
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
       </div>
       <div id="banner-net" style="border-radius:4px;padding:10px 14px;border:1px solid #ccc;display:flex;gap:16px;align-items:center">
@@ -361,7 +361,7 @@ TARIFF.totalAvg  = (TARIFF.supplyAvg + TARIFF.network) * (1 + TARIFF.VAT);
 TARIFF.supplyEurMwh = TARIFF.supplyAvg / TARIFF.BGN_PER_EUR * 1000;
 
 const PRESETS = {
-  kozloduy: { overnightBn: 7.56, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 12 },
+  kozloduy: { overnightBn: 8.17, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 10 },
   ap1000:   { overnightBn: 8.60, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 10 },
   vogtle:   { overnightBn: 13.20, opex: 45, mw: 1117, life: 60, wacc: 4.0, cf: 90, constr: 10 },
 };
