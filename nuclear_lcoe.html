@@ -323,7 +323,7 @@ header {
       </div>
 
     </div>
-    <div style="font-size:0.68rem;color:#9aaabc;margin-top:6px">* Само производствена компонента — мрежа и данъци не са включени.</div>
+    <div style="font-size:0.68rem;color:#9aaabc;margin-top:6px">* Мрежа, ОЗЕ, акциз и ДДС запазени. Само снабдяването се замества с LCOE. Регулирана тарифа: КЕВР Ц-25, Енерго-Про.</div>
   </div>
 
   <!-- Warning note -->
@@ -347,6 +347,21 @@ header {
 const BASE = location.hostname === 'localhost'
   ? ''
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
+
+// КЕВР Ц-25, Енерго-Про (BGN/kWh без ДДС)
+const TARIFF = {
+  BGN_PER_EUR:  1.95583,
+  supply:       { day: 0.1540, night: 0.0544 },
+  network:      0.0145 + 0.0511 + 0.0250 + 0.00205,  // пренос + разпр. + ОЗЕ + акциз
+  VAT:          0.20,
+  dayShare:     0.70,
+};
+// Weighted avg supply BGN/kWh
+TARIFF.supplyAvg = TARIFF.dayShare * TARIFF.supply.day + (1 - TARIFF.dayShare) * TARIFF.supply.night;
+// Full regulated rate BGN/kWh (for display)
+TARIFF.totalAvg  = (TARIFF.supplyAvg + TARIFF.network) * (1 + TARIFF.VAT);
+// EUR/MWh for regulated supply only
+TARIFF.supplyEurMwh = TARIFF.supplyAvg / TARIFF.BGN_PER_EUR * 1000;
 
 const PRESETS = {
   kozloduy: { overnightBn: 7.56, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 12 },
@@ -482,26 +497,37 @@ function recalc() {
     document.getElementById('br-hours-above').textContent = aboveYr;
     document.getElementById('br-hours-below').textContent = belowYr;
 
-    // Household comparison
+    // Household comparison — proper tariff-aware calc
+    // Only supply component changes; network + VAT stay fixed.
+    // new_bill = 100 × (lcoe_bgn + network) / (supply_bgn + network)   [VAT cancels]
     const ps2 = computePriceStats(priceHours);
     if (ps2) {
-      const REG_PRICE = 150;
-      const mkt = ps2.avg;
       const lcoe = r.lcoe;
+      const lcoeBgn = lcoe / 1000 * TARIFF.BGN_PER_EUR;          // EUR/MWh → BGN/kWh
+      const net     = TARIFF.network;
 
-      const fillCard = (refPrice, billId, diffId, refId) => {
-        const bill = 100 * lcoe / refPrice;
-        const diff = bill - 100;
-        const col  = diff > 0 ? '#cc2200' : '#1a8a1a';
-        document.getElementById(refId).textContent  = refPrice.toFixed(0);
+      // Regulated: supply = TARIFF.supplyAvg BGN/kWh (day/night weighted)
+      const regBill = 100 * (lcoeBgn + net) / (TARIFF.supplyAvg + net);
+      const regDiff = regBill - 100;
+      const regRef  = TARIFF.supplyEurMwh.toFixed(0);
+
+      // Free market: supply = Ember avg + 5 EUR/MWh markup, converted to BGN/kWh
+      const mktEur  = ps2.avg + 5;
+      const mktBgn  = mktEur / 1000 * TARIFF.BGN_PER_EUR;
+      const mktBill = 100 * (lcoeBgn + net) / (mktBgn + net);
+      const mktDiff = mktBill - 100;
+
+      const fillCard = (bill, diff, refStr, billId, diffId, refId) => {
+        const col = diff > 0 ? '#cc2200' : '#1a8a1a';
+        document.getElementById(refId).textContent  = refStr;
         document.getElementById(billId).textContent = bill.toFixed(1);
         document.getElementById(billId).style.color = col;
         document.getElementById(diffId).textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' EUR (' + (diff >= 0 ? '+' : '') + diff.toFixed(0) + '%)';
         document.getElementById(diffId).style.color = col;
       };
 
-      fillCard(REG_PRICE, 'hh-reg-bill', 'hh-reg-diff', 'hh-reg-ref');
-      fillCard(mkt,       'hh-mkt-bill', 'hh-mkt-diff', 'hh-mkt-ref');
+      fillCard(regBill, regDiff, regRef,         'hh-reg-bill', 'hh-reg-diff', 'hh-reg-ref');
+      fillCard(mktBill, mktDiff, mktEur.toFixed(0), 'hh-mkt-bill', 'hh-mkt-diff', 'hh-mkt-ref');
       document.getElementById('household-panel').style.display = '';
     }
 
