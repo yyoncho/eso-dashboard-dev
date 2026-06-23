@@ -548,9 +548,16 @@ async function init() {
       document.getElementById('ps-med').textContent    = fmtEur(ps.median);
       document.getElementById('ps-min').textContent    = fmtEur(ps.min);
       document.getElementById('ps-max').textContent    = fmtEur(ps.max);
-      document.getElementById('ps-gt100').textContent  = ps.gt100.toLocaleString('bg-BG') + ' ч.';
-      document.getElementById('ps-gt150').textContent  = ps.gt150.toLocaleString('bg-BG') + ' ч.';
-      document.getElementById('ps-neg').textContent    = ps.neg.toLocaleString('bg-BG') + ' ч.';
+      const span = (priceHours[priceHours.length-1].t - priceHours[0].t) / (365.25 * 86400);
+      const n    = priceHours.length;
+      const fmtH = (cnt) => {
+        const ann = Math.round(cnt / span);
+        const pct = (cnt / n * 100).toFixed(1);
+        return ann.toLocaleString('bg-BG') + ' ч./год. (' + pct + '%)';
+      };
+      document.getElementById('ps-gt100').textContent  = fmtH(ps.gt100);
+      document.getElementById('ps-gt150').textContent  = fmtH(ps.gt150);
+      document.getElementById('ps-neg').textContent    = fmtH(ps.neg);
       const fmt = ts => new Date(ts * 1000).toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' });
       const fromStr = priceHours.length ? fmt(priceHours[0].t) : '—';
       const toStr   = priceHours.length ? fmt(priceHours[priceHours.length - 1].t) : '—';
