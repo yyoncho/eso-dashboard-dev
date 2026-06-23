@@ -269,6 +269,28 @@ header {
     </div>
   </div>
 
+  <!-- Household comparison -->
+  <div id="household-panel" style="display:none;margin-top:10px">
+    <div style="font-size:0.72rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Влияние върху сметка от 100 EUR/мес.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="stat-card" style="text-align:center">
+        <div class="stat-label">Регулиран пазар</div>
+        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">снабдяване <span id="hh-reg-ref">—</span> EUR/MWh</div>
+        <div class="stat-val" id="hh-reg-bill" style="font-size:1.5rem">—</div>
+        <div class="stat-unit">EUR / мес.</div>
+        <div class="stat-sub" id="hh-reg-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
+      </div>
+      <div class="stat-card" style="text-align:center">
+        <div class="stat-label">Свободен пазар</div>
+        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">борса <span id="hh-mkt-ref">—</span> EUR/MWh</div>
+        <div class="stat-val" id="hh-mkt-bill" style="font-size:1.5rem">—</div>
+        <div class="stat-unit">EUR / мес.</div>
+        <div class="stat-sub" id="hh-mkt-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
+      </div>
+    </div>
+    <div style="font-size:0.68rem;color:#9aaabc;margin-top:6px">* Мрежа, ОЗЕ, акциз и ДДС запазени. Само снабдяването се замества с LCOE. Регулирана тарифа: КЕВР Ц-25, Енерго-Про.</div>
+  </div>
+
   <!-- Breakdown -->
   <div class="panel">
     <div class="panel-header">Разбивка на себестойността (LCOE — Lazard методология)</div>
@@ -299,31 +321,6 @@ header {
         <div class="price-stat-row"><span>Период</span><span id="ps-period">—</span></div>
       </div>
     </div>
-  </div>
-
-  <!-- Household comparison -->
-  <div id="household-panel" style="display:none;margin-top:14px">
-    <div style="font-size:0.72rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Влияние върху сметка от 100 EUR/мес.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Регулиран пазар</div>
-        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">при <span id="hh-reg-ref">~150</span> EUR/MWh</div>
-        <div class="stat-val" id="hh-reg-bill" style="font-size:1.5rem">—</div>
-        <div class="stat-unit">EUR / мес.</div>
-        <div class="stat-sub" id="hh-reg-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
-      </div>
-
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Свободен пазар</div>
-        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">при <span id="hh-mkt-ref">—</span> EUR/MWh</div>
-        <div class="stat-val" id="hh-mkt-bill" style="font-size:1.5rem">—</div>
-        <div class="stat-unit">EUR / мес.</div>
-        <div class="stat-sub" id="hh-mkt-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
-      </div>
-
-    </div>
-    <div style="font-size:0.68rem;color:#9aaabc;margin-top:6px">* Мрежа, ОЗЕ, акциз и ДДС запазени. Само снабдяването се замества с LCOE. Регулирана тарифа: КЕВР Ц-25, Енерго-Про.</div>
   </div>
 
   <!-- Warning note -->
