@@ -302,19 +302,28 @@ header {
   </div>
 
   <!-- Household comparison -->
-  <div class="panel" id="household-panel" style="display:none">
-    <div class="panel-header">Сравнение — сметка за ток при LCOE vs. пазар</div>
-    <div class="breakdown-body">
-      <div class="brow"><span>Средна пазарна цена (Ember, 2г.)</span><span id="hh-mkt">—</span></div>
-      <div class="brow"><span>Себестойност АЕЦ (LCOE)</span><span id="hh-lcoe">—</span></div>
-      <div class="brow" style="height:6px"></div>
-      <div class="brow"><span>Сметка при пазарна цена</span><span>100 EUR / мес.</span></div>
-      <div class="brow derived"><span>▶ Сметка при АЕЦ LCOE</span><span id="hh-bill">—</span></div>
-      <div class="brow total"><span>Разлика</span><span id="hh-diff">—</span></div>
+  <div id="household-panel" style="display:none;margin-top:14px">
+    <div style="font-size:0.72rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Влияние върху сметка от 100 EUR/мес.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+      <div class="stat-card" style="text-align:center">
+        <div class="stat-label">Регулиран пазар</div>
+        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">при <span id="hh-reg-ref">~150</span> EUR/MWh</div>
+        <div class="stat-val" id="hh-reg-bill" style="font-size:1.5rem">—</div>
+        <div class="stat-unit">EUR / мес.</div>
+        <div class="stat-sub" id="hh-reg-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
+      </div>
+
+      <div class="stat-card" style="text-align:center">
+        <div class="stat-label">Свободен пазар</div>
+        <div style="font-size:0.7rem;color:#7a8aaa;margin-bottom:4px">при <span id="hh-mkt-ref">—</span> EUR/MWh</div>
+        <div class="stat-val" id="hh-mkt-bill" style="font-size:1.5rem">—</div>
+        <div class="stat-unit">EUR / мес.</div>
+        <div class="stat-sub" id="hh-mkt-diff" style="font-weight:600;font-size:0.85rem;margin-top:2px">—</div>
+      </div>
+
     </div>
-    <div style="font-size:0.72rem;color:#7a8aaa;padding:6px 10px 4px">
-      * Само производствена компонента. Мрежа, данъци и регулирани такси не са включени.
-    </div>
+    <div style="font-size:0.68rem;color:#9aaabc;margin-top:6px">* Само производствена компонента — мрежа и данъци не са включени.</div>
   </div>
 
   <!-- Warning note -->
@@ -476,16 +485,23 @@ function recalc() {
     // Household comparison
     const ps2 = computePriceStats(priceHours);
     if (ps2) {
-      const mkt     = ps2.avg;
-      const bill    = 100 * r.lcoe / mkt;
-      const diff    = bill - 100;
-      const diffCol = diff > 0 ? '#cc2200' : '#1a8a1a';
-      document.getElementById('hh-mkt').textContent  = mkt.toFixed(1) + ' EUR/MWh';
-      document.getElementById('hh-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
-      document.getElementById('hh-bill').textContent = bill.toFixed(1) + ' EUR / мес.';
-      document.getElementById('hh-diff').textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' EUR / мес.  (' + (diff >= 0 ? '+' : '') + (diff).toFixed(0) + '%)';
-      document.getElementById('hh-diff').style.color  = diffCol;
-      document.getElementById('hh-bill').style.color  = diffCol;
+      const REG_PRICE = 150;
+      const mkt = ps2.avg;
+      const lcoe = r.lcoe;
+
+      const fillCard = (refPrice, billId, diffId, refId) => {
+        const bill = 100 * lcoe / refPrice;
+        const diff = bill - 100;
+        const col  = diff > 0 ? '#cc2200' : '#1a8a1a';
+        document.getElementById(refId).textContent  = refPrice.toFixed(0);
+        document.getElementById(billId).textContent = bill.toFixed(1);
+        document.getElementById(billId).style.color = col;
+        document.getElementById(diffId).textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' EUR (' + (diff >= 0 ? '+' : '') + diff.toFixed(0) + '%)';
+        document.getElementById(diffId).style.color = col;
+      };
+
+      fillCard(REG_PRICE, 'hh-reg-bill', 'hh-reg-diff', 'hh-reg-ref');
+      fillCard(mkt,       'hh-mkt-bill', 'hh-mkt-diff', 'hh-mkt-ref');
       document.getElementById('household-panel').style.display = '';
     }
 
