@@ -234,8 +234,8 @@ header {
     <button class="gear-btn" onclick="openModal()" title="Параметри">⚙</button>
     <div style="margin-bottom:2px">
       <div class="slider-row" style="margin:0 0 8px">
-        <label>Общо: <strong id="cr-total">12.00</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">(без лихви: <span id="cr-overnight">9.48</span> Млрд.)</span></label>
-        <input type="range" id="cost-slider" min="1" max="15" step="0.01" value="9.48" oninput="onCostSlider()">
+        <label>Общо: <strong id="cr-total">12.00</strong> Млрд. EUR &nbsp;<span style="color:#7a8aaa;font-weight:normal;font-size:0.8em">(без лихви: <span id="cr-overnight">7.56</span> Млрд.)</span></label>
+        <input type="range" id="cost-slider" min="1" max="15" step="0.01" value="7.56" oninput="onCostSlider()">
       </div>
       <div class="slider-row" style="margin:0 0 8px">
         <label>Капацитетен фактор: <strong id="lbl-cf">90%</strong></label>
@@ -248,8 +248,8 @@ header {
                oninput="document.getElementById('lbl-constr').textContent=this.value+' год.'; recalc()">
       </div>
       <div class="slider-row" style="margin:0 0 12px">
-        <label>Лихвен процент: <strong id="lbl-wacc">4%</strong></label>
-        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="4"
+        <label>Лихвен процент: <strong id="lbl-wacc">8%</strong></label>
+        <input type="range" id="p-wacc" min="2" max="15" step="0.5" value="8"
                oninput="document.getElementById('lbl-wacc').textContent=this.value+'%'; recalc()">
       </div>
       <div id="banner-net" style="border-radius:4px;padding:10px 14px;border:1px solid #ccc;display:flex;gap:16px;align-items:center">
@@ -325,7 +325,7 @@ const BASE = location.hostname === 'localhost'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data';
 
 const PRESETS = {
-  kozloduy: { overnightBn: 9.48, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 12 },
+  kozloduy: { overnightBn: 7.56, opex: 45, mw: 1000, life: 60, wacc: 8.0, cf: 90, constr: 12 },
   ap1000:   { overnightBn: 8.60, opex: 45, mw: 1000, life: 60, wacc: 4.0, cf: 90, constr: 10 },
   vogtle:   { overnightBn: 13.20, opex: 45, mw: 1117, life: 60, wacc: 4.0, cf: 90, constr: 10 },
 };
