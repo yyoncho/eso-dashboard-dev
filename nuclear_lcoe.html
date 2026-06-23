@@ -301,6 +301,22 @@ header {
     </div>
   </div>
 
+  <!-- Household comparison -->
+  <div class="panel" id="household-panel" style="display:none">
+    <div class="panel-header">Сравнение — сметка за ток при LCOE vs. пазар</div>
+    <div class="breakdown-body">
+      <div class="brow"><span>Средна пазарна цена (Ember, 2г.)</span><span id="hh-mkt">—</span></div>
+      <div class="brow"><span>Себестойност АЕЦ (LCOE)</span><span id="hh-lcoe">—</span></div>
+      <div class="brow" style="height:6px"></div>
+      <div class="brow"><span>Сметка при пазарна цена</span><span>100 EUR / мес.</span></div>
+      <div class="brow derived"><span>▶ Сметка при АЕЦ LCOE</span><span id="hh-bill">—</span></div>
+      <div class="brow total"><span>Разлика</span><span id="hh-diff">—</span></div>
+    </div>
+    <div style="font-size:0.72rem;color:#7a8aaa;padding:6px 10px 4px">
+      * Само производствена компонента. Мрежа, данъци и регулирани такси не са включени.
+    </div>
+  </div>
+
   <!-- Warning note -->
   <div style="background:#fffbe6;border:1px solid #e8d84a;border-left:4px solid #c8a800;border-radius:4px;padding:8px 14px;margin-top:14px;margin-bottom:10px;font-size:0.8rem;color:#5a4800;line-height:1.5">
     <strong>⚠ Бележка:</strong> Калкулациите предполагат <strong>замяна на съществуващите мощности</strong> — новите блокове заместват изведените. При добавяне на нови блокове към съществуващите финансовият резултат ще бъде значително по-лош: пазарът ще е наситен с допълнителна ядрена мощност, цените ще паднат и себестойността ще остане непокрита за много повече часове.
@@ -456,6 +472,22 @@ function recalc() {
     document.getElementById('br-net-sub').style.color   = isPos ? '#5a8060' : '#805050';
     document.getElementById('br-hours-above').textContent = aboveYr;
     document.getElementById('br-hours-below').textContent = belowYr;
+
+    // Household comparison
+    const ps2 = computePriceStats(priceHours);
+    if (ps2) {
+      const mkt     = ps2.avg;
+      const bill    = 100 * r.lcoe / mkt;
+      const diff    = bill - 100;
+      const diffCol = diff > 0 ? '#cc2200' : '#1a8a1a';
+      document.getElementById('hh-mkt').textContent  = mkt.toFixed(1) + ' EUR/MWh';
+      document.getElementById('hh-lcoe').textContent = r.lcoe.toFixed(1) + ' EUR/MWh';
+      document.getElementById('hh-bill').textContent = bill.toFixed(1) + ' EUR / мес.';
+      document.getElementById('hh-diff').textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' EUR / мес.  (' + (diff >= 0 ? '+' : '') + (diff).toFixed(0) + '%)';
+      document.getElementById('hh-diff').style.color  = diffCol;
+      document.getElementById('hh-bill').style.color  = diffCol;
+      document.getElementById('household-panel').style.display = '';
+    }
 
   }
 }
