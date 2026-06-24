@@ -258,7 +258,21 @@ def update_prices(year: int, month: int):
         print(f"  energy-charts → {len(data.get('unix_seconds', []))} price points", flush=True)
     except Exception as e:
         print(f"  WARN: energy-charts fetch failed: {e}", flush=True)
-        data = {"unix_seconds": [], "price": [], "unit": "EUR/MWh"}
+
+    # If fetch failed or returned empty, preserve existing data rather than overwrite with zeros
+    if not data or not data.get("unix_seconds"):
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text())
+                if existing.get("unix_seconds"):
+                    print(f"  keeping existing {len(existing['unix_seconds'])} price points (fetch failed)", flush=True)
+                    data = existing
+                else:
+                    data = {"unix_seconds": [], "price": [], "unit": "EUR/MWh"}
+            except Exception:
+                data = {"unix_seconds": [], "price": [], "unit": "EUR/MWh"}
+        else:
+            data = {"unix_seconds": [], "price": [], "unit": "EUR/MWh"}
 
     # Supplement with ibex.bg to fill the CET-midnight boundary gaps.
     # Energy-charts is UTC-aligned; ibex.bg CET delivery days span ±2h around UTC midnight.
