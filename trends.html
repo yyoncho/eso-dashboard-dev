@@ -160,7 +160,7 @@ header a:hover { color: #fff; }
 <script>
 'use strict';
 
-const DATA_URL = location.hostname === 'localhost'
+const DATA_URL = (location.hostname === 'localhost' || location.protocol === 'file:')
   ? '../eso-data/data/trends_daily.json'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data/trends_daily.json';
 
