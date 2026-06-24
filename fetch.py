@@ -244,7 +244,7 @@ def update_prices(year: int, month: int):
         try:
             cached = json.loads(path.read_text())
             fetched_at = cached.get("fetched_at")
-            if fetched_at:
+            if fetched_at and cached.get("unix_seconds"):
                 age_h = (now - datetime.fromisoformat(fetched_at)).total_seconds() / 3600
                 if age_h < 4:
                     return   # still fresh
