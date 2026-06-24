@@ -320,15 +320,21 @@ def main():
     write_today_alias(record["date_bg"])
     write_index()
 
-    # refresh prices for current month (once per day)
-    now_utc = datetime.now(timezone.utc)
-    update_prices(now_utc.year, now_utc.month)
-    update_neighbor_prices(now_utc.year, now_utc.month)
-
     print(f"[{record['timestamp_utc']}] load {record['load_mw']} MW  "
           f"gen {record['gen_total_mw']} MW  "
           f"net_import {record['net_import_mw']} MW")
 
 
+def update_prices_cmd():
+    """Entry point for price-only update, called from push_data.sh independently of ESO fetch."""
+    now_utc = datetime.now(timezone.utc)
+    update_prices(now_utc.year, now_utc.month)
+    update_neighbor_prices(now_utc.year, now_utc.month)
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--prices-only":
+        update_prices_cmd()
+    else:
+        main()
