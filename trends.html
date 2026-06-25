@@ -66,24 +66,6 @@ header a:hover { color: #fff; }
 .btn.active-solar { background: #c87800; color: #fff; border-color: #c87800; }
 .btn.active-coal  { background: #555;    color: #fff; border-color: #555; }
 
-.cpi-wrap {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #444;
-  cursor: pointer;
-  padding: 4px 8px;
-  border: 1px solid #c5d8ee;
-  border-radius: 4px;
-  background: #f0f5fb;
-  transition: all 0.12s;
-  white-space: nowrap;
-  user-select: none;
-}
-.cpi-wrap:hover { background: #dce8f5; }
-.cpi-wrap input { cursor: pointer; accent-color: #1a6fbf; width: 13px; height: 13px; }
 
 .kpi-row {
   display: grid;
@@ -135,9 +117,6 @@ header a:hover { color: #fff; }
       <span>Цена · Слънчева · Въглища — 365-дневна плъзгаща средна (2015–2026)</span>
       <div class="controls">
         <button class="btn active-price" id="btn-price" onclick="toggle('price')">💶 Цена</button>
-        <label class="cpi-wrap" title="Цените се дефлират с EU HICP спрямо последния месец">
-          <input type="checkbox" id="chk-cpi" onchange="toggleCpi()"> реални EUR
-        </label>
         <button class="btn active-solar" id="btn-solar" onclick="toggle('solar')">☀️ Слънчева</button>
         <button class="btn active-coal"  id="btn-coal"  onclick="toggle('coal')">🏭 Въглища</button>
       </div>
@@ -184,35 +163,10 @@ const DATA_URL = (location.hostname === 'localhost' || location.protocol === 'fi
   ? '../eso-data/data/trends_daily.json'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data/trends_daily.json';
 
-// EU HICP monthly index (Jan 2015 = 100), approximate from Eurostat.
-// Annual change rates used to build cumulative index:
-//   2015: 0.0%, 2016: 0.2%, 2017: 1.7%, 2018: 1.9%, 2019: 1.4%,
-//   2020: 0.3%, 2021: 2.9%, 2022: 8.4%, 2023: 5.4%, 2024: 2.4%, 2025: 2.2%, 2026: 2.0%
-const HICP_ANNUAL = [
-  [2015,100.00],[2016,100.20],[2017,101.90],[2018,103.84],[2019,105.29],
-  [2020,105.61],[2021,108.67],[2022,117.80],[2023,124.17],[2024,127.15],
-  [2025,129.95],[2026,131.60],
-];
-
-function hicpForDate(dateStr) {
-  const yr = parseInt(dateStr.slice(0, 4));
-  const mo = parseInt(dateStr.slice(5, 7));
-  // linear interpolation between annual midpoints (Jul 1 of each year)
-  const fracYear = yr + (mo - 0.5) / 12;
-  let lo = HICP_ANNUAL[0], hi = HICP_ANNUAL[HICP_ANNUAL.length - 1];
-  for (let i = 0; i < HICP_ANNUAL.length - 1; i++) {
-    if (HICP_ANNUAL[i][0] <= yr && HICP_ANNUAL[i+1][0] > yr) {
-      lo = HICP_ANNUAL[i]; hi = HICP_ANNUAL[i+1]; break;
-    }
-  }
-  const t = (fracYear - lo[0]) / (hi[0] - lo[0]);
-  return lo[1] + t * (hi[1] - lo[1]);
-}
-
 const MW_TO_TWH = 8760 / 1e6;
 
 const vis = { price: true, solar: true, coal: true };
-let showCpi = false, plotData = null;
+let plotData = null;
 
 function toggle(key) {
   vis[key] = !vis[key];
@@ -220,12 +174,6 @@ function toggle(key) {
   btn.className = 'btn' + (vis[key] ? ' active-' + key : '');
   if (plotData) render();
 }
-
-function toggleCpi() {
-  showCpi = document.getElementById('chk-cpi').checked;
-  if (plotData) { updatePriceKpi(); render(); }
-}
-
 
 function rollingMean(arr, W) {
   const out = new Array(arr.length).fill(null);
@@ -262,23 +210,14 @@ function kpiChgEl(elId, now, then, unit, decimals, lowerIsBetter) {
 }
 
 function updatePriceKpi() {
-  const { days, maPrice, maPriceCpi } = plotData;
-  const ma = showCpi ? maPriceCpi : maPrice;
-  const last = lastNonNull(ma);
+  const { days, maPrice } = plotData;
+  const last = lastNonNull(maPrice);
   if (!last) return;
-
   const refDate = new Date(days[last.idx]);
   refDate.setFullYear(refDate.getFullYear() - 3);
   const i3 = idxAtDate(days, refDate.toISOString().slice(0, 10));
-
   const now = last.val;
-  const then = i3 >= 0 ? ma[i3] : null;
-
-  const latestMonth = days[days.length - 1].slice(0, 7);
-  const label = showCpi
-    ? `Цена реална — 365д MA (EUR/${latestMonth})`
-    : 'Цена — 365д MA (Ember)';
-  document.getElementById('kl-price').textContent = label;
+  const then = i3 >= 0 ? maPrice[i3] : null;
   document.getElementById('kv-price').textContent = now != null ? now.toFixed(1) + ' EUR/MWh' : '—';
   kpiChgEl('kc-price', now, then, 'EUR/MWh', 1, true);
 }
@@ -307,17 +246,14 @@ function mwToTwh(arr) {
 }
 
 function render() {
-  const { days, price, priceCpi, solar, coal, maPrice, maPriceCpi, maSolar, maCoal } = plotData;
-  const activePrice = showCpi ? priceCpi : price;
-  const activeMaPrice = showCpi ? maPriceCpi : maPrice;
+  const { days, maPrice, maSolar, maCoal } = plotData;
   const maSolarTwh = mwToTwh(maSolar);
   const maCoalTwh  = mwToTwh(maCoal);
 
   const traces = [];
   const C = { price: '#1a6fbf', solar: '#c87800', coal: '#666' };
-  const priceName = showCpi ? 'Реална цена 365д MA (EUR/MWh)' : 'Цена 365д MA (EUR/MWh)';
 
-  if (vis.price) traces.push({ x: days, y: activeMaPrice, name: priceName,                    yaxis:'y1', mode:'lines', line:{color:C.price, width:3} });
+  if (vis.price) traces.push({ x: days, y: maPrice,    name: 'Цена 365д MA (EUR/MWh)',         yaxis:'y1', mode:'lines', line:{color:C.price, width:3} });
   if (vis.solar) traces.push({ x: days, y: maSolarTwh,    name: 'Слънчева 365д MA (TWh/год.)',yaxis:'y2', mode:'lines', line:{color:C.solar, width:3} });
   if (vis.coal)  traces.push({ x: days, y: maCoalTwh,     name: 'Въглища 365д MA (TWh/год.)', yaxis:'y2', mode:'lines', line:{color:C.coal,  width:3, dash:'dot'} });
 
@@ -344,27 +280,12 @@ function render() {
 async function main() {
   const data = await fetch(DATA_URL).then(r => r.json());
   const W = 365;
-
-  // Find latest month with price data for normalization reference
-  let latestPriceDate = '2015-01-01';
-  for (let i = data.days.length - 1; i >= 0; i--) {
-    if (data.price[i] != null) { latestPriceDate = data.days[i]; break; }
-  }
-  const hicpLatest = hicpForDate(latestPriceDate);
-
-  const priceCpi = data.price.map((p, i) =>
-    p != null ? +(p * hicpLatest / hicpForDate(data.days[i])).toFixed(2) : null
-  );
-
   const maSolar = rollingMean(data.solar, W);
   const maCoal  = rollingMean(data.coal,  W);
 
   plotData = {
     days: data.days,
-    price: data.price, priceCpi,
-    solar: data.solar, coal: data.coal,
-    maPrice:    rollingMean(data.price, W),
-    maPriceCpi: rollingMean(priceCpi,  W),
+    maPrice: rollingMean(data.price, W),
     maSolar, maCoal,
   };
 
