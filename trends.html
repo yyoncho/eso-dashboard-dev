@@ -62,36 +62,51 @@ header a:hover { color: #fff; }
   white-space: nowrap;
 }
 .btn:hover { background: #dce8f5; }
-.btn.active-price   { background: #1a6fbf; color: #fff; border-color: #1a6fbf; }
-.btn.active-pricecpi{ background: #7ab3e8; color: #fff; border-color: #7ab3e8; }
-.btn.active-solar   { background: #c87800; color: #fff; border-color: #c87800; }
-.btn.active-coal    { background: #555;    color: #fff; border-color: #555; }
-.btn.active-raw     { background: #6a3d9a; color: #fff; border-color: #6a3d9a; }
+.btn.active-price { background: #1a6fbf; color: #fff; border-color: #1a6fbf; }
+.btn.active-solar { background: #c87800; color: #fff; border-color: #c87800; }
+.btn.active-coal  { background: #555;    color: #fff; border-color: #555; }
+.btn.active-raw   { background: #6a3d9a; color: #fff; border-color: #6a3d9a; }
+
+.cpi-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #444;
+  cursor: pointer;
+  padding: 4px 8px;
+  border: 1px solid #c5d8ee;
+  border-radius: 4px;
+  background: #f0f5fb;
+  transition: all 0.12s;
+  white-space: nowrap;
+  user-select: none;
+}
+.cpi-wrap:hover { background: #dce8f5; }
+.cpi-wrap input { cursor: pointer; accent-color: #1a6fbf; width: 13px; height: 13px; }
 
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
-@media (max-width: 700px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 420px) { .kpi-row { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .kpi-row { grid-template-columns: 1fr; } }
 
 .kpi {
   border-radius: 5px;
   padding: 11px 14px;
   border: 1px solid;
 }
-.kpi.price    { background: #f0f6ff; border-color: #b8d4f5; }
-.kpi.pricecpi { background: #e6f2ff; border-color: #90bde8; }
-.kpi.solar    { background: #fff8ee; border-color: #f5d98a; }
-.kpi.coal     { background: #f5f5f5; border-color: #d0d0d0; }
+.kpi.price { background: #f0f6ff; border-color: #b8d4f5; }
+.kpi.solar { background: #fff8ee; border-color: #f5d98a; }
+.kpi.coal  { background: #f5f5f5; border-color: #d0d0d0; }
 .kpi-label { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.07em; color: #6a7a90; margin-bottom: 4px; }
 .kpi-val   { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
-.kpi.price    .kpi-val { color: #1a6fbf; }
-.kpi.pricecpi .kpi-val { color: #3a88cc; }
-.kpi.solar    .kpi-val { color: #c87800; }
-.kpi.coal     .kpi-val { color: #444; }
+.kpi.price .kpi-val { color: #1a6fbf; }
+.kpi.solar .kpi-val { color: #c87800; }
+.kpi.coal  .kpi-val { color: #444; }
 .kpi-chg { font-size: 0.71rem; color: #5a6a80; margin-top: 4px; }
 .kpi-chg.up   { color: #2a8a2a; }
 .kpi-chg.down { color: #c0392b; }
@@ -120,33 +135,30 @@ header a:hover { color: #fff; }
     <div class="panel-header">
       <span>Цена · Слънчева · Въглища — 365-дневна плъзгаща средна (2015–2026)</span>
       <div class="controls">
-        <button class="btn active-price"    id="btn-price"    onclick="toggle('price')">💶 Цена (номинална)</button>
-        <button class="btn active-pricecpi" id="btn-pricecpi" onclick="toggle('pricecpi')">💶 Цена (реална 2024€)</button>
-        <button class="btn active-solar"    id="btn-solar"    onclick="toggle('solar')">☀️ Слънчева</button>
-        <button class="btn active-coal"     id="btn-coal"     onclick="toggle('coal')">🏭 Въглища</button>
-        <button class="btn"                 id="btn-raw"      onclick="toggleRaw()">Дневни стойности</button>
+        <button class="btn active-price" id="btn-price" onclick="toggle('price')">💶 Цена</button>
+        <label class="cpi-wrap" title="Цените се дефлират с EU HICP спрямо последния месец">
+          <input type="checkbox" id="chk-cpi" onchange="toggleCpi()"> реални EUR
+        </label>
+        <button class="btn active-solar" id="btn-solar" onclick="toggle('solar')">☀️ Слънчева</button>
+        <button class="btn active-coal"  id="btn-coal"  onclick="toggle('coal')">🏭 Въглища</button>
+        <button class="btn"              id="btn-raw"   onclick="toggleRaw()">Дневни стойности</button>
       </div>
     </div>
     <div class="panel-body">
 
       <div class="kpi-row" id="kpi-row" style="display:none">
         <div class="kpi price">
-          <div class="kpi-label">Цена — 365д MA (Ember)</div>
+          <div class="kpi-label" id="kl-price">Цена — 365д MA (Ember)</div>
           <div class="kpi-val" id="kv-price">—</div>
           <div class="kpi-chg" id="kc-price"></div>
         </div>
-        <div class="kpi pricecpi">
-          <div class="kpi-label">Цена реална — 365д MA (2024€)</div>
-          <div class="kpi-val" id="kv-pricecpi">—</div>
-          <div class="kpi-chg" id="kc-pricecpi"></div>
-        </div>
         <div class="kpi solar">
-          <div class="kpi-label">Слънчева — 365д MA (ЕСО/ENTSOE)</div>
+          <div class="kpi-label">Слънчева — 365д MA</div>
           <div class="kpi-val" id="kv-solar">—</div>
           <div class="kpi-chg" id="kc-solar"></div>
         </div>
         <div class="kpi coal">
-          <div class="kpi-label">Въглища — 365д MA (ЕСО/ENTSOE)</div>
+          <div class="kpi-label">Въглища — 365д MA</div>
           <div class="kpi-val" id="kv-coal">—</div>
           <div class="kpi-chg" id="kc-coal"></div>
         </div>
@@ -156,10 +168,11 @@ header a:hover { color: #fff; }
       <div id="chart"></div>
 
       <div class="note">
-        <b>Цени:</b> Ember Climate, Day-Ahead пазар (EUR/MWh), от 2016 г. Реална цена — дефлирана с EU HICP спрямо 2024 г.
-        <br><b>Слънчева генерация:</b> ЕСО СКАДА (ФЕЦ) + ENTSOE данни.
+        <b>Цени:</b> Ember Climate, Day-Ahead пазар (EUR/MWh), от 2016 г.
+        Реални EUR: дефлирани с EU HICP спрямо последния наличен месец в данните.
+        <br><b>Слънчева:</b> ЕСО СКАДА (ФЕЦ) + ENTSOE.
         <br><b>Въглища:</b> Кондензационни ТЕЦ + Топлофикационни ТЕЦ + Заводски ТЕЦ (ЕСО СКАДА) + ENTSOE.
-        <br>Генерацията е показана в <b>TWh/год.</b> (годишен еквивалент). 365-дневната MA елиминира сезонността. Последните ~182 дни нямат пълен прозорец и не са показани.
+        <br>Генерацията е в <b>TWh/год.</b> (годишен еквивалент). Последните ~182 дни нямат пълен 365д прозорец.
       </div>
     </div>
   </div>
@@ -173,31 +186,46 @@ const DATA_URL = (location.hostname === 'localhost' || location.protocol === 'fi
   ? '../eso-data/data/trends_daily.json'
   : 'https://raw.githubusercontent.com/yyoncho/eso-dashboard/refs/heads/data/data/trends_daily.json';
 
-// EU HICP deflators → normalize to 2024 = 1.0
-// Source: Eurostat HICP all-items EU average (approximate annual)
-const HICP = {
-  2015: 1.000, 2016: 1.000, 2017: 1.020, 2018: 1.042, 2019: 1.061,
-  2020: 1.063, 2021: 1.099, 2022: 1.225, 2023: 1.297, 2024: 1.333,
-  2025: 1.370, 2026: 1.395,
-};
-// Convert to "divide by this to get 2024€ equivalent"
-// cpi_factor[year] = HICP[year] / HICP[2024]
-function cpiDeflator(dateStr) {
+// EU HICP monthly index (Jan 2015 = 100), approximate from Eurostat.
+// Annual change rates used to build cumulative index:
+//   2015: 0.0%, 2016: 0.2%, 2017: 1.7%, 2018: 1.9%, 2019: 1.4%,
+//   2020: 0.3%, 2021: 2.9%, 2022: 8.4%, 2023: 5.4%, 2024: 2.4%, 2025: 2.2%, 2026: 2.0%
+const HICP_ANNUAL = [
+  [2015,100.00],[2016,100.20],[2017,101.90],[2018,103.84],[2019,105.29],
+  [2020,105.61],[2021,108.67],[2022,117.80],[2023,124.17],[2024,127.15],
+  [2025,129.95],[2026,131.60],
+];
+
+function hicpForDate(dateStr) {
   const yr = parseInt(dateStr.slice(0, 4));
-  const h = HICP[yr] ?? HICP[2026];
-  return h / HICP[2024];
+  const mo = parseInt(dateStr.slice(5, 7));
+  // linear interpolation between annual midpoints (Jul 1 of each year)
+  const fracYear = yr + (mo - 0.5) / 12;
+  let lo = HICP_ANNUAL[0], hi = HICP_ANNUAL[HICP_ANNUAL.length - 1];
+  for (let i = 0; i < HICP_ANNUAL.length - 1; i++) {
+    if (HICP_ANNUAL[i][0] <= yr && HICP_ANNUAL[i+1][0] > yr) {
+      lo = HICP_ANNUAL[i]; hi = HICP_ANNUAL[i+1]; break;
+    }
+  }
+  const t = (fracYear - lo[0]) / (hi[0] - lo[0]);
+  return lo[1] + t * (hi[1] - lo[1]);
 }
 
-const MW_TO_TWH = 8760 / 1e6; // avg MW → TWh/year equivalent
+const MW_TO_TWH = 8760 / 1e6;
 
-const vis = { price: true, pricecpi: true, solar: true, coal: true };
-let showRaw = false, plotData = null;
+const vis = { price: true, solar: true, coal: true };
+let showCpi = false, showRaw = false, plotData = null;
 
 function toggle(key) {
   vis[key] = !vis[key];
   const btn = document.getElementById('btn-' + key);
   btn.className = 'btn' + (vis[key] ? ' active-' + key : '');
   if (plotData) render();
+}
+
+function toggleCpi() {
+  showCpi = document.getElementById('chk-cpi').checked;
+  if (plotData) { updatePriceKpi(); render(); }
 }
 
 function toggleRaw() {
@@ -209,8 +237,7 @@ function toggleRaw() {
 
 function rollingMean(arr, W) {
   const out = new Array(arr.length).fill(null);
-  let sum = 0, n = 0;
-  const buf = [];
+  let sum = 0, n = 0, buf = [];
   for (let i = 0; i < arr.length; i++) {
     const v = arr[i];
     if (v != null) { sum += v; n++; }
@@ -242,29 +269,43 @@ function kpiChgEl(elId, now, then, unit, decimals, lowerIsBetter) {
   el.className = 'kpi-chg ' + ((lowerIsBetter ? !up : up) ? 'up' : 'down');
 }
 
-function setKpis(days, maPrice, maPriceCpi, maSolar, maCoal) {
-  const last = lastNonNull(maPrice) || lastNonNull(maSolar);
+function updatePriceKpi() {
+  const { days, maPrice, maPriceCpi } = plotData;
+  const ma = showCpi ? maPriceCpi : maPrice;
+  const last = lastNonNull(ma);
   if (!last) return;
 
   const refDate = new Date(days[last.idx]);
   refDate.setFullYear(refDate.getFullYear() - 3);
-  const ref3 = refDate.toISOString().slice(0, 10);
-  const i3 = idxAtDate(days, ref3);
+  const i3 = idxAtDate(days, refDate.toISOString().slice(0, 10));
 
-  const pNow = lastNonNull(maPrice)?.val;      const p3 = i3 >= 0 ? maPrice[i3]    : null;
-  const pcNow = lastNonNull(maPriceCpi)?.val;  const pc3= i3 >= 0 ? maPriceCpi[i3] : null;
-  const sNow = lastNonNull(maSolar)?.val;      const s3 = i3 >= 0 ? maSolar[i3]    : null;
-  const cNow = lastNonNull(maCoal)?.val;       const c3 = i3 >= 0 ? maCoal[i3]     : null;
+  const now = last.val;
+  const then = i3 >= 0 ? ma[i3] : null;
 
-  document.getElementById('kv-price').textContent    = pNow  != null ? pNow.toFixed(1)  + ' EUR/MWh' : '—';
-  document.getElementById('kv-pricecpi').textContent = pcNow != null ? pcNow.toFixed(1) + ' EUR/MWh' : '—';
-  document.getElementById('kv-solar').textContent    = sNow  != null ? sNow.toFixed(2)  + ' TWh/год.' : '—';
-  document.getElementById('kv-coal').textContent     = cNow  != null ? cNow.toFixed(2)  + ' TWh/год.' : '—';
+  const latestMonth = days[days.length - 1].slice(0, 7);
+  const label = showCpi
+    ? `Цена реална — 365д MA (EUR/${latestMonth})`
+    : 'Цена — 365д MA (Ember)';
+  document.getElementById('kl-price').textContent = label;
+  document.getElementById('kv-price').textContent = now != null ? now.toFixed(1) + ' EUR/MWh' : '—';
+  kpiChgEl('kc-price', now, then, 'EUR/MWh', 1, true);
+}
 
-  kpiChgEl('kc-price',    pNow,  p3,  'EUR/MWh',  1, true);
-  kpiChgEl('kc-pricecpi', pcNow, pc3, 'EUR/MWh',  1, true);
-  kpiChgEl('kc-solar',    sNow,  s3,  'TWh/год.', 2, false);
-  kpiChgEl('kc-coal',     cNow,  c3,  'TWh/год.', 2, true);
+function setKpis(days, maSolar, maCoal) {
+  const last = lastNonNull(maSolar) || lastNonNull(maCoal);
+  if (!last) return;
+
+  const refDate = new Date(days[last.idx]);
+  refDate.setFullYear(refDate.getFullYear() - 3);
+  const i3 = idxAtDate(days, refDate.toISOString().slice(0, 10));
+
+  const sNow = lastNonNull(maSolar)?.val; const s3 = i3 >= 0 ? maSolar[i3] : null;
+  const cNow = lastNonNull(maCoal)?.val;  const c3 = i3 >= 0 ? maCoal[i3]  : null;
+
+  document.getElementById('kv-solar').textContent = sNow != null ? sNow.toFixed(2) + ' TWh/год.' : '—';
+  document.getElementById('kv-coal').textContent  = cNow != null ? cNow.toFixed(2) + ' TWh/год.' : '—';
+  kpiChgEl('kc-solar', sNow, s3, 'TWh/год.', 2, false);
+  kpiChgEl('kc-coal',  cNow, c3, 'TWh/год.', 2, true);
 
   document.getElementById('kpi-row').style.display = '';
 }
@@ -275,26 +316,28 @@ function mwToTwh(arr) {
 
 function render() {
   const { days, price, priceCpi, solar, coal, maPrice, maPriceCpi, maSolar, maCoal } = plotData;
+  const activePrice = showCpi ? priceCpi : price;
+  const activeMaPrice = showCpi ? maPriceCpi : maPrice;
   const solarTwh   = mwToTwh(solar);
   const coalTwh    = mwToTwh(coal);
   const maSolarTwh = mwToTwh(maSolar);
   const maCoalTwh  = mwToTwh(maCoal);
 
   const traces = [];
-  const C = { price: '#1a6fbf', pricecpi: '#7ab3e8', solar: '#c87800', coal: '#666' };
-  const R = { price: 'rgba(26,111,191,0.12)', pricecpi: 'rgba(122,179,232,0.10)', solar: 'rgba(200,120,0,0.12)', coal: 'rgba(100,100,100,0.09)' };
+  const C = { price: '#1a6fbf', solar: '#c87800', coal: '#666' };
+  const R = { price: 'rgba(26,111,191,0.12)', solar: 'rgba(200,120,0,0.12)', coal: 'rgba(100,100,100,0.09)' };
+
+  const priceName = showCpi ? 'Реална цена 365д MA (EUR/MWh)' : 'Цена 365д MA (EUR/MWh)';
 
   if (showRaw) {
-    if (vis.price)    traces.push({ x: days, y: price,    yaxis:'y1', mode:'lines', line:{color:R.price,    width:1}, showlegend:false, hoverinfo:'skip' });
-    if (vis.pricecpi) traces.push({ x: days, y: priceCpi, yaxis:'y1', mode:'lines', line:{color:R.pricecpi, width:1}, showlegend:false, hoverinfo:'skip' });
-    if (vis.solar)    traces.push({ x: days, y: solarTwh, yaxis:'y2', mode:'lines', line:{color:R.solar,    width:1}, showlegend:false, hoverinfo:'skip' });
-    if (vis.coal)     traces.push({ x: days, y: coalTwh,  yaxis:'y2', mode:'lines', line:{color:R.coal,     width:1}, showlegend:false, hoverinfo:'skip' });
+    if (vis.price) traces.push({ x: days, y: activePrice, yaxis:'y1', mode:'lines', line:{color:R.price, width:1}, showlegend:false, hoverinfo:'skip' });
+    if (vis.solar) traces.push({ x: days, y: solarTwh,   yaxis:'y2', mode:'lines', line:{color:R.solar, width:1}, showlegend:false, hoverinfo:'skip' });
+    if (vis.coal)  traces.push({ x: days, y: coalTwh,    yaxis:'y2', mode:'lines', line:{color:R.coal,  width:1}, showlegend:false, hoverinfo:'skip' });
   }
 
-  if (vis.price)    traces.push({ x: days, y: maPrice,    name:'Цена 365д MA (EUR/MWh)',         yaxis:'y1', mode:'lines', line:{color:C.price,    width:3} });
-  if (vis.pricecpi) traces.push({ x: days, y: maPriceCpi, name:'Реална цена 365д MA (2024€/MWh)',yaxis:'y1', mode:'lines', line:{color:C.pricecpi, width:2, dash:'dash'} });
-  if (vis.solar)    traces.push({ x: days, y: maSolarTwh, name:'Слънчева 365д MA (TWh/год.)',    yaxis:'y2', mode:'lines', line:{color:C.solar,    width:3} });
-  if (vis.coal)     traces.push({ x: days, y: maCoalTwh,  name:'Въглища 365д MA (TWh/год.)',     yaxis:'y2', mode:'lines', line:{color:C.coal,     width:3, dash:'dot'} });
+  if (vis.price) traces.push({ x: days, y: activeMaPrice, name: priceName,                    yaxis:'y1', mode:'lines', line:{color:C.price, width:3} });
+  if (vis.solar) traces.push({ x: days, y: maSolarTwh,    name: 'Слънчева 365д MA (TWh/год.)',yaxis:'y2', mode:'lines', line:{color:C.solar, width:3} });
+  if (vis.coal)  traces.push({ x: days, y: maCoalTwh,     name: 'Въглища 365д MA (TWh/год.)', yaxis:'y2', mode:'lines', line:{color:C.coal,  width:3, dash:'dot'} });
 
   Plotly.react('chart', traces, {
     height: 500,
@@ -310,22 +353,30 @@ function render() {
       tickfont: { color: '#555', size: 11 },
       overlaying: 'y', side: 'right', showgrid: false, rangemode: 'tozero', zeroline: false,
     },
-    legend: { orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center', font: { size: 11 } },
+    legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center', font: { size: 11 } },
     plot_bgcolor: '#fff', paper_bgcolor: '#fff',
     hovermode: 'x unified', hoverlabel: { font: { size: 11 } },
   }, { responsive: true, displayModeBar: false });
-
-  document.getElementById('chart').style.display = '';
 }
 
 async function main() {
   const data = await fetch(DATA_URL).then(r => r.json());
   const W = 365;
+
+  // Find latest month with price data for normalization reference
+  let latestPriceDate = '2015-01-01';
+  for (let i = data.days.length - 1; i >= 0; i--) {
+    if (data.price[i] != null) { latestPriceDate = data.days[i]; break; }
+  }
+  const hicpLatest = hicpForDate(latestPriceDate);
+
   const priceCpi = data.price.map((p, i) =>
-    p != null ? +(p / cpiDeflator(data.days[i])).toFixed(2) : null
+    p != null ? +(p * hicpLatest / hicpForDate(data.days[i])).toFixed(2) : null
   );
+
   const maSolar = rollingMean(data.solar, W);
   const maCoal  = rollingMean(data.coal,  W);
+
   plotData = {
     days: data.days,
     price: data.price, priceCpi,
@@ -334,8 +385,10 @@ async function main() {
     maPriceCpi: rollingMean(priceCpi,  W),
     maSolar, maCoal,
   };
+
   document.getElementById('status').style.display = 'none';
-  setKpis(data.days, plotData.maPrice, plotData.maPriceCpi,
+  updatePriceKpi();
+  setKpis(data.days,
     maSolar.map(v => v != null ? +(v * MW_TO_TWH).toFixed(4) : null),
     maCoal.map(v  => v != null ? +(v * MW_TO_TWH).toFixed(4) : null));
   render();
