@@ -1278,20 +1278,7 @@ function updateStatusCards(latest, pd, nbrPd) {
   ];
   if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: -pumpsNow, unit: 'MW' });
 
-  // Live congestion rate (RO + GR borders)
-  if (nbrPd && isFinite(price)) {
-    const tsMs2 = toUtcMs(latest);
-    const roP = getPriceAt(nbrPd.ro, tsMs2), grP = getPriceAt(nbrPd.gr, tsMs2);
-    const roMw = latest['RO_mw'] || 0, grMw = latest['GR_mw'] || 0;
-    let congEurH = 0, hasCongData = false;
-    if (isFinite(roP)) { congEurH += -roMw * (roP - price); hasCongData = true; }
-    if (isFinite(grP)) { congEurH += -grMw * (grP - price); hasCongData = true; }
-    if (hasCongData) {
-      const congColor = congEurH >= 0 ? '#0088aa' : '#cc2200';
-      cards.push({ label: 'Congestion', color: congColor,
-        v: Math.round(congEurH), unit: congEurH >= 0 ? '€/h приход' : '€/h разход', _raw: true });
-    }
-  }
+
 
   cards.sort((a, b) => b.v - a.v);
 
