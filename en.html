@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="bg">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>БГ Мрежов Монитор — неофициален</title>
+<title>BG Grid Monitor — unofficial</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -247,42 +247,42 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 <header>
   <div class="header-inner">
     <div class="logo-area">
-      <div class="logo-circle">БГ</div>
+      <div class="logo-circle">BG</div>
       <div class="logo-text">
-        <h1>Мрежов монитор — България</h1>
-        <p>Неофициален ресурс &bull; данни от ЕСО ЕАД и IBEX &bull; не представлява ЕСО ЕАД</p>
+        <h1>Grid Monitor — Bulgaria</h1>
+        <p>Unofficial resource &bull; data from ESO EAD and IBEX &bull; not affiliated with ESO EAD</p>
       </div>
     </div>
     <div class="header-right">
       <div class="live-badge">
         <div class="dot" id="dot"></div>
-        <span id="ts-label">Зареждане…</span>
+        <span id="ts-label">Loading…</span>
         <a href="congestion.html" style="margin-left:10px;color:rgba(255,255,255,0.7);font-size:0.72rem;text-decoration:none;white-space:nowrap;">Congestion →</a>
-        <a href="en.html" style="margin-left:10px;color:#ffd700;font-size:0.72rem;text-decoration:none;font-weight:700;white-space:nowrap;">EN</a>
+        <a href="index.html" style="margin-left:10px;color:#ffd700;font-size:0.72rem;text-decoration:none;font-weight:700;white-space:nowrap;">БГ</a>
       </div>
       <div class="day-nav">
         <button class="nav-btn" id="prev-btn" onclick="shiftDay(-1)">&#8592;</button>
         <input type="date" id="date-picker" onchange="pickDate(this.value)">
-        <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
+        <button class="nav-btn active" id="today-btn" onclick="goToday()">Today</button>
         <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
         <span id="day-label"></span>
         <div class="rec-dropdown-wrap" style="position:relative">
           <button class="nav-btn" id="npp-btn" onclick="toggleNpp(event)" style="padding:0 7px">▾</button>
           <div id="npp-dropdown" style="position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid #c5d8ee;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:200;min-width:220px;display:none">
-            <div style="background:#004494;color:#fff;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;padding:7px 12px;border-radius:5px 5px 0 0">Анализи</div>
+            <div style="background:#004494;color:#fff;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;padding:7px 12px;border-radius:5px 5px 0 0">Analyses</div>
             <div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px">
-              <a href="nuclear_lcoe.html" style="font-size:0.82rem;color:#2d6bbf;text-decoration:none">⚛ АЕЦ Козлодуй — LCOE калкулатор</a>
-              <a href="trends.html"       style="font-size:0.82rem;color:#2d6bbf;text-decoration:none">📈 Дългосрочни тенденции</a>
+              <a href="nuclear_lcoe.html" style="font-size:0.82rem;color:#2d6bbf;text-decoration:none">⚛ Kozloduy NPP — LCOE calculator</a>
+              <a href="trends.html"       style="font-size:0.82rem;color:#2d6bbf;text-decoration:none">📈 Long-term trends</a>
             </div>
           </div>
         </div>
         <div class="rec-dropdown-wrap">
-          <button class="nav-btn" id="rec-btn" onclick="toggleRecords(event)">🏆 Рекорди</button>
+          <button class="nav-btn" id="rec-btn" onclick="toggleRecords(event)">🏆 Records</button>
           <div id="rec-dropdown-panel">
-            <div class="rec-dropdown-title">Рекорди — ВЕИ и ССЕЕ</div>
+            <div class="rec-dropdown-title">Records — RES &amp; BESS</div>
             <div id="records-inner"></div>
             <div style="padding:8px 12px 4px;border-top:1px solid #eef0f5;margin-top:4px">
-              <a href="records.html" style="font-size:0.75rem;color:#2d6bbf;text-decoration:none">Пълна история на рекордите →</a>
+              <a href="records.html" style="font-size:0.75rem;color:#2d6bbf;text-decoration:none">Full record history →</a>
             </div>
           </div>
         </div>
@@ -292,10 +292,10 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 </header>
 
 <div class="past-banner" id="past-banner">
-  📅 Исторически данни — показват се архивни записи, не актуална информация
+  📅 Historical data — showing archived records, not live information
 </div>
 <div id="snap-scrubber">
-  <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Снимка:</span>
+  <span style="font-size:0.75rem;color:#5a7090;white-space:nowrap;">Snapshot:</span>
   <input type="range" id="snap-slider" min="0" max="0" value="0" style="flex:1;" oninput="onSnapSlider(this.value)">
   <span id="snap-ts" style="font-size:0.75rem;font-weight:600;color:#004494;white-space:nowrap;min-width:130px;text-align:right;">—</span>
 </div>
@@ -307,22 +307,22 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- status cards -->
   <div class="stat-grid">
     <div class="stat-card">
-      <div class="stat-label">Товар на РБ</div>
+      <div class="stat-label">System load</div>
       <div class="stat-val" id="s-load">—</div>
       <div class="stat-unit">MW</div>
     </div>
     <div class="stat-card green">
-      <div class="stat-label">Производство</div>
+      <div class="stat-label">Generation</div>
       <div class="stat-val" id="s-gen">—</div>
       <div class="stat-unit">MW</div>
     </div>
     <div class="stat-card orange">
-      <div class="stat-label">IBEX цена</div>
+      <div class="stat-label">IBEX price</div>
       <div class="stat-val" id="s-ibex-price">—</div>
       <div class="stat-unit">EUR/MWh</div>
     </div>
     <div class="stat-card" id="s-import-card">
-      <div class="stat-label" id="s-import-label">Внос/Износ</div>
+      <div class="stat-label" id="s-import-label">Imports/Exports</div>
       <div class="stat-val" id="s-import">—</div>
       <div class="stat-unit">MW</div>
     </div>
@@ -337,15 +337,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
       <div class="panel" id="gen-live">
         <div class="panel-header">
-          <span><a href="#gen-live" class="anchor-link">Структура на производство — живо</a></span>
+          <span><a href="#gen-live" class="anchor-link">Generation mix — live</a></span>
           <div style="display:flex;align-items:center;gap:6px;">
             <div class="toggle-group">
-              <button class="tog-btn" id="tog-pie-mwh" onclick="setPieMwhMode(!pieMwhMode)">МВт</button>
+              <button class="tog-btn" id="tog-pie-mwh" onclick="setPieMwhMode(!pieMwhMode)">MW</button>
             </div>
-            <button class="info-btn" onclick="document.getElementById('pie-info').classList.toggle('open')" title="Информация">?</button>
+            <button class="info-btn" onclick="document.getElementById('pie-info').classList.toggle('open')" title="Info">?</button>
           </div>
         </div>
-        <div id="pie-info" class="info-dropdown">Данните за производство по източници са в реално време от ЕСО ЕАД. Вносът и износът се показват директно от ЕСО без допълнителна обработка. ССЕЕ (батерия) се връща от API-то на ЕСО, но не е включено в процентното разпределение на диаграмата — това обяснява „липсващите" проценти до 100%. Зареждането се изчислява като разлика между общото потребление и сумата от всички останали източници; разреждането се отчита директно от API-то. Верификация: производство + внос − износ ≈ потребление.</div>
+        <div id="pie-info" class="info-dropdown">Generation-by-source data is real-time from ESO EAD. Imports and exports are shown directly from ESO without further processing. BESS (battery) values come from the ESO API but are not included in the chart's percentage breakdown — this explains the &ldquo;missing&rdquo; percentages up to 100%. Charging is computed as the difference between total consumption and the sum of all other sources; discharging is reported directly by the API. Verification: generation + imports − exports ≈ consumption.</div>
         <div style="padding:4px;">
           <div id="chart-pie" style="height:500px;"></div>
         </div>
@@ -353,18 +353,18 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
       <div class="panel" id="flows-live">
         <div class="panel-header">
-          <a href="#flows-live" class="anchor-link">Трансгранични потоци</a>
+          <a href="#flows-live" class="anchor-link">Cross-border flows</a>
           <span id="flows-price-note" style="font-weight:400;font-size:0.68rem;opacity:0.8;"></span>
         </div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table">
             <thead>
               <tr>
-                <th>Страна</th>
-                <th>Баланс</th>
-                <th style="width:100px;">Поток</th>
+                <th>Country</th>
+                <th>Balance</th>
+                <th style="width:100px;">Flow</th>
                 <th style="text-align:right;">EUR/h</th>
-                <th style="text-align:right;">Конг. €/h</th>
+                <th style="text-align:right;">Cong. €/h</th>
               </tr>
             </thead>
             <tbody id="flows-tbody"></tbody>
@@ -375,25 +375,25 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       <!-- Congestion rent card -->
       <div class="panel" id="cong-live" style="display:none;">
         <div class="panel-header">
-          <a href="#cong-live" class="anchor-link">Congestion рента — живо</a>
-          <button class="info-btn" onclick="document.getElementById('cong-card-info').classList.toggle('open')" title="Информация">?</button>
+          <a href="#cong-live" class="anchor-link">Congestion rent — live</a>
+          <button class="info-btn" onclick="document.getElementById('cong-card-info').classList.toggle('open')" title="Info">?</button>
         </div>
-        <div id="cong-card-info" class="info-dropdown">Congestion рента е приходът, който операторът на преносната система (ЕСО) получава при пренос на електроенергия между два пазара с различна цена. При износ от БГ към РО или ГР (по-висока цена), ЕСО инкасира разликата в цените, умножена по преносната мощност. Формула: рента = −поток_МВт × (цена_съсед − цена_БГ) × часове. Отрицателен поток означава износ от БГ. Положителна рента = приход за ЕСО.</div>
+        <div id="cong-card-info" class="info-dropdown">Congestion rent is the revenue the transmission system operator (ESO) collects when transmitting electricity between two markets with different prices. When exporting from BG to RO or GR (higher price), ESO pockets the price difference multiplied by the transferred power. Formula: rent = −flow_MW × (price_neighbour − price_BG) × hours. Negative flow means export from BG. Positive rent = revenue for ESO.</div>
         <div class="panel-body" style="padding:8px 12px 10px;">
           <!-- Price comparison row -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:#f0f5fb;border-radius:4px;padding:7px 8px;margin-bottom:10px;">
             <div>
-              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">IBEX (БГ)</div>
+              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">IBEX (BG)</div>
               <div style="font-size:1.1rem;font-weight:700;color:#1a2233;" id="cc-p-bg">—</div>
               <div style="font-size:0.65rem;color:#7a8aaa;">EUR/MWh</div>
             </div>
             <div>
-              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">DA Румъния</div>
+              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">DA Romania</div>
               <div style="font-size:1.1rem;font-weight:700;color:#1a2233;" id="cc-p-ro">—</div>
               <div style="font-size:0.65rem;font-weight:600;" id="cc-spread-ro">—</div>
             </div>
             <div>
-              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">DA Гърция</div>
+              <div style="font-size:0.6rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">DA Greece</div>
               <div style="font-size:1.1rem;font-weight:700;color:#1a2233;" id="cc-p-gr">—</div>
               <div style="font-size:0.65rem;font-weight:600;" id="cc-spread-gr">—</div>
             </div>
@@ -402,48 +402,48 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
             <thead>
               <tr style="border-bottom:1px solid #c5d8ee;">
-                <th style="text-align:left;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Граница</th>
-                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Поток МВт</th>
-                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Спред €/МВтч</th>
-                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Рента €/ч</th>
+                <th style="text-align:left;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Border</th>
+                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Flow MW</th>
+                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Spread €/MWh</th>
+                <th style="text-align:right;padding:3px 4px;color:#5a7090;font-weight:600;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.04em;">Rent €/h</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="padding:5px 4px;">🇷🇴 Румъния</td>
+                <td style="padding:5px 4px;">🇷🇴 Romania</td>
                 <td style="text-align:right;padding:5px 4px;" id="cc-ro-mw">—</td>
                 <td style="text-align:right;padding:5px 4px;" id="cc-ro-spread">—</td>
                 <td style="text-align:right;padding:5px 4px;font-weight:700;" id="cc-ro-eur">—</td>
               </tr>
               <tr>
-                <td style="padding:5px 4px;">🇬🇷 Гърция</td>
+                <td style="padding:5px 4px;">🇬🇷 Greece</td>
                 <td style="text-align:right;padding:5px 4px;" id="cc-gr-mw">—</td>
                 <td style="text-align:right;padding:5px 4px;" id="cc-gr-spread">—</td>
                 <td style="text-align:right;padding:5px 4px;font-weight:700;" id="cc-gr-eur">—</td>
               </tr>
               <tr style="border-top:2px solid #004494;background:#f0f5fb;">
-                <td colspan="3" style="padding:6px 4px;font-weight:700;color:#004494;font-size:0.82rem;">Общо congestion</td>
+                <td colspan="3" style="padding:6px 4px;font-weight:700;color:#004494;font-size:0.82rem;">Total congestion</td>
                 <td style="text-align:right;padding:6px 4px;font-weight:700;font-size:1rem;" id="cc-total-eur">—</td>
               </tr>
             </tbody>
           </table>
           <div id="cong-daily-box" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;">
-            <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Congestion — дневен приход</div>
+            <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Congestion — daily revenue</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
               <div class="balance-item revenue">
-                <div class="balance-label">Румъния</div>
+                <div class="balance-label">Romania</div>
                 <div class="balance-val revenue" id="b-cong-ro-eur">—</div>
                 <div class="stat-unit" id="b-cong-ro-sub">—</div>
               </div>
               <div class="balance-item revenue">
-                <div class="balance-label">Гърция</div>
+                <div class="balance-label">Greece</div>
                 <div class="balance-val revenue" id="b-cong-gr-eur">—</div>
                 <div class="stat-unit" id="b-cong-gr-sub">—</div>
               </div>
             </div>
             <div style="margin-top:6px;">
               <div class="balance-item" style="grid-column:1/-1;">
-                <div class="balance-label">Общо congestion (РО + ГР)</div>
+                <div class="balance-label">Total congestion (RO + GR)</div>
                 <div class="balance-val neutral" id="b-cong-total-eur">—</div>
               </div>
             </div>
@@ -457,63 +457,63 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div class="panel" id="balance">
-        <div class="panel-header"><a href="#balance" class="anchor-link">Дневен баланс</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
-        <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности. Печалбата от арбитраж на ССЕЕ (Δ) е изчислена като разлика между приход от разреждане и разход за зареждане по борсова цена — реалният финансов резултат зависи от договорните условия на оператора.</div>
+        <div class="panel-header"><a href="#balance" class="anchor-link">Daily balance</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Info">?</button></div>
+        <div id="balance-info" class="info-dropdown">Values are computed at the IBEX day-ahead price. They are illustrative only — they do not reflect actual contract prices, grid-access fees or final financial figures. The BESS arbitrage profit (Δ) is discharge revenue minus charging cost at the spot price — the real financial result depends on the operator's contractual terms.</div>
         <div class="panel-body">
           <div class="balance-grid">
             <div class="balance-item expense">
-              <div class="balance-label">Внос</div>
+              <div class="balance-label">Imports</div>
               <div class="balance-val expense" id="b-import-eur">—</div>
               <div class="stat-unit" id="b-import-mwh">—</div>
             </div>
             <div class="balance-item revenue">
-              <div class="balance-label">Износ</div>
+              <div class="balance-label">Exports</div>
               <div class="balance-val revenue" id="b-export-eur">—</div>
               <div class="stat-unit" id="b-export-mwh">—</div>
             </div>
             <div class="balance-item" style="grid-column:1/-1;">
-              <div class="balance-label">Нетен баланс (+ износ / &minus; внос)</div>
+              <div class="balance-label">Net balance (+ exports / &minus; imports)</div>
               <div class="balance-val neutral" id="b-net-eur">—</div>
               <div class="stat-unit" id="b-net-mwh">—</div>
             </div>
           </div>
           <div class="price-box">
-            <div><div class="price-label">IBEX DA (текуща)</div>
+            <div><div class="price-label">IBEX DA (current)</div>
               <span class="price-val" id="p-current">—</span> <span class="price-unit">EUR/MWh</span></div>
-            <div><div class="price-label">Средна за деня</div>
+            <div><div class="price-label">Daily average</div>
               <span class="price-val" id="p-avg">—</span> <span class="price-unit">EUR/MWh</span></div>
-            <div><div class="price-label">Мин / Макс</div>
+            <div><div class="price-label">Min / Max</div>
               <span class="price-val" id="p-minmax">—</span> <span class="price-unit">EUR/MWh</span></div>
           </div>
           <div id="batt-daily-box" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #c5d8ee;">
-            <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">ССЕЕ — дневен баланс</div>
+            <div style="font-size:0.68rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">BESS — daily balance</div>
             <div id="b-batt-eur-row" style="display:none;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                 <div class="balance-item expense">
-                  <div class="balance-label">Зареждане</div>
+                  <div class="balance-label">Charging</div>
                   <div class="balance-val expense" id="b-batt-chg-eur">—</div>
                   <div class="stat-unit" id="b-batt-chg-sub">—</div>
                 </div>
                 <div class="balance-item revenue">
-                  <div class="balance-label">Разреждане</div>
+                  <div class="balance-label">Discharging</div>
                   <div class="balance-val revenue" id="b-batt-dis-eur">—</div>
                   <div class="stat-unit" id="b-batt-dis-sub">—</div>
                 </div>
               </div>
               <div id="b-pumps-row" style="display:none;margin-top:6px;">
                 <div class="balance-item expense">
-                  <div class="balance-label">Зареждане помпи</div>
+                  <div class="balance-label">Pump charging</div>
                   <div class="balance-val expense" id="b-pumps-eur">—</div>
                   <div class="stat-unit" id="b-pumps-sub">—</div>
                 </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
                 <div class="balance-item">
-                  <div class="balance-label">Разр./Зар.</div>
+                  <div class="balance-label">Dis./Chg.</div>
                   <div><span class="balance-val neutral" id="b-batt-eff">—</span> <span class="stat-unit">%</span></div>
                 </div>
                 <div class="balance-item">
-                  <div class="balance-label">Δ Арбитраж</div>
+                  <div class="balance-label">Δ Arbitrage</div>
                   <div class="balance-val neutral" id="b-batt-arb">—</div>
                   <div class="stat-unit" id="b-batt-arb-prices"></div>
                 </div>
@@ -524,15 +524,15 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
       </div>
 
       <div class="panel" id="gen-table-panel">
-        <div class="panel-header"><a href="#gen-table-panel" class="anchor-link">Производство по източници — живо</a></div>
+        <div class="panel-header"><a href="#gen-table-panel" class="anchor-link">Generation by source — live</a></div>
         <div class="panel-body" style="padding:6px 12px 10px;">
           <table class="flows-table" id="gen-table">
             <thead>
               <tr>
-                <th>Източник</th>
-                <th style="text-align:right;">МВт</th>
+                <th>Source</th>
+                <th style="text-align:right;">MW</th>
                 <th style="text-align:right;">%</th>
-                <th style="width:100px;">Дял</th>
+                <th style="width:100px;">Share</th>
               </tr>
             </thead>
             <tbody id="gen-tbody"></tbody>
@@ -546,37 +546,37 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- timeline chart -->
   <div class="panel" id="day-profile" style="margin-bottom:12px;">
     <div class="panel-header">
-      <span><a href="#day-profile" class="anchor-link">Дневен профил</a></span>
+      <span><a href="#day-profile" class="anchor-link">Daily profile</a></span>
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="toggle-group">
-          <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
-          <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/ч</button>
-          <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Колони</button>
+          <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">RES</button>
+          <button class="tog-btn" id="tog-eur"     onclick="setEurMode(!eurMode)">€/h</button>
+          <button class="tog-btn" id="tog-col"     onclick="setColMode(!colMode)">Columns</button>
         </div>
-        <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Информация">?</button>
-        <button class="fs-btn" onclick="toggleFullscreen('day-profile','chart-timeline')" title="Цял екран">⛶</button>
+        <button class="info-btn" onclick="document.getElementById('profile-info').classList.toggle('open')" title="Info">?</button>
+        <button class="fs-btn" onclick="toggleFullscreen('day-profile','chart-timeline')" title="Fullscreen">⛶</button>
       </div>
     </div>
-    <div id="profile-info" class="info-dropdown">Данните са изчислени на база живи данни от ЕСО ЕАД, получавани на интервали от 5 минути. Поради вариации при заснемането на интервала е възможна грешка, типично в рамките на 1–2%.</div>
+    <div id="profile-info" class="info-dropdown">Values are computed from live ESO EAD data received at 5-minute intervals. Due to sampling-interval variations a small error is possible, typically within 1–2%.</div>
     <div id="re-stats-bar" style="display:none;"></div>
     <div id="total-stats-bar" class="stat-grid" style="padding:8px 12px;margin-bottom:0;border-bottom:1px solid #c5d8ee;"></div>
     <div style="padding:6px 8px 10px;">
       <div id="chart-timeline" class="fs-chart" style="height:640px;"></div>
     </div>
     <div id="day-start-ctrl" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 0 6px;border-top:1px solid #eef2f8;">
-      <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Предишен час">◄</button>
+      <button onclick="shiftDayStart(-1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Previous hour">◄</button>
       <span id="day-start-label" style="font-size:0.68rem;color:#8a9bb5;min-width:120px;text-align:center;">00:00</span>
-      <button onclick="shiftDayStart(1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Следващ час">►</button>
+      <button onclick="shiftDayStart(1)" style="background:none;border:none;padding:1px 5px;cursor:pointer;font-size:0.78rem;color:#aab8cc;line-height:1.4;" title="Next hour">►</button>
     </div>
   </div>
 
   <!-- flows timeline -->
   <div class="panel" id="flows-profile" style="margin-bottom:12px;">
     <div class="panel-header">
-      <a href="#flows-profile" class="anchor-link">Трансгранични потоци — дневен профил (+ внос / &minus; износ)</a>
+      <a href="#flows-profile" class="anchor-link">Cross-border flows — daily profile (+ imports / &minus; exports)</a>
       <div style="display:flex;align-items:center;gap:6px;">
-        <button class="tog-btn" id="tog-flows-eur" onclick="setFlowsEurMode(!flowsEurMode)">€/ч</button>
-        <button class="fs-btn" onclick="toggleFullscreen('flows-profile','chart-flows-ts')" title="Цял екран">⛶</button>
+        <button class="tog-btn" id="tog-flows-eur" onclick="setFlowsEurMode(!flowsEurMode)">€/h</button>
+        <button class="fs-btn" onclick="toggleFullscreen('flows-profile','chart-flows-ts')" title="Fullscreen">⛶</button>
       </div>
     </div>
     <div id="flows-country-bar" style="display:none;padding:8px 12px;border-bottom:1px solid #c5d8ee;"></div>
@@ -588,14 +588,14 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- tariff calculator — hidden by default, shown with #tariff=1 -->
   <div class="panel" id="tariff" style="display:none;">
     <div class="panel-header">
-      <span>Борсова цена — Свободен пазар vs Регулирана тарифа</span>
-      <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Информация">?</button>
+      <span>Spot price — Free market vs Regulated tariff</span>
+      <button class="info-btn" onclick="document.getElementById('tariff-info').classList.toggle('open')" title="Info">?</button>
     </div>
     <div id="tariff-info" class="info-dropdown">
-      Сравнение на регулираната тарифа (КЕВР) с текущата борсова цена (IBEX). Мрежовите такси (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара. Стойностите са ориентировъчни — реалните договорни условия на свободния пазар може да се различават.
+      Comparison of the regulated tariff (EWRC) with the current spot price (IBEX). Network charges (transmission, distribution, RES, excise) are identical on both markets. Values are indicative — actual free-market contract terms may differ.
     </div>
     <div id="tariff-body">
-      <div style="color:#8a9bb5;font-size:0.78rem;padding:10px 12px;">Зареждане…</div>
+      <div style="color:#8a9bb5;font-size:0.78rem;padding:10px 12px;">Loading…</div>
     </div>
   </div>
 
@@ -610,28 +610,28 @@ const REFRESH_MS = 5 * 60 * 1000;
 const STALE_MS   = 9 * 60 * 1000;
 
 const GEN_SERIES = [
-  { key: 'АЕЦ',                 label: 'АЕЦ',           color: '#2caffe' },
-  { key: 'Кондензационни ТЕЦ',  label: 'Конд. ТЕЦ',    color: '#544fc5' },
-  { key: 'Топлофикационни ТЕЦ', label: 'Топло. ТЕЦ',   color: '#00e272' },
-  { key: 'Заводски ТЕЦ',        label: 'Зав. ТЕЦ',      color: '#fe6a35' },
-  { key: 'ВЕЦ',                 label: 'ВЕЦ',           color: '#6b8abc' },
-  { key: 'Малки ВЕЦ',           label: 'Малки ВЕЦ',     color: '#d568fb' },
-  { key: 'ВяЕЦ',                label: 'ВяЕЦ',          color: '#2ee0ca' },
-  { key: 'ФЕЦ',                 label: 'ФЕЦ',           color: '#fa4b42' },
-  { key: 'Био ЕЦ',              label: 'Биомаса',       color: '#feb56a' },
+  { key: 'АЕЦ',                 label: 'Nuclear',           color: '#2caffe' },
+  { key: 'Кондензационни ТЕЦ',  label: 'Coal TPP',    color: '#544fc5' },
+  { key: 'Топлофикационни ТЕЦ', label: 'CHP (heating)',   color: '#00e272' },
+  { key: 'Заводски ТЕЦ',        label: 'CHP (industrial)',      color: '#fe6a35' },
+  { key: 'ВЕЦ',                 label: 'Hydro',           color: '#6b8abc' },
+  { key: 'Малки ВЕЦ',           label: 'Small hydro',     color: '#d568fb' },
+  { key: 'ВяЕЦ',                label: 'Wind',          color: '#2ee0ca' },
+  { key: 'ФЕЦ',                 label: 'Solar',           color: '#fa4b42' },
+  { key: 'Био ЕЦ',              label: 'Biomass',       color: '#feb56a' },
 ];
 
 const FLOW_CFG = [
-  { key: 'RO_mw', label: 'Румъния',     color: '#2caffe' },
-  { key: 'SR_mw', label: 'Сърбия',      color: '#00e272' },
-  { key: 'MK_mw', label: 'С.Македония', color: '#fe6a35' },
-  { key: 'GR_mw', label: 'Гърция',      color: '#544fc5' },
-  { key: 'TR_mw', label: 'Турция',      color: '#d568fb' },
+  { key: 'RO_mw', label: 'Romania',     color: '#2caffe' },
+  { key: 'SR_mw', label: 'Serbia',      color: '#00e272' },
+  { key: 'MK_mw', label: 'N. Macedonia', color: '#fe6a35' },
+  { key: 'GR_mw', label: 'Greece',      color: '#544fc5' },
+  { key: 'TR_mw', label: 'Turkey',      color: '#d568fb' },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  TARIFF CONFIG — КЕВР Ц-25, юли 2025 (референтни стойности, Енерго-Про)
-//  Всички стойности в лв/кВтч без ДДС, освен ако е отбелязано друго.
+//  Всички стойности в лв/kWh без ДДС, освен ако е отбелязано друго.
 // ══════════════════════════════════════════════════════════════════════════════
 const TARIFF = {
   BGN_PER_EUR:      1.95583,
@@ -641,10 +641,10 @@ const TARIFF = {
   transmission:     0.0145,   // Пренос НЕК
   distribution:     0.0511,   // Разпределение
   renewables:       0.0250,   // ОЗЕ надбавка
-  excise:           0.00205,  // Акциз (фиксиран по закон: 2,05 лв/МВтч)
+  excise:           0.00205,  // Акциз (фиксиран по закон: 2,05 лв/MWh)
   VAT:              0.20,     // ДДС
-  dayShare:         0.70,     // Дял дневно потребление (за изчисляване на кВтч от бюджет)
-  freeMarketMarkup: 5,        // Надбавка свободен пазар (EUR/МВтч) — балансираща отговорност
+  dayShare:         0.70,     // Дял дневно потребление (за изчисляване на kWh от бюджет)
+  freeMarketMarkup: 5,        // Надбавка свободен пазар (EUR/MWh) — балансираща отговорност
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -735,7 +735,7 @@ function battDis(v, tsMs) {
   if (tsMs != null && tsMs >= NEW_BESS_MS) return Math.max(0, v);
   return v >= 50 ? v : 0;
 }
-function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('bg-BG'); }
+function fmt0(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : Math.round(v).toLocaleString('en-GB'); }
 function fmt1(v)  { return (v === undefined || v === null || isNaN(v)) ? '—' : v.toFixed(1); }
 function fmtHMin(h) { const m = Math.round(h*60); return `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`; }
 // Convert UTC ms → Sofia local datetime string ("YYYY-MM-DD HH:MM") for Plotly axis
@@ -744,8 +744,8 @@ function toSofiaStr(ms) { return new Date(ms).toLocaleString('sv',{timeZone:'Eur
 function fmtEur(e) {
   if (!isFinite(e)) return '—';
   const a = Math.abs(e), s = e < 0 ? '−' : '';
-  if (a >= 1e6) return s + (a/1e6).toFixed(2) + ' млн.€';
-  if (a >= 1e3) return s + (a/1e3).toFixed(1) + ' хил.€';
+  if (a >= 1e6) return s + (a/1e6).toFixed(2) + ' M€';
+  if (a >= 1e3) return s + (a/1e3).toFixed(1) + ' k€';
   return s + a.toFixed(0) + ' €';
 }
 
@@ -1077,7 +1077,7 @@ function updateTotalStats(binned, pd, dateStr) {
     mwhTotals['_batt'] += bd * mwhScale;
     if (eurScale !== null) eurTotals['_batt'] += bd * eurScale;
   }
-  const unit = eurMode ? 'млн.€' : 'GWh';
+  const unit = eurMode ? 'M€' : 'GWh';
   const dec  = eurMode ? 2 : 3;
   const avgPr = (key) => {
     const mwh = mwhTotals[key] * 1000;
@@ -1111,17 +1111,17 @@ function updateTotalStats(binned, pd, dateStr) {
     chgEl.textContent = fmtEur(chgDisplay);
     chgEl.className = 'balance-val ' + (chgDisplay >= 0 ? 'revenue' : 'expense');
 
-    document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh зар.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
+    document.getElementById('b-batt-chg-sub').textContent = `${fmt0(chgMwh)} MWh chg.` + (isFinite(avgChg) ? ` @ ${avgChg.toFixed(1)} EUR/MWh` : '');
     const disDisplay = battEurDis * 1e6; // positive = earned (discharging at positive price)
     const disEl = document.getElementById('b-batt-dis-eur');
     disEl.textContent = fmtEur(disDisplay);
     disEl.className = 'balance-val ' + (disDisplay >= 0 ? 'revenue' : 'expense');
 
-    document.getElementById('b-batt-dis-sub').textContent = `${fmt0(disMwh)} MWh разр.` + (isFinite(avgDis) ? ` @ ${avgDis.toFixed(1)} EUR/MWh` : '');
+    document.getElementById('b-batt-dis-sub').textContent = `${fmt0(disMwh)} MWh dis.` + (isFinite(avgDis) ? ` @ ${avgDis.toFixed(1)} EUR/MWh` : '');
     const arbEl = document.getElementById('b-batt-arb');
     arbEl.className = 'balance-val ' + (battDelta >= 0 ? 'revenue' : 'expense');
     arbEl.textContent = fmtEur(battDelta * 1e6);
-    document.getElementById('b-batt-arb-prices').textContent = isFinite(avgDis) && isFinite(avgChg) ? `разр. ${avgDis.toFixed(0)} vs зар. ${avgChg.toFixed(0)} €/MWh` : '';
+    document.getElementById('b-batt-arb-prices').textContent = isFinite(avgDis) && isFinite(avgChg) ? `dis. ${avgDis.toFixed(0)} vs chg. ${avgChg.toFixed(0)} €/MWh` : '';
     const eff = chgMwh > 0 ? disMwh / chgMwh * 100 : 0;
     document.getElementById('b-batt-eff').textContent = eff > 0 ? fmt1(eff) : '—';
   } else {
@@ -1131,33 +1131,33 @@ function updateTotalStats(binned, pd, dateStr) {
   let html = '';
   for (const s of sources) html += keyItem(s.color, s.label, s.key);
   if (!reMode && !hiddenGenKeys.has('_batt')) {
-    html += keyItem('#f59f00', 'ССЕЕ разр.', '_batt');
+    html += keyItem('#f59f00', 'BESS dis.', '_batt');
     if (eurMode) {
       const chgSub = battChgMwh > 0 ? `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(battChgCost*1e6/(battChgMwh*1000)).toFixed(0)} €/MWh</div>` : '';
-      html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgCost).toFixed(dec), unit, chgSub);
+      html += statItem('#8e24aa', 'BESS chg.', (-battChgCost).toFixed(dec), unit, chgSub);
       if (pumpsChgMwh > 0) {
         const pumpsSub = `<div style="font-size:0.58rem;color:#8a9ab0;margin-top:1px;">@ ${(pumpsChgCost*1e6/(pumpsChgMwh*1000)).toFixed(0)} €/MWh</div>`;
-        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgCost).toFixed(dec), unit, pumpsSub);
+        html += statItem('#0369a1', 'Pumps chg.', (-pumpsChgCost).toFixed(dec), unit, pumpsSub);
       }
     } else {
       if (battChgMwh > 0) {
-        html += statItem('#8e24aa', 'ССЕЕ зар.', (-battChgMwh).toFixed(dec), unit);
+        html += statItem('#8e24aa', 'BESS chg.', (-battChgMwh).toFixed(dec), unit);
       }
       if (pumpsChgMwh > 0) {
-        html += statItem('#0369a1', 'Помпи зар.', (-pumpsChgMwh).toFixed(dec), unit);
+        html += statItem('#0369a1', 'Pumps chg.', (-pumpsChgMwh).toFixed(dec), unit);
       }
     }
   }
   if (reMode) {
     const rs = calcReStats(binned, priceByBin);
-    const u  = eurMode ? 'хил.€' : 'GWh';
+    const u  = eurMode ? 'k€' : 'GWh';
     const d  = eurMode ? 1 : 1;
     const pct = rs.loadAcc > 0 ? rs.reAcc / rs.loadAcc * 100 : 0;
-    html += `<div class="stat-card" style="border-top-color:#2ee0ca"><div class="stat-label">ВЕИ покритие</div><div class="stat-val">${pct.toFixed(1)}</div><div class="stat-unit">%</div></div>`;
-    html += statItem('#2ee0ca', 'ВЕИ енергия',  rs.reAcc.toFixed(d),    u);
-    html += statItem('#cc2200', 'Непокрито',     rs.gapAcc.toFixed(d),   u);
-    html += statItem('#feb56a', 'Излишък',       rs.excessAcc.toFixed(2),u);
-    html += statItem('#aaa',    '100% покр.',    fmtHMin(rs.fullH),     'ч:мин');
+    html += `<div class="stat-card" style="border-top-color:#2ee0ca"><div class="stat-label">RES coverage</div><div class="stat-val">${pct.toFixed(1)}</div><div class="stat-unit">%</div></div>`;
+    html += statItem('#2ee0ca', 'RES energy',  rs.reAcc.toFixed(d),    u);
+    html += statItem('#cc2200', 'Uncovered',     rs.gapAcc.toFixed(d),   u);
+    html += statItem('#feb56a', 'Surplus',       rs.excessAcc.toFixed(2),u);
+    html += statItem('#aaa',    '100% cov.',    fmtHMin(rs.fullH),     'h:min');
   }
   document.getElementById('total-stats-bar').innerHTML = html;
 }
@@ -1177,11 +1177,11 @@ function drawColChart(binned, pd, dateStr) {
     for (const s of GEN_SERIES) totals[s.key] += Math.max(0, b[s.key]||0) * scale;
     totals['_batt'] += battDis(b['batt_discharge_mw'], b.ts) * scale;
   }
-  const unit = eurMode ? 'млн.€' : 'GWh';
+  const unit = eurMode ? 'M€' : 'GWh';
   const dec  = eurMode ? 3 : 3;
   const srcBase = reMode ? GEN_SERIES.filter(s => RE_KEYS.has(s.key)) : GEN_SERIES;
   const colItems = srcBase.map(s => ({ label: s.label, value: totals[s.key], color: s.color }));
-  if (!reMode) colItems.push({ label: 'ССЕЕ разр.', value: totals['_batt'], color: '#f59f00' });
+  if (!reMode) colItems.push({ label: 'BESS dis.', value: totals['_batt'], color: '#f59f00' });
   colItems.sort((a, b) => b.value - a.value);
   const labels = colItems.map(c => c.label);
   const values = colItems.map(c => c.value);
@@ -1253,7 +1253,7 @@ function updateStatusCards(latest, pd, nbrPd) {
   // At negative price: importing earns money (green), exporting costs money (red)
   const isCostly = isFinite(price) ? (nImp * price > 0) : isImp;
   document.getElementById('s-import-card').className = 'stat-card '+(isCostly?'red':'green');
-  document.getElementById('s-import-label').textContent = isImp?'Внос':'Износ';
+  document.getElementById('s-import-label').textContent = isImp?'Imports':'Exports';
   document.getElementById('s-import').textContent = fmt0(Math.abs(nImp));
 
   // Dynamic source cards sorted by descending MW
@@ -1263,21 +1263,21 @@ function updateStatusCards(latest, pd, nbrPd) {
   const pumpsNow  = latest['pumps_mw'] || 0;
 
   const cards = [
-    { label: 'ФЕЦ',        color: '#fa4b42', v: latest['ФЕЦ']||0,
+    { label: 'Solar',        color: '#fa4b42', v: latest['ФЕЦ']||0,
       unit: 'MW' },
-    { label: 'АЕЦ',        color: '#2caffe', v: latest['АЕЦ']||0,
+    { label: 'Nuclear',        color: '#2caffe', v: latest['АЕЦ']||0,
       unit: 'MW' },
-    { label: 'ВЕЦ',        color: '#6b8abc', v: latest['ВЕЦ']||0,
+    { label: 'Hydro',        color: '#6b8abc', v: latest['ВЕЦ']||0,
       unit: 'MW' },
-    { label: 'М.ВЕЦ',      color: '#d568fb', v: latest['Малки ВЕЦ']||0,
+    { label: 'S. hydro',      color: '#d568fb', v: latest['Малки ВЕЦ']||0,
       unit: 'MW' },
-    { label: 'ВяЕЦ',       color: '#2ee0ca', v: latest['ВяЕЦ']||0,
+    { label: 'Wind',       color: '#2ee0ca', v: latest['ВяЕЦ']||0,
       unit: 'MW' },
-    { label: 'ССЕЕ',       color: '#7b3fa0',
+    { label: 'BESS',       color: '#7b3fa0',
       v: bSt==='charging' ? -Math.abs(bMw) : Math.abs(bMw),
-      unit: bSt==='charging' ? 'MW — зар.' : bSt==='discharging' ? 'MW — разр.' : 'MW' },
+      unit: bSt==='charging' ? 'MW — chg.' : bSt==='discharging' ? 'MW — dis.' : 'MW' },
   ];
-  if (pumpsNow > 0) cards.push({ label: 'Помпи зар.', color: '#0369a1', v: -pumpsNow, unit: 'MW' });
+  if (pumpsNow > 0) cards.push({ label: 'Pumps chg.', color: '#0369a1', v: -pumpsNow, unit: 'MW' });
 
 
 
@@ -1331,7 +1331,7 @@ function updateFlowsTable(latest, pd, nbrPd) {
         <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#ccc;"></div>
         <div class="flow-bar ${isImp?'import':'export'}" style="width:${pct}%;"></div>
       </div></td>
-      <td style="text-align:right;font-size:0.75rem;color:${eurColor};" title="Оценка на база IBEX DA цена">${isFinite(eurVal)?fmtEur(eurVal)+'/h ~':'—'}</td>
+      <td style="text-align:right;font-size:0.75rem;color:${eurColor};" title="Estimate at IBEX DA price">${isFinite(eurVal)?fmtEur(eurVal)+'/h ~':'—'}</td>
       <td style="text-align:right;line-height:1.3;">${congTxt}</td>`;
     tbody.appendChild(tr);
   }
@@ -1352,7 +1352,7 @@ function updateFlowsTable(latest, pd, nbrPd) {
   const netTr = document.createElement('tr');
   netTr.style.cssText = 'border-top:2px solid #c5d8ee;font-weight:700;';
   netTr.innerHTML = `
-    <td style="font-weight:700;color:#1a2233;">Нетна позиция</td>
+    <td style="font-weight:700;color:#1a2233;">Net position</td>
     <td class="${netMwClass}">${fmt0(Math.abs(netMw))} MW ${isNetImp?'▲':'▼'}</td>
     <td><div class="flow-bar-wrap">
       <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#999;"></div>
@@ -1384,14 +1384,14 @@ function updateCongCard(latest, pd, nbrPd) {
   const totalEur = (isFinite(roEur) ? roEur : 0) + (isFinite(grEur) ? grEur : 0);
 
   const fmtMw = mw => {
-    const dir = mw < 0 ? '▼ износ' : mw > 0 ? '▲ внос' : '—';
-    return `${fmt0(Math.abs(mw))} МВт ${dir}`;
+    const dir = mw < 0 ? '▼ export' : mw > 0 ? '▲ import' : '—';
+    return `${fmt0(Math.abs(mw))} MW ${dir}`;
   };
   const fmtSpread = sp => isFinite(sp)
-    ? `<span style="color:${sp>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${sp>=0?'+':''}${sp.toFixed(1)} €/МВтч</span>`
+    ? `<span style="color:${sp>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${sp>=0?'+':''}${sp.toFixed(1)} €/MWh</span>`
     : '<span style="color:#999;">—</span>';
   const fmtRent = eur => isFinite(eur)
-    ? `<span style="color:${eur>=0?'#1a8a1a':'#cc2200'};">${fmtEur(eur)}/ч</span>`
+    ? `<span style="color:${eur>=0?'#1a8a1a':'#cc2200'};">${fmtEur(eur)}/h</span>`
     : '<span style="color:#999;">—</span>';
 
   // Price box
@@ -1399,9 +1399,9 @@ function updateCongCard(latest, pd, nbrPd) {
   document.getElementById('cc-p-ro').textContent = isFinite(roP) ? roP.toFixed(1) : '—';
   document.getElementById('cc-p-gr').textContent = isFinite(grP) ? grP.toFixed(1) : '—';
   document.getElementById('cc-spread-ro').innerHTML = isFinite(roSpread)
-    ? `<span style="color:${roSpread>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${roSpread>=0?'+':''}${roSpread.toFixed(1)} €/МВтч</span>` : '—';
+    ? `<span style="color:${roSpread>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${roSpread>=0?'+':''}${roSpread.toFixed(1)} €/MWh</span>` : '—';
   document.getElementById('cc-spread-gr').innerHTML = isFinite(grSpread)
-    ? `<span style="color:${grSpread>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${grSpread>=0?'+':''}${grSpread.toFixed(1)} €/МВтч</span>` : '—';
+    ? `<span style="color:${grSpread>=0?'#1a8a1a':'#cc2200'};font-weight:600;">${grSpread>=0?'+':''}${grSpread.toFixed(1)} €/MWh</span>` : '—';
 
   // Table cells
   document.getElementById('cc-ro-mw').innerHTML     = `<span style="color:${roMw<=0?'#1a8a1a':'#cc2200'};">${fmtMw(roMw)}</span>`;
@@ -1412,7 +1412,7 @@ function updateCongCard(latest, pd, nbrPd) {
   document.getElementById('cc-gr-eur').innerHTML    = fmtRent(grEur);
 
   const totEl = document.getElementById('cc-total-eur');
-  totEl.innerHTML = `<span style="color:${totalEur>=0?'#1a8a1a':'#cc2200'};">${fmtEur(totalEur)}/ч</span>`;
+  totEl.innerHTML = `<span style="color:${totalEur>=0?'#1a8a1a':'#cc2200'};">${fmtEur(totalEur)}/h</span>`;
 }
 
 function updateGenTable(latest) {
@@ -1420,11 +1420,11 @@ function updateGenTable(latest) {
   const battDischarge = battDis(latest['batt_discharge_mw'], toUtcMs(latest));
   const netImp = latest['net_import_mw'] || 0;
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, mw: latest[s.key]||0 }));
-  if (battDischarge > 0) rows.push({ label: 'ССЕЕ разреждане', color: '#f59f00', mw: battDischarge });
-  if (netImp > 0) rows.push({ label: 'Внос', color: '#9e9e9e', mw: netImp });
+  if (battDischarge > 0) rows.push({ label: 'BESS discharge', color: '#f59f00', mw: battDischarge });
+  if (netImp > 0) rows.push({ label: 'Imports', color: '#9e9e9e', mw: netImp });
   const pumpsNow = latest['pumps_mw'] || 0;
-  if (pumpsNow > 0) rows.push({ label: 'Помпи (товар)', color: '#0369a1', mw: -pumpsNow });
-  if (netImp < 0) rows.push({ label: 'Износ', color: '#1a8a1a', mw: netImp });
+  if (pumpsNow > 0) rows.push({ label: 'Pumps (load)', color: '#0369a1', mw: -pumpsNow });
+  if (netImp < 0) rows.push({ label: 'Exports', color: '#1a8a1a', mw: netImp });
   rows.sort((a,b) => b.mw - a.mw);
   const total = rows.filter(r => r.mw > 0).reduce((s,r) => s + r.mw, 0) || 1;
   const tbody = document.getElementById('gen-tbody');
@@ -1500,15 +1500,15 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null, nbrPd = null) {
   const impEl = document.getElementById('b-import-eur');
   impEl.textContent = fmtEur(impDisplay);
   impEl.className = 'balance-val ' + (impDisplay >= 0 ? 'revenue' : 'expense');
-  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh внос'+(isFinite(avgImpPrice)?` @ ${fmt1(avgImpPrice)} EUR/MWh`:'');
+  document.getElementById('b-import-mwh').textContent = fmt0(impMwh)+' MWh imported'+(isFinite(avgImpPrice)?` @ ${fmt1(avgImpPrice)} EUR/MWh`:'');
   const expEl = document.getElementById('b-export-eur');
   expEl.textContent = fmtEur(expDisplay);
   expEl.className = 'balance-val ' + (expDisplay >= 0 ? 'revenue' : 'expense');
-  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh износ'+(isFinite(avgExpPrice)?` @ ${fmt1(avgExpPrice)} EUR/MWh`:'');
+  document.getElementById('b-export-mwh').textContent = fmt0(expMwh)+' MWh exported'+(isFinite(avgExpPrice)?` @ ${fmt1(avgExpPrice)} EUR/MWh`:'');
   const netEl = document.getElementById('b-net-eur');
   netEl.textContent = fmtEur(net);
   netEl.className   = 'balance-val '+(net>=0?'revenue':'expense');
-  document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh нет';
+  document.getElementById('b-net-mwh').textContent = fmt0(expMwh-impMwh)+' MWh net';
 
   // Congestion daily box
   const congBox = document.getElementById('cong-daily-box');
@@ -1584,15 +1584,15 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null, nbrPd = null) {
   if (!hasAny) { bar.style.display = 'none'; return; }
   bar.style.display = '';
   const useEur = flowsEurMode;
-  const unit = useEur ? 'млн.€' : 'GWh';
-  bar.innerHTML = '<div class="stat-label" style="margin-bottom:6px;">Трансгранична енергия за деня</div>'
+  const unit = useEur ? 'M€' : 'GWh';
+  bar.innerHTML = '<div class="stat-label" style="margin-bottom:6px;">Cross-border energy for the day</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
     + FLOW_CFG.map(f => {
         const gwh = ctryGwh[f.key];
         if (Math.abs(gwh) < 0.01) return '';
         const isImp = gwh > 0;
         const arrow = isImp ? '▲' : '▼';
-        const label = isImp ? 'внос' : 'износ';
+        const label = isImp ? 'import' : 'export';
         const avgP  = ctryMwh[f.key] > 0 ? ctryEur[f.key] / ctryMwh[f.key] : NaN;
         const eurVal = ctryEur[f.key] / 1e6;  // MWh*EUR → млн.€
         const arrowSpan = `<span style="color:${isImp?'#cc2200':'#1a8a1a'}">${arrow}</span>`;
@@ -1621,7 +1621,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   const T = TARIFF;
   const dayPrices = getDayPrices(pd, dateStr);
   if (!dayPrices.length) {
-    el.innerHTML = '<div style="color:#8a9bb5;font-size:0.78rem;padding:6px 0;">Няма борсови данни за избрания ден.</div>';
+    el.innerHTML = '<div style="color:#8a9bb5;font-size:0.78rem;padding:6px 0;">No market data for the selected day.</div>';
     return;
   }
 
@@ -1665,12 +1665,12 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
   // ── component table rows (use snapshot price for supply, daily avg shown in label) ──
   const compRows = [
-    { label: `Снабдяване<br><span style="font-size:0.6rem;color:#8a9bb5;">борса: ${isFinite(currentSpotEur)?currentSpotEur.toFixed(0):'—'} €/МВтч</span>`,
+    { label: `Supply<br><span style="font-size:0.6rem;color:#8a9bb5;">spot: ${isFinite(currentSpotEur)?currentSpotEur.toFixed(0):'—'} €/MWh</span>`,
       reg: T.supply.day, free: freeSupplyCur },
-    { label: 'Пренос НЕК',    reg: T.transmission, free: T.transmission, fixed: true },
-    { label: 'Разпределение', reg: T.distribution, free: T.distribution, fixed: true },
-    { label: 'ОЗЕ надбавка',  reg: T.renewables,   free: T.renewables,   fixed: true },
-    { label: 'Акциз',         reg: T.excise,        free: T.excise,       fixed: true },
+    { label: 'Transmission (NEK)',    reg: T.transmission, free: T.transmission, fixed: true },
+    { label: 'Distribution', reg: T.distribution, free: T.distribution, fixed: true },
+    { label: 'RES surcharge',  reg: T.renewables,   free: T.renewables,   fixed: true },
+    { label: 'Excise duty',         reg: T.excise,        free: T.excise,       fixed: true },
   ];
 
   const compHTML = compRows.map(r => {
@@ -1693,13 +1693,13 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   let loadWeights, loadProfileLabel;
   if (loadProfile && loadProfile.weights && loadProfile.weights.length === 24) {
     loadWeights = loadProfile.weights;
-    loadProfileLabel = `последните ${loadProfile.days} дни (${loadProfile.computed})`;
+    loadProfileLabel = `last ${loadProfile.days} days (${loadProfile.computed})`;
   } else {
     const typ = [0.45,0.38,0.34,0.33,0.33,0.38,0.52,0.72,0.82,0.82,0.77,0.72,
                  0.68,0.63,0.63,0.68,0.78,0.88,0.93,0.98,0.93,0.83,0.68,0.53];
     const ts = typ.reduce((s,v)=>s+v,0);
     loadWeights = typ.map(v => v/ts);
-    loadProfileLabel = 'типичен профил';
+    loadProfileLabel = 'typical profile';
   }
 
   const isSofiaDay = h => h >= T.DAY_START && h < T.DAY_END;
@@ -1707,18 +1707,18 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   const _nowH2      = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
   const regNowExVat = isSofiaDay(_nowH2) ? regDayExVat : regNightExVat;
   const _regNowLv2  = isSofiaDay(_nowH2) ? regDayVat : regNightVat;
-  const _regNowLbl2 = isSofiaDay(_nowH2) ? 'ден' : 'нощ';
+  const _regNowLbl2 = isSofiaDay(_nowH2) ? 'day' : 'night';
   const totNowPct   = pct(_regNowLv2, freeVatCur);
 
   const totHTML = `
     <tr style="border-top:2px solid #c5d8ee;color:#5a7090;font-size:0.72rem;">
-      <td>Без ДДС &nbsp;(${_regNowLbl2})</td>
+      <td>Excl. VAT &nbsp;(${_regNowLbl2})</td>
       <td style="text-align:right;font-family:monospace;">${fmtV(regNowExVat)}</td>
       <td style="text-align:right;font-family:monospace;">${isFinite(freeExVatCur)?fmtV(freeExVatCur):'—'}</td>
       <td style="text-align:right;${pctSty(pct(regNowExVat,freeExVatCur))}">${fmtP(pct(regNowExVat,freeExVatCur))}</td>
     </tr>
     <tr style="font-weight:700;background:#f0f6ff;">
-      <td>ОБЩО с ДДС &nbsp;(${_regNowLbl2})</td>
+      <td>TOTAL incl. VAT &nbsp;(${_regNowLbl2})</td>
       <td style="text-align:right;font-family:monospace;color:#004494;">${fmtV(_regNowLv2)}</td>
       <td style="text-align:right;font-family:monospace;${isFinite(freeVatCur)?(freeVatCur<_regNowLv2?'color:#1a8a1a':'color:#cc2200'):''}">${isFinite(freeVatCur)?fmtV(freeVatCur):'—'}</td>
       <td style="text-align:right;font-size:0.75rem;"><span style="${pctSty(totNowPct)}">${fmtP(totNowPct)}</span></td>
@@ -1750,7 +1750,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
   // Ranges helper
   function hoursToRanges(hs) {
-    if (!hs.length) return 'никои';
+    if (!hs.length) return 'none';
     const sorted = [...hs].sort((a,b)=>a-b);
     const ranges = [];
     let s = sorted[0], e = sorted[0];
@@ -1794,7 +1794,7 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
   // Which regulated tier applies at the selected time (Sofia local hour)?
   const nowH = parseInt(new Date(nowMs).toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
   const regNowLv = isSofiaDay(nowH) ? regDayVat : regNightVat;
-  const regNowLabel = isSofiaDay(nowH) ? 'ден' : 'нощ';
+  const regNowLabel = isSofiaDay(nowH) ? 'day' : 'night';
   const nowPct = pct(regNowLv, currentFreeLv);
   const nowCheaper = isFinite(currentFreeLv) && currentFreeLv < regNowLv;
 
@@ -1814,22 +1814,22 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
       <!-- Dominant: free-market end price -->
       <div style="flex:1;padding:14px 18px;">
-        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:5px;">Цена за краен потребител (свободен пазар)</div>
-        <div style="font-size:2.1rem;font-weight:800;${nowCheaper?'color:#1a8a1a':'color:#cc2200'};line-height:1.05;">${fmtEk(freeEurKwh)} <span style="font-size:0.95rem;font-weight:500;color:#5a7090;">EUR/кВтч</span></div>
+        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:#5a7090;margin-bottom:5px;">End-consumer price (free market)</div>
+        <div style="font-size:2.1rem;font-weight:800;${nowCheaper?'color:#1a8a1a':'color:#cc2200'};line-height:1.05;">${fmtEk(freeEurKwh)} <span style="font-size:0.95rem;font-weight:500;color:#5a7090;">EUR/kWh</span></div>
         <div style="font-size:0.7rem;color:#8a9bb5;margin-top:6px;line-height:1.6;">
-          борса&nbsp;${fmtEk(supplyEurKwh)} &nbsp;+&nbsp; мрежа&nbsp;${fmtEk(networkEurKwh)} &nbsp;+&nbsp; ДДС&nbsp;${fmtEk(vatEurKwh)} EUR/кВтч
+          spot&nbsp;${fmtEk(supplyEurKwh)} &nbsp;+&nbsp; grid&nbsp;${fmtEk(networkEurKwh)} &nbsp;+&nbsp; VAT&nbsp;${fmtEk(vatEurKwh)} EUR/kWh
         </div>
         <div style="font-size:0.65rem;color:#aab8cc;margin-top:2px;">
-          борсова цена (IBEX)&nbsp;${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'}&nbsp;EUR/МВтч
+          spot price (IBEX)&nbsp;${isFinite(currentSpotEur)?currentSpotEur.toFixed(1):'—'}&nbsp;EUR/MWh
         </div>
       </div>
 
       <!-- Delta + regulated reference + arrow -->
       <div style="padding:14px 18px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:130px;border-left:1px solid #edf2f8;">
         <div style="font-size:1.7rem;font-weight:800;${pctSty(nowPct)};line-height:1.05;">${fmtP(nowPct)}</div>
-        <div style="font-size:0.68rem;color:#8a9bb5;">${nowCheaper?'по-евтин от регулирана':'по-скъп от регулирана'}</div>
+        <div style="font-size:0.68rem;color:#8a9bb5;">${nowCheaper?'cheaper than regulated':'more expensive than regulated'}</div>
         <div style="font-size:0.72rem;color:#8a9bb5;margin-top:2px;">
-          vs рег. <span style="color:#5a7090;font-weight:600;">${fmtEk(regNowEurKwh)}</span> EUR/кВтч
+          vs reg. <span style="color:#5a7090;font-weight:600;">${fmtEk(regNowEurKwh)}</span> EUR/kWh
         </div>
         <div id="tariff-arrow" style="font-size:0.75rem;color:#aab8cc;margin-top:3px;">${tariffExpanded?'▲':'▼'}</div>
       </div>
@@ -1839,17 +1839,17 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
     <div id="tariff-details" style="display:${tariffExpanded?'block':'none'};">
       <div class="panel-body">
         <div style="font-size:0.72rem;color:#8a9bb5;margin-bottom:10px;">
-          Референтни стойности по решение <strong style="color:#5a7090;">Ц-25 КЕВР, юли 2025</strong> (Енерго-Про / Електросевер).
-          Мрежовите компоненти (пренос, разпределение, ОЗЕ, акциз) са еднакви и на двата пазара.
-          Дневна тарифа: 07:00–23:00 ч. &nbsp;|&nbsp; Нощна: 23:00–07:00 ч.
+          Reference values per decision <strong style="color:#5a7090;">C-25 of EWRC, July 2025</strong> (Energo-Pro / Electrosever).
+          Network components (transmission, distribution, RES, excise) are identical on both markets.
+          Day tariff: 07:00–23:00 &nbsp;|&nbsp; Night: 23:00–07:00
         </div>
 
         <table class="flows-table" style="margin-bottom:16px;">
           <thead>
             <tr>
-              <th>Компонент</th>
-              <th style="text-align:right;">Регулирана<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
-              <th style="text-align:right;">Свободен пазар<br><span style="font-weight:400;color:#8a9bb5;">(EUR/кВтч)</span></th>
+              <th>Component</th>
+              <th style="text-align:right;">Regulated<br><span style="font-weight:400;color:#8a9bb5;">(EUR/kWh)</span></th>
+              <th style="text-align:right;">Free market<br><span style="font-weight:400;color:#8a9bb5;">(EUR/kWh)</span></th>
               <th style="text-align:right;">Δ%</th>
             </tr>
           </thead>
@@ -1861,70 +1861,70 @@ function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null)
 
         <div style="border-top:2px solid #edf2f8;padding-top:12px;">
           <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-            Консуматор с ${dailyKwh} кВтч/ден
+            Consumer using ${dailyKwh} kWh/day
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
             <div class="balance-item">
-              <div class="balance-label">Регулирана</div>
-              <div class="balance-val">${fmtEd(regDailyEur)} EUR/ден</div>
+              <div class="balance-label">Regulated</div>
+              <div class="balance-val">${fmtEd(regDailyEur)} EUR/day</div>
             </div>
             <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
-              <div class="balance-label">Свободен пазар</div>
-              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/ден</div>
+              <div class="balance-label">Free market</div>
+              <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${fmtEd(freeDailyEur)} EUR/day</div>
             </div>
             <div class="balance-item ${freeIsCheaper?'revenue':'expense'}">
-              <div class="balance-label">Разлика</div>
+              <div class="balance-label">Difference</div>
               <div class="balance-val ${freeIsCheaper?'revenue':'expense'}">${freeIsCheaper?'−':'+'}${fmtEd(Math.abs(savingEur))} EUR</div>
               <div class="stat-unit">${isFinite(savingPct)?(freeIsCheaper?'−':'+')+(Math.abs(savingPct)).toFixed(1)+'%':''}</div>
             </div>
           </div>
 
           <div style="font-size:0.72rem;font-weight:700;color:#004494;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-            По-евтини часове на свободния пазар
+            Hours when the free market is cheaper
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
             <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
-              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Дневна тарифа (07–23ч)</div>
-              <strong>${dayCheap.length}</strong> от 16 часа
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Day tariff (07–23h)</div>
+              <strong>${dayCheap.length}</strong> of 16 hours
               <div style="font-size:0.68rem;margin-top:3px;${dayCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
-                ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+                ${dayCheap.length>0 ? hoursToRanges(dayCheap.map(a=>a.h)) : 'no hours — the market is more expensive'}
               </div>
             </div>
             <div style="background:#f0f6ff;border:1px solid #c5d8ee;border-radius:4px;padding:8px 10px;font-size:0.78rem;">
-              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Нощна тарифа (23–07ч)</div>
-              <strong>${nightCheap.length}</strong> от 8 часа
+              <div style="color:#5a7090;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Night tariff (23–07h)</div>
+              <strong>${nightCheap.length}</strong> of 8 hours
               <div style="font-size:0.68rem;margin-top:3px;${nightCheap.length>0?'color:#1a8a1a':'color:#cc2200'}">
-                ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'всички часове — пазарът е по-скъп'}
+                ${nightCheap.length>0 ? hoursToRanges(nightCheap.map(a=>a.h)) : 'no hours — the market is more expensive'}
               </div>
             </div>
           </div>
 
           ${allCheap.length > 0 ? `
           <div style="font-size:0.75rem;padding:8px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;line-height:1.5;">
-            ✓ <strong>${allCheap.length} часа</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) свободният пазар е по-евтин от регулираната тарифа.
+            ✓ In <strong>${allCheap.length} hours</strong> (${hoursToRanges(allCheap.map(a=>a.h))}) the free market is cheaper than the regulated tariff.
           </div>` : `
           <div style="font-size:0.75rem;padding:8px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">
-            ✗ Днес борсовите цени надвишават регулираната тарифа <strong>във всички часове</strong> — регулираната тарифа е по-изгодна.
+            ✗ Today spot prices exceed the regulated tariff <strong>in all hours</strong> — the regulated tariff is the better deal.
           </div>`}
 
           ${(() => {
             const fmtEur = v => (v / T.BGN_PER_EUR).toFixed(2);
             const lines = [
               `<div style="display:flex;gap:16px;font-size:0.75rem;margin-top:8px;padding:7px 10px;background:#f5f8ff;border:1px solid #c5d8ee;border-radius:4px;">`,
-              `<span>Свободен пазар: <strong>${fmtEur(freeDailyCost)} EUR/ден</strong></span>`,
-              `<span>Регулиран: <strong>${fmtEur(regDailyCost)} EUR/ден</strong></span>`,
+              `<span>Free market: <strong>${fmtEur(freeDailyCost)} EUR/day</strong></span>`,
+              `<span>Regulated: <strong>${fmtEur(regDailyCost)} EUR/day</strong></span>`,
               `</div>`,
             ].join('');
             let action = '';
             if (freeIsCheaper) {
-              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;">✓ Свободният пазар е по-изгоден — спестявате <strong>${fmtEur(regDailyCost - freeDailyCost)} EUR/ден</strong>.</div>`;
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#f0fff5;border:1px solid #a5d5b5;border-radius:4px;">✓ The free market is the better deal — you save <strong>${fmtEur(regDailyCost - freeDailyCost)} EUR/day</strong>.</div>`;
             } else if (allCheap.length === 0) {
-              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">✗ Няма евтини часове — регулираната тарифа е по-изгодна.</div>`;
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff5f5;border:1px solid #f5c5c5;border-radius:4px;">✗ No cheap hours — the regulated tariff is the better deal.</div>`;
             } else if (breakEven) {
               const diff = fmtEur(freeDailyCost - regDailyCost);
-              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff8f0;border:1px solid #f5c5a5;border-radius:4px;line-height:1.7;">Трябва да спестите <strong>${diff} EUR/ден</strong> — преместете ~<strong>${breakEven.shiftPct.toFixed(0)}%</strong> (${breakEven.shiftKwh.toFixed(1)} кВтч) от потреблението към евтините часове (${breakEven.cheapHours}).</div>`;
+              action = `<div style="margin-top:6px;font-size:0.75rem;padding:7px 10px;background:#fff8f0;border:1px solid #f5c5a5;border-radius:4px;line-height:1.7;">You need to save <strong>${diff} EUR/day</strong> — shift ~<strong>${breakEven.shiftPct.toFixed(0)}%</strong> (${breakEven.shiftKwh.toFixed(1)} kWh) of consumption to the cheap hours (${breakEven.cheapHours}).</div>`;
             }
-            return `<div style="margin-top:8px;">${lines}${action}<div style="margin-top:4px;color:#aab8cc;font-size:0.68rem;padding-left:2px;">профил: ${loadProfileLabel}</div></div>`;
+            return `<div style="margin-top:8px;">${lines}${action}<div style="margin-top:4px;color:#aab8cc;font-size:0.68rem;padding-left:2px;">profile: ${loadProfileLabel}</div></div>`;
           })()}
         </div>
       </div>
@@ -1942,7 +1942,7 @@ function drawPie(latest) {
   // Always include every source (even at 0) so label count never changes → no resize
   const rows = GEN_SERIES.map(s => ({ label: s.label, color: s.color, v: latest[s.key]||0 }));
   const vals   = [...rows.map(r=>r.v),   battDis(latest['batt_discharge_mw'], toUtcMs(latest)), Math.max(0, latest['net_import_mw']||0)];
-  const labels = [...rows.map(r=>r.label), 'ССЕЕ разреждане',              'Внос'];
+  const labels = [...rows.map(r=>r.label), 'BESS discharge',              'Imports'];
   const colors = [...rows.map(r=>r.color), '#f59f00',                       '#9e9e9e'];
 
   const total = vals.reduce((a,b)=>a+b,0);
@@ -1955,23 +1955,23 @@ function drawPie(latest) {
     : (loadMw > 0 ? Math.max(0, total - loadMw - exportMw) : 0);
   const pumpsNowPie = latest['pumps_mw'] || 0;
   const subParts = [];
-  if (loadMw > 0) subParts.push({ v: loadMw, s: `${fmt0(loadMw)} т`, pin: 0 });
-  if (exportMw > 50) subParts.push({ v: exportMw, s: `${fmt0(exportMw)} износ`, pin: 1 });
-  if (chgMw > 50) subParts.push({ v: chgMw, s: `${fmt0(chgMw)} зар.`, pin: 99 });
-  if (pumpsNowPie > 0) subParts.push({ v: pumpsNowPie, s: `${fmt0(pumpsNowPie)} помпи`, pin: 99 });
+  if (loadMw > 0) subParts.push({ v: loadMw, s: `${fmt0(loadMw)} load`, pin: 0 });
+  if (exportMw > 50) subParts.push({ v: exportMw, s: `${fmt0(exportMw)} export`, pin: 1 });
+  if (chgMw > 50) subParts.push({ v: chgMw, s: `${fmt0(chgMw)} chg.`, pin: 99 });
+  if (pumpsNowPie > 0) subParts.push({ v: pumpsNowPie, s: `${fmt0(pumpsNowPie)} pumps`, pin: 99 });
   subParts.sort((a, b) => a.pin !== b.pin ? a.pin - b.pin : b.v - a.v);
   const centerSub = subParts.length
     ? `<span style="font-size:9px;color:#5a7090">${subParts.map(p=>p.s).join(' / ')}</span>`
     : '';
-  const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">МВт</span><br>${centerSub}`;
+  const centerText = () => `<b>${fmt0(total)}</b><br><span style="font-size:10px">MW</span><br>${centerSub}`;
   const traceData = [{
     type: 'pie', values: vals, labels: labels,
     marker: { colors, line: { color: '#fff', width: 1.5 } },
     hole: 0.44, sort: false,
     textinfo: pieMwhMode ? 'none' : 'label+percent',
-    texttemplate: pieMwhMode ? '%{label}<br>%{value:.0f} МВт' : undefined,
+    texttemplate: pieMwhMode ? '%{label}<br>%{value:.0f} MW' : undefined,
     textfont: { size: 10, family: 'Arial' },
-    hovertemplate: '<b>%{label}</b><br>%{value:.0f} МВт<br>%{percent}<extra></extra>',
+    hovertemplate: '<b>%{label}</b><br>%{value:.0f} MW<br>%{percent}<extra></extra>',
     insidetextorientation: 'radial',
   }];
   const layout = {
@@ -1994,7 +1994,7 @@ function drawPie(latest) {
     Plotly.update('chart-pie',
       { values: [vals], labels: [labels], 'marker.colors': [colors], sort: [false],
         textinfo: [pieMwhMode ? 'none' : 'label+percent'],
-        texttemplate: [pieMwhMode ? '%{label}<br>%{value:.0f} МВт' : ''] },
+        texttemplate: [pieMwhMode ? '%{label}<br>%{value:.0f} MW' : ''] },
       { 'annotations[0].text': centerText() },
       [0]);
     // suppress animation
@@ -2029,12 +2029,12 @@ function drawTimeline(binned, pd, dateStr) {
   for (const p of dayPrices)
     priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
   function pAt(p) { return priceByBin[p.ts] ?? NaN; }
-  function eur(mw, p) { // MW → хил.€/h
+  function eur(mw, p) { // MW → k€/h
     if (!eurMode || mw == null || isNaN(mw)) return mw;
     const pr = pAt(p); return isFinite(pr) ? mw * pr / 1000 : null;
   }
-  const yUnit = eurMode ? 'хил.€/h' : 'MW';
-  const htFmt = eurMode ? (lbl => `${lbl}: %{y:.1f} хил.€/h<extra></extra>`) : (lbl => `${lbl}: %{y:.0f} MW<extra></extra>`);
+  const yUnit = eurMode ? 'k€/h' : 'MW';
+  const htFmt = eurMode ? (lbl => `${lbl}: %{y:.1f} k€/h<extra></extra>`) : (lbl => `${lbl}: %{y:.0f} MW<extra></extra>`);
 
   const genTraces = GEN_SERIES.map(s => ({
     x: xs, y: pts.map(p => { const v = isNaN(p[s.key])?null:Math.max(0,p[s.key]||0); return eur(v,p)??v; }),
@@ -2046,36 +2046,36 @@ function drawTimeline(binned, pd, dateStr) {
 
   const loadTrace = {
     x: xs, y: pts.map(p => { const v = isNaN(p['load_mw'])?null:p['load_mw']||0; return eur(v,p)??v; }),
-    name: 'Товар', line: { color: '#e53935', width: 2.5, shape: 'spline' },
-    hovertemplate: htFmt('Товар'),
+    name: 'Load', line: { color: '#e53935', width: 2.5, shape: 'spline' },
+    hovertemplate: htFmt('Load'),
   };
   const battDischargeTrace = {
     x: xs, y: pts.map(p => { const v = battDis(p['batt_discharge_mw'], p.ts); return eur(v,p)??v; }),
-    name: 'ССЕЕ разреждане', stackgroup: 'gen',
+    name: 'BESS discharge', stackgroup: 'gen',
     fillcolor: '#f59f0080', line: { width: 0.5, color: '#f59f00', shape: 'linear' },
     visible: hiddenGenKeys.has('_batt') ? 'legendonly' : true,
-    hovertemplate: htFmt('ССЕЕ разреждане'),
+    hovertemplate: htFmt('BESS discharge'),
   };
   const battChargeTrace = {
     x: xs, y: pts.map(p => { const v = p['batt_charge_mw']; const mw = (v != null && v > 0) ? -v : 0; return eur(mw,p)??mw; }),
-    name: 'ССЕЕ зареждане', line: { color: '#8e24aa', width: 1.5, dash: 'dot', shape: 'spline' },
+    name: 'BESS charging', line: { color: '#8e24aa', width: 1.5, dash: 'dot', shape: 'spline' },
     visible: reMode ? 'legendonly' : true,
-    hovertemplate: htFmt('ССЕЕ зареждане'),
+    hovertemplate: htFmt('BESS charging'),
   };
 
   const hasPumps = pts.some(p => (p['pumps_mw'] || 0) > 0);
   const pumpsTrace = hasPumps ? {
     x: xs, y: pts.map(p => { const v = p['pumps_mw'] || 0; const mw = v > 0 ? -v : 0; return eur(mw,p)??mw; }),
-    name: 'Помпи', line: { color: '#0369a1', width: 1.5, dash: 'dot', shape: 'spline' },
+    name: 'Pumps', line: { color: '#0369a1', width: 1.5, dash: 'dot', shape: 'spline' },
     visible: reMode ? 'legendonly' : true,
-    hovertemplate: htFmt('Помпи'),
+    hovertemplate: htFmt('Pumps'),
   } : null;
 
   const rotatedPrices = rotatePts(dayPrices, dateStr);
   const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = (!eurMode && rotatedPrices.length) ? {
     x: priceXs, y: rotatedPrices.map(p=>p.price),
-    name: 'IBEX цена', yaxis: 'y2',
+    name: 'IBEX price', yaxis: 'y2',
     visible: reMode ? 'legendonly' : true,
     line: { color: '#e07000', width: 1.5 },
     hovertemplate: 'IBEX: %{y:.1f} EUR/MWh<extra></extra>',
@@ -2088,7 +2088,7 @@ function drawTimeline(binned, pd, dateStr) {
   Plotly.react('chart-timeline', traces, {
     ...LO,
     uirevision: `timeline-${reMode}-${eurMode}`,
-    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Hour' },
     yaxis:  { ...LO.yaxis, title: yUnit },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
               gridcolor: 'transparent', linecolor: '#e07000',
@@ -2146,17 +2146,17 @@ function drawFlowsTimeline(binned, pd) {
   const netRaw = pts.map(p=>isNaN(p['net_import_mw'])?null:p['net_import_mw']||0);
   traces.push({
     x: xs, y: pts.map((p,i) => { const v=netRaw[i]; return v===null?null:(mwToEur(v,p)??v); }),
-    name: 'Нетна позиция', fill: 'tozeroy',
+    name: 'Net position', fill: 'tozeroy',
     fillcolor: 'rgba(80,80,80,0.15)',
     line: { color: '#1a2233', width: 2.5 },
-    hovertemplate: htFmt('Нетна позиция'),
+    hovertemplate: htFmt('Net position'),
   });
 
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
-    xaxis: { ...LO.xaxis, type: 'date', title: 'Час' },
-    yaxis: { ...LO.yaxis, title: `${unit} (+ внос / − износ)` },
+    xaxis: { ...LO.xaxis, type: 'date', title: 'Hour' },
+    yaxis: { ...LO.yaxis, title: `${unit} (+ imports / − exports)` },
     legend: { ...LO.legend, orientation: 'h', y: window.innerWidth < 640 ? -0.28 : -0.2 },
     margin: { t: 8, b: window.innerWidth < 640 ? 120 : 90, l: 58, r: 10 },
     shapes: [{ type:'line', xref:'paper', x0:0, x1:1, y0:0, y1:0,
@@ -2206,9 +2206,9 @@ function toggleFullscreen(panelId, chartId) {
 
 function updateTimestamp(latest) {
   const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
-  if (!latest) { el.textContent = 'Няма данни'; return; }
+  if (!latest) { el.textContent = 'No data'; return; }
   const ms  = toUtcMs(latest), age = Date.now()-ms, mins = Math.round(age/60000);
-  el.textContent = mins < 2 ? 'Обновено току-що' : `Обновено преди ${mins} мин.`;
+  el.textContent = mins < 2 ? 'Updated just now' : `Updated ${mins} min ago`;
   dot.className  = 'dot'+(age > STALE_MS ? ' stale' : '');
 }
 
@@ -2236,7 +2236,7 @@ function updateSnapLabel(snap) {
   const el = document.getElementById('snap-ts');
   if (!isFinite(ms)) { el.textContent = '—'; return; }
   const d = new Date(ms);
-  el.textContent = d.toLocaleTimeString('bg-BG', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit' }) + ' ч. (местно)';
+  el.textContent = d.toLocaleTimeString('en-GB', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit' }) + ' (local time)';
 }
 
 function onSnapSlider(val) {
@@ -2334,7 +2334,7 @@ async function refresh() {
 
   } catch(e) {
     console.error(e);
-    document.getElementById('ts-label').textContent = 'Грешка: ' + e.message;
+    document.getElementById('ts-label').textContent = 'Error: ' + e.message;
   }
 }
 
@@ -2344,6 +2344,20 @@ async function loadRecords() {
   if (_recordsLoaded) return;
   try {
     const rec = await getJSON(`${BASE}/records.json`);
+    const REC_EN = {
+      solar: 'Peak solar generation', solar_gwh: 'Solar energy in a day',
+      total_chg: 'BESS + pumps charging', batt_chg: 'Battery charging',
+      chg_gwh_day: 'Charging in a day', batt_dis: 'BESS discharging',
+      dis_gwh_day: 'Discharging in a day', pumps_gwh: 'Pumps record day',
+      export: 'Peak export power', daily_re: 'Daily RES share',
+      re_gwh_day: 'RES energy in a day', re_hours: 'Longest 100% RES',
+    };
+    for (const k of Object.keys(rec)) {
+      if (rec[k] && typeof rec[k] === 'object') {
+        if (REC_EN[k]) rec[k].label = REC_EN[k];
+        if (rec[k].unit === 'ч') rec[k].unit = 'h';
+      }
+    }
     _rec = rec;
     const inner = document.getElementById('records-inner');
     inner.innerHTML = '';
@@ -2352,7 +2366,7 @@ async function loadRecords() {
       const r = rec[key]; if (!r) continue;
       const div = document.createElement('div');
       div.className = 'rec-card';
-      const valStr = ['%', 'ч', 'GWh'].includes(r.unit) ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('bg-BG');
+      const valStr = ['%', 'h', 'GWh'].includes(r.unit) ? r.val.toFixed(1) : Math.round(r.val).toLocaleString('en-GB');
       const dateHtml = r.date
         ? `<a href="#day=${r.date}" data-day="${r.date}" data-snap="${r.snap_ts||''}" onclick="navigateRecord(event,this)">${r.date}</a>`
         : '—';
@@ -2421,7 +2435,7 @@ function updateRecordAlerts(allRecords, binned, dateStr) {
     if (!rec || !isFinite(val) || val <= 0) continue;
     // Show trophy if this day holds the current record, or if running value is beating it
     if (rec.date === dateStr || val > rec.val) {
-      const fmt = ['%','ч'].includes(rec.unit) ? val.toFixed(1) : rec.unit === 'GWh' ? val.toFixed(2) : Math.round(val).toLocaleString('bg-BG');
+      const fmt = ['%','h'].includes(rec.unit) ? val.toFixed(1) : rec.unit === 'GWh' ? val.toFixed(2) : Math.round(val).toLocaleString('en-GB');
       beating.push({ key, label: rec.label, val: fmt, unit: rec.unit, prev: rec.val });
     }
   }
@@ -2429,10 +2443,10 @@ function updateRecordAlerts(allRecords, binned, dateStr) {
   if (!beating.length) { el.style.display = 'none'; return; }
 
   el.style.display = 'block';
-  const dayLabel = dateStr === todayStr() ? 'днес' : 'на този ден';
-  el.innerHTML = `<span id="rec-alerts-label">🏆 Рекорди ${dayLabel}:</span>` +
+  const dayLabel = dateStr === todayStr() ? 'today' : 'on this day';
+  el.innerHTML = `<span id="rec-alerts-label">🏆 Records ${dayLabel}:</span>` +
     beating.map(b => {
-      const prevFmt = ['%','ч'].includes(b.unit) ? b.prev.toFixed(1) : b.unit === 'GWh' ? b.prev.toFixed(2) : Math.round(b.prev).toLocaleString('bg-BG');
+      const prevFmt = ['%','h'].includes(b.unit) ? b.prev.toFixed(1) : b.unit === 'GWh' ? b.prev.toFixed(2) : Math.round(b.prev).toLocaleString('en-GB');
       return `<a class="rec-alert-chip" href="records.html#${b.key}">` +
         `<span class="chip-trophy">🏆</span>${b.val} ${b.unit}` +
         `<span class="rec-alert-label">${b.label}</span></a>`;
@@ -2496,9 +2510,9 @@ setInterval(refresh, REFRESH_MS);
 </script>
 
 <footer style="text-align:center;padding:16px 20px 24px;font-size:0.72rem;color:#7a8aaa;">
-  Неофициален ресурс &bull; данни от <a href="https://www.eso.bg" target="_blank" rel="noopener" style="color:#004494;">ЕСО ЕАД</a> и <a href="https://ibex.bg" target="_blank" rel="noopener" style="color:#004494;">IBEX</a>
-  &bull; <a href="https://github.com/yyoncho/eso-dashboard/blob/master/README.md" target="_blank" rel="noopener" style="color:#004494;">Документация (README)</a>
-  &bull; <a href="https://github.com/yyoncho/eso-dashboard/blob/master/CHANGELOG.md" target="_blank" rel="noopener" style="color:#004494;">Промени (Changelog)</a>
+  Unofficial resource &bull; data from <a href="https://www.eso.bg" target="_blank" rel="noopener" style="color:#004494;">ESO EAD</a> and <a href="https://ibex.bg" target="_blank" rel="noopener" style="color:#004494;">IBEX</a>
+  &bull; <a href="https://github.com/yyoncho/eso-dashboard/blob/master/README.md" target="_blank" rel="noopener" style="color:#004494;">Documentation (README)</a>
+  &bull; <a href="https://github.com/yyoncho/eso-dashboard/blob/master/CHANGELOG.md" target="_blank" rel="noopener" style="color:#004494;">Changelog</a>
   &bull; <a href="https://github.com/yyoncho/eso-dashboard" target="_blank" rel="noopener" style="color:#004494;">GitHub</a>
 </footer>
 <img src="https://hits.sh/yyoncho.github.io/eso-dashboard.svg" style="display:none" alt="" referrerpolicy="no-referrer-when-downgrade">
