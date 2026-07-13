@@ -480,19 +480,17 @@
       document.body.appendChild(host);
     }
     host.style.display = 'inline-flex';
-    host.style.gap = '4px';
     host.style.alignItems = 'center';
-    const mk = (code, flag, title) => {
-      const b = document.createElement('button');
-      b.textContent = flag;
-      b.title = title;
-      b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:1.05rem;line-height:1;padding:1px 2px;' +
-        (lang === code ? 'opacity:1;filter:none;' : 'opacity:0.45;filter:grayscale(35%);');
-      b.onclick = e => { e.preventDefault(); e.stopPropagation(); if (lang !== code) switchTo(code); };
-      return b;
-    };
-    host.appendChild(mk('bg', '🇧🇬', 'Български'));
-    host.appendChild(mk('en', '🇬🇧', 'English'));
+    // Single toggle: show the CURRENT language's flag; clicking switches to
+    // the other one (tooltip explains the action).
+    const other = lang === 'en' ? 'bg' : 'en';
+    const b = document.createElement('button');
+    b.textContent = lang === 'en' ? '🇬🇧' : '🇧🇬';
+    b.title = lang === 'en' ? 'Превключи на български' : 'Switch to English';
+    b.setAttribute('aria-label', b.title);
+    b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:1.05rem;line-height:1;padding:1px 2px;';
+    b.onclick = e => { e.preventDefault(); e.stopPropagation(); switchTo(other); };
+    host.appendChild(b);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
