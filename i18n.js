@@ -271,6 +271,7 @@
     ['Информация', 'Info'],
     ['Предишен час', 'Previous hour'],
     ['Следващ час', 'Next hour'],
+    ['Оценка на база IBEX DA цена — не е реална сетълмент стойност', 'Estimate at IBEX DA price — not an actual settlement value'],
     ['Оценка на база IBEX DA цена', 'Estimate at IBEX DA price'],
     ['Обновено току-що', 'Updated just now'],
     ['Обновено преди ', 'Updated '],
@@ -510,7 +511,7 @@
     if (root.nodeName === 'SCRIPT' || root.nodeName === 'STYLE') return;
     for (const a of ATTRS) {
       const v = root.getAttribute && root.getAttribute(a);
-      if (v && CYR.test(v)) root.setAttribute(a, tr(v));
+      if (v && CYR.test(v)) { const nv = tr(v); if (nv !== v) root.setAttribute(a, nv); }
     }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: n => {
@@ -526,7 +527,7 @@
       for (const a of ATTRS) {
         root.querySelectorAll(`[${a}]`).forEach(el => {
           const v = el.getAttribute(a);
-          if (v && CYR.test(v)) el.setAttribute(a, tr(v));
+          if (v && CYR.test(v)) { const nv = tr(v); if (nv !== v) el.setAttribute(a, nv); }
         });
       }
     }
@@ -556,7 +557,7 @@
           m.addedNodes.forEach(n => translateNode(n));
         } else if (m.type === 'attributes') {
           const v = m.target.getAttribute(m.attributeName);
-          if (v && CYR.test(v)) m.target.setAttribute(m.attributeName, tr(v));
+          if (v && CYR.test(v)) { const nv = tr(v); if (nv !== v) m.target.setAttribute(m.attributeName, nv); }
         }
       }
     });
