@@ -56,13 +56,13 @@ header a:hover { color: #fff; }
   padding: 11px 14px;
   border: 1px solid;
 }
-.kpi.batt  { background: #fff8ee; border-color: #f5d98a; }
-.kpi.pumps { background: #eef6fb; border-color: #b5d6ea; }
+.kpi.batt  { background: #faf0f7; border-color: #e5c3da; }
+.kpi.pumps { background: #eef8ee; border-color: #bfe3bf; }
 .kpi.total { background: #f5f5f5; border-color: #d0d0d0; }
 .kpi-label { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.07em; color: #6a7a90; margin-bottom: 4px; }
 .kpi-val   { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
-.kpi.batt  .kpi-val { color: #c87800; }
-.kpi.pumps .kpi-val { color: #0369a1; }
+.kpi.batt  .kpi-val { color: #9c3a83; }
+.kpi.pumps .kpi-val { color: #2e7d32; }
 .kpi.total .kpi-val { color: #444; }
 .kpi-sub { font-size: 0.71rem; color: #5a6a80; margin-top: 4px; }
 
@@ -179,18 +179,29 @@ function setKpis(days) {
 
 function render(days) {
   const x = days.map(d => d.date);
+  const battMa7 = days.map((_, i) => {
+    if (i < 6) return null;
+    const w = days.slice(i - 6, i + 1);
+    return +(w.reduce((s, d) => s + d.batt, 0) / 7).toFixed(3);
+  });
   const traces = [
     {
       x, y: days.map(d => +d.pumps.toFixed(3)),
       name: 'Помпи (ПАВЕЦ)', type: 'bar',
-      marker: { color: '#4db3e6', line: { color: '#fff', width: 1 } },
+      marker: { color: '#52a552', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Помпи: %{y:.2f} ГВтч<extra></extra>',
     },
     {
       x, y: days.map(d => +d.batt.toFixed(3)),
       name: 'Батерии (ССЕЕ)', type: 'bar',
-      marker: { color: '#f7c948', line: { color: '#fff', width: 1 } },
+      marker: { color: '#b04f96', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Батерии: %{y:.2f} ГВтч<extra></extra>',
+    },
+    {
+      x, y: battMa7,
+      name: 'Батерии — 7д средна', type: 'scatter', mode: 'lines',
+      line: { color: '#7fe0ff', width: 2.5 },
+      hovertemplate: '%{x}<br>Батерии — 7д средна: %{y:.2f} ГВтч<extra></extra>',
     },
   ];
 
@@ -208,13 +219,13 @@ function render(days) {
     shapes: [{
       type: 'line', xref: 'paper', x0: 0, x1: 1,
       y0: CHAIRA_STORAGE_GWH, y1: CHAIRA_STORAGE_GWH,
-      line: { color: '#c0392b', width: 2, dash: 'dash' },
+      line: { color: '#ffd700', width: 2.5, dash: 'dash' },
     }],
     annotations: [{
       xref: 'paper', x: 0.995, xanchor: 'right',
       y: CHAIRA_STORAGE_GWH, yanchor: 'bottom', yshift: 2,
       text: 'Номинален капацитет на резервоара на Чаира ~6.4 ГВтч',
-      showarrow: false, font: { size: 11, color: '#c0392b' },
+      showarrow: false, font: { size: 11, color: '#333' },
       bgcolor: 'rgba(255,255,255,0.9)', borderpad: 2,
     }],
     legend: { orientation: 'h', y: -0.28, x: 0.5, xanchor: 'center', font: { size: 11 } },

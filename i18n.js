@@ -134,6 +134,7 @@
     ['Батерии — средно на ден', 'Batteries — daily average'],
     ['Помпи — средно на ден', 'Pumps — daily average'],
     ['Общо — средно на ден', 'Total — daily average'],
+    ['Батерии — 7д средна', 'Batteries — 7d average'],
     ['Батерии (ССЕЕ)', 'Batteries (BESS)'],
     ['Помпи (ПАВЕЦ)', 'Pumps (PSH)'],
     ['Батерии:', 'Batteries:'],
