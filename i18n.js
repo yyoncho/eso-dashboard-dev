@@ -129,7 +129,7 @@
     ['Дни с непълни данни (под 270 от 288 снимки) са пропуснати.',
      'Days with incomplete data (fewer than 270 of 288 snapshots) are skipped.'],
     ['Номинален капацитет на резервоара на Чаира ~6.4 ГВтч', 'Nominal Chaira reservoir capacity ~6.4 GWh'],
-    ['Пунктирана линия:', 'Dashed line:'],
+    ['Синя линия:', 'Blue line:'],
     ['Данни:', 'Data:'],
     ['Батерии — средно на ден', 'Batteries — daily average'],
     ['Помпи — средно на ден', 'Pumps — daily average'],
