@@ -183,13 +183,13 @@ function render(days) {
     {
       x, y: days.map(d => +d.pumps.toFixed(3)),
       name: 'Помпи (ПАВЕЦ)', type: 'bar',
-      marker: { color: '#0369a1' },
+      marker: { color: '#4db3e6', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Помпи: %{y:.2f} ГВтч<extra></extra>',
     },
     {
       x, y: days.map(d => +d.batt.toFixed(3)),
       name: 'Батерии (ССЕЕ)', type: 'bar',
-      marker: { color: '#7b3fa0' },
+      marker: { color: '#7b3fa0', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Батерии: %{y:.2f} ГВтч<extra></extra>',
     },
   ];
