@@ -179,11 +179,6 @@ function setKpis(days) {
 
 function render(days) {
   const x = days.map(d => d.date);
-  const battMa7 = days.map((_, i) => {
-    if (i < 6) return null;
-    const w = days.slice(i - 6, i + 1);
-    return +(w.reduce((s, d) => s + d.batt, 0) / 7).toFixed(3);
-  });
   const traces = [
     {
       x, y: days.map(d => +d.pumps.toFixed(3)),
@@ -196,12 +191,6 @@ function render(days) {
       name: 'Батерии (ССЕЕ)', type: 'bar',
       marker: { color: '#b04f96', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Батерии: %{y:.2f} ГВтч<extra></extra>',
-    },
-    {
-      x, y: battMa7,
-      name: 'Батерии — 7д средна', type: 'scatter', mode: 'lines',
-      line: { color: '#7fe0ff', width: 2.5 },
-      hovertemplate: '%{x}<br>Батерии — 7д средна: %{y:.2f} ГВтч<extra></extra>',
     },
   ];
 
@@ -219,7 +208,7 @@ function render(days) {
     shapes: [{
       type: 'line', xref: 'paper', x0: 0, x1: 1,
       y0: CHAIRA_STORAGE_GWH, y1: CHAIRA_STORAGE_GWH,
-      line: { color: '#ffd700', width: 2.5, dash: 'dash' },
+      line: { color: '#7fe0ff', width: 2.5, dash: 'dash' },
     }],
     annotations: [{
       xref: 'paper', x: 0.995, xanchor: 'right',
