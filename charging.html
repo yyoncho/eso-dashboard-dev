@@ -56,13 +56,13 @@ header a:hover { color: #fff; }
   padding: 11px 14px;
   border: 1px solid;
 }
-.kpi.batt  { background: #faf0f7; border-color: #e5c3da; }
-.kpi.pumps { background: #eef8ee; border-color: #bfe3bf; }
+.kpi.batt  { background: #efeefb; border-color: #c9c6ee; }
+.kpi.pumps { background: #e9f6fe; border-color: #b3e0f8; }
 .kpi.total { background: #f5f5f5; border-color: #d0d0d0; }
 .kpi-label { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.07em; color: #6a7a90; margin-bottom: 4px; }
 .kpi-val   { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
-.kpi.batt  .kpi-val { color: #9c3a83; }
-.kpi.pumps .kpi-val { color: #2e7d32; }
+.kpi.batt  .kpi-val { color: #544fc5; }
+.kpi.pumps .kpi-val { color: #147ab8; }
 .kpi.total .kpi-val { color: #444; }
 .kpi-sub { font-size: 0.71rem; color: #5a6a80; margin-top: 4px; }
 
@@ -183,13 +183,13 @@ function render(days) {
     {
       x, y: days.map(d => +d.pumps.toFixed(3)),
       name: 'Помпи (ПАВЕЦ)', type: 'bar',
-      marker: { color: '#52a552', line: { color: '#fff', width: 1 } },
+      marker: { color: '#2caffe', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Помпи: %{y:.2f} ГВтч<extra></extra>',
     },
     {
       x, y: days.map(d => +d.batt.toFixed(3)),
       name: 'Батерии (ССЕЕ)', type: 'bar',
-      marker: { color: '#b04f96', line: { color: '#fff', width: 1 } },
+      marker: { color: '#544fc5', line: { color: '#fff', width: 1 } },
       hovertemplate: '%{x}<br>Батерии: %{y:.2f} ГВтч<extra></extra>',
     },
   ];
