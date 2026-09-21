@@ -365,7 +365,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div class="panel" id="balance">
-        <div class="panel-header"><a href="#balance" class="anchor-link">Дневен баланс</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
+        <div class="panel-header"><a href="#balance" class="anchor-link" id="balance-title">Дневен баланс</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
         <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности. Печалбата от арбитраж на ССЕЕ (Δ) е изчислена като разлика между приход от разреждане и разход за зареждане по борсова цена — реалният финансов резултат зависи от договорните условия на оператора.</div>
         <div class="panel-body">
           <div class="balance-grid">
@@ -388,7 +388,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <div class="price-box">
             <div><div class="price-label">IBEX DA (текуща)</div>
               <span class="price-val" id="p-current">—</span> <span class="price-unit">EUR/MWh</span></div>
-            <div><div class="price-label">Средна за деня</div>
+            <div><div class="price-label" id="p-avg-label">Средна за деня</div>
               <span class="price-val" id="p-avg">—</span> <span class="price-unit">EUR/MWh</span></div>
             <div><div class="price-label">Мин / Макс</div>
               <span class="price-val" id="p-minmax">—</span> <span class="price-unit">EUR/MWh</span></div>
@@ -454,7 +454,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <!-- timeline chart -->
   <div class="panel" id="day-profile" style="margin-bottom:12px;">
     <div class="panel-header">
-      <span><a href="#day-profile" class="anchor-link">Дневен профил</a></span>
+      <span><a href="#day-profile" class="anchor-link" id="day-profile-title">Дневен профил</a></span>
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="toggle-group">
           <button class="tog-btn" id="tog-re"      onclick="setReMode(!reMode)">ВЕИ</button>
@@ -840,6 +840,49 @@ function computeDayAvg(binned) {
   return obj;
 }
 
+// Sofia-local midnight of `dateStr`, as a real UTC ms epoch.
+function sofiaMidnightUtcMs(dateStr) {
+  const noon = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  return new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000;
+}
+// Collapse a multi-day binned series into a single "typical day" 96-point
+// profile: average every field across all days, grouped by Sofia-local
+// time-of-day (15-min slot). Synthetic `ts` values anchor on `anchorDateStr`
+// so the result plots as one ordinary, monotonically-increasing day.
+function avgDailyProfile(binned, anchorDateStr) {
+  const midnight = sofiaMidnightUtcMs(anchorDateStr), W = 15*60*1000;
+  const slots = Array.from({length: 96}, () => []);
+  for (const b of binned) {
+    const hm = toSofiaStr(b.ts).slice(11, 16);
+    const [hh, mm] = hm.split(':').map(Number);
+    slots[hh*4 + Math.floor(mm/15)].push(b);
+  }
+  return slots.map((recs, i) => {
+    const obj = { ts: midnight + i*W };
+    for (const k of ALL_KEYS) obj[k] = recs.length ? avgOf(recs, k) : NaN;
+    if (isNaN(obj['load_mw'])) obj['load_mw'] = recs.length ? avgOf(recs, 'Товар на РБ') : NaN;
+    return obj;
+  });
+}
+// Same idea for the IBEX price series (an array of {ts, price}).
+function avgDailyPriceProfile(dayPrices, anchorDateStr) {
+  const midnight = sofiaMidnightUtcMs(anchorDateStr), W = 15*60*1000;
+  const slots = Array.from({length: 96}, () => []);
+  for (const p of dayPrices) {
+    if (!isFinite(p.price)) continue;
+    const hm = toSofiaStr(p.ts).slice(11, 16);
+    const [hh, mm] = hm.split(':').map(Number);
+    slots[hh*4 + Math.floor(mm/15)].push(p.price);
+  }
+  const out = [];
+  slots.forEach((arr, i) => {
+    if (!arr.length) return;
+    out.push({ ts: midnight + i*W, price: arr.reduce((a,b)=>a+b,0)/arr.length });
+  });
+  return out;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════════════════════════════════════════
@@ -992,6 +1035,13 @@ function shiftRange(dir) {
 }
 function goToday() { mode = 'day'; customEnd = null; currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
 
+const BG_MONTHS = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+function isoWeekNumber(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
 function updateNav() {
   const today = todayStr();
   const { start, end } = getRange();
@@ -999,7 +1049,17 @@ function updateNav() {
   document.getElementById('prev-btn').disabled  = start <= lo;
   document.getElementById('next-btn').disabled  = end >= today;
   document.getElementById('today-btn').classList.toggle('active', mode === 'day' && currentDay === null);
-  document.getElementById('day-label').textContent = (start === end) ? start : `${start} → ${end}`;
+
+  let dayLabel;
+  if (mode === 'month') {
+    const [y, m] = start.split('-');
+    dayLabel = `${BG_MONTHS[parseInt(m, 10) - 1]} ${y}`;
+  } else if (mode === 'week') {
+    dayLabel = `Седмица ${isoWeekNumber(start)} (${start} → ${end})`;
+  } else {
+    dayLabel = (start === end) ? start : `${start} → ${end}`;
+  }
+  document.getElementById('day-label').textContent = dayLabel;
 
   const picker = document.getElementById('date-picker');
   if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1] > today ? allDates[allDates.length-1] : today; }
@@ -1522,7 +1582,8 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null, endDateStr = null)
   const hasAny = FLOW_CFG.some(f => Math.abs(ctryGwh[f.key]) > 0.01);
   if (!hasAny) { bar.style.display = 'none'; return; }
   bar.style.display = '';
-  bar.innerHTML = '<div class="stat-label" style="margin-bottom:6px;">Трансгранична енергия за деня</div>'
+  const isPeriod = endDateStr && endDateStr !== dateStr;
+  bar.innerHTML = `<div class="stat-label" style="margin-bottom:6px;">Трансгранична енергия за ${isPeriod ? 'периода' : 'деня'}</div>`
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">'
     + FLOW_CFG.map(f => {
         const gwh = ctryGwh[f.key];
@@ -1948,16 +2009,23 @@ function drawTimeline(binned, pd, dateStr, endDateStr) {
   window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr; window._lastEndStr = endDateStr;
   if (colMode) { drawColChart(binned, pd, dateStr, endDateStr); return; }
 
-  // "day start" rotation only makes sense within a single day — a multi-day
-  // range just shows the raw chronological series.
+  // Ranges longer than 2 days collapse to a single averaged "typical day"
+  // profile (matches the >2-day averaging threshold used everywhere else).
+  // "day start" rotation only makes sense within a single day either way.
+  const rangeSpan  = endDateStr ? daysBetween(dateStr, endDateStr) + 1 : 1;
+  const isAvgRange = rangeSpan > 2;
   const isMultiDay = endDateStr && endDateStr !== dateStr;
-  const pts = isMultiDay ? binned : rotatePts(binned, dateStr);
+  const pts = isAvgRange ? avgDailyProfile(binned, dateStr)
+            : isMultiDay ? binned
+            : rotatePts(binned, dateStr);
   const xs  = pts.map(p => toSofiaStr(p.ts));
 
-  // Build price lookup for EUR mode
+  // Build price lookup for EUR mode — averaged per slot-of-day in range mode
+  // so it lines up with the synthetic `ts` values `pts` uses above.
   const dayPrices = getDayPrices(pd, dateStr, endDateStr);
+  const priceSource = isAvgRange ? avgDailyPriceProfile(dayPrices, dateStr) : dayPrices;
   const priceByBin = {};
-  for (const p of dayPrices)
+  for (const p of priceSource)
     priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
   function pAt(p) { return priceByBin[p.ts] ?? NaN; }
   function eur(mw, p) { // MW → хил.€/h
@@ -2002,7 +2070,7 @@ function drawTimeline(binned, pd, dateStr, endDateStr) {
     hovertemplate: htFmt('Помпи'),
   } : null;
 
-  const rotatedPrices = isMultiDay ? dayPrices : rotatePts(dayPrices, dateStr);
+  const rotatedPrices = isAvgRange ? priceSource : isMultiDay ? dayPrices : rotatePts(dayPrices, dateStr);
   const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = (!eurMode && rotatedPrices.length) ? {
     x: priceXs, y: rotatedPrices.map(p=>p.price),
@@ -2022,7 +2090,7 @@ function drawTimeline(binned, pd, dateStr, endDateStr) {
     // dragmode:false (in LO) blocks click/touch-drag zoom already; pinch-zoom
     // is a separate touch gesture it doesn't cover, so pin the axes too on
     // narrow screens -- otherwise a two-finger pinch can still narrow the chart.
-    xaxis: { ...LO.xaxis, type: 'date', title: 'Час', fixedrange: window.innerWidth < 640 },
+    xaxis: { ...LO.xaxis, type: 'date', title: isAvgRange ? 'Час (средно за периода)' : 'Час', fixedrange: window.innerWidth < 640 },
     yaxis:  { ...LO.yaxis, title: yUnit, fixedrange: window.innerWidth < 640 },
     yaxis2: { title: 'EUR/MWh', overlaying: 'y', side: 'right',
               gridcolor: 'transparent', linecolor: '#e07000',
@@ -2055,11 +2123,13 @@ function drawTimeline(binned, pd, dateStr, endDateStr) {
   }
 }
 
-function drawFlowsTimeline(binned, pd) {
+function drawFlowsTimeline(binned, pd, dateStr, endDateStr) {
   if (!binned.length) return;
   window._lastFlowsBinned = binned;
   window._lastFlowsPd = pd;
-  const pts = binned;
+  const rangeSpan  = endDateStr ? daysBetween(dateStr, endDateStr) + 1 : 1;
+  const isAvgRange = endDateStr && rangeSpan > 2;
+  const pts = isAvgRange ? avgDailyProfile(binned, dateStr) : binned;
   const xs  = pts.map(p => toSofiaStr(p.ts));
 
   const traces = FLOW_CFG.map(f => ({
@@ -2078,7 +2148,7 @@ function drawFlowsTimeline(binned, pd) {
   Plotly.react('chart-flows-ts', traces, {
     ...LO,
     uirevision: 'flows',
-    xaxis: { ...LO.xaxis, type: 'date', title: 'Час', fixedrange: window.innerWidth < 640 },
+    xaxis: { ...LO.xaxis, type: 'date', title: isAvgRange ? 'Час (средно за периода)' : 'Час', fixedrange: window.innerWidth < 640 },
     yaxis: { ...LO.yaxis, title: `MW (+ внос / − износ)`, fixedrange: window.innerWidth < 640 },
     legend: { ...LO.legend, orientation: 'h', y: window.innerWidth < 640 ? -0.28 : -0.2 },
     margin: { t: 8, b: window.innerWidth < 640 ? 120 : 90, l: 58, r: 10 },
@@ -2203,6 +2273,13 @@ async function refresh() {
     // and drop momentary/snapshot UI. 1-2 day ranges behave exactly as before.
     const isRangeAvg = span > 2;
 
+    const balanceTitle = document.getElementById('balance-title');
+    if (balanceTitle) balanceTitle.textContent = isRangeAvg ? 'Баланс за периода' : 'Дневен баланс';
+    const pAvgLabel = document.getElementById('p-avg-label');
+    if (pAvgLabel) pAvgLabel.textContent = isRangeAvg ? 'Средна за периода' : 'Средна за деня';
+    const profileTitle = document.getElementById('day-profile-title');
+    if (profileTitle) profileTitle.textContent = isRangeAvg ? 'Дневен профил (средно за периода)' : 'Дневен профил';
+
     const records = await fetchRangeRecords(start, end);
 
     // Also load the day before `start` to pick up 00:00–01:00 Sofia records that
@@ -2286,7 +2363,7 @@ async function refresh() {
     updateDayBalance(displayBinned, pd, start, null, end);
     updateDayStartLabel();
     drawTimeline(displayBinned, pd, start, end);
-    drawFlowsTimeline(displayBinned, pd);
+    drawFlowsTimeline(displayBinned, pd, start, end);
     updateTotalStats(displayBinned, pd, start, end);
     drawTariffPanel(pd, displayBinned, start, null, _loadProfile, end);
 
