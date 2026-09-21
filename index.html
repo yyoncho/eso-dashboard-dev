@@ -245,10 +245,16 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <span id="lang-flags" style="margin-left:8px;"></span>
       </div>
       <div class="day-nav">
-        <button class="nav-btn" id="prev-btn" onclick="shiftDay(-1)">&#8592;</button>
+        <div class="toggle-group" id="mode-toggle" style="margin-right:2px;">
+          <button class="tog-btn" id="mode-day"   onclick="setMode('day')"  title="Единичен ден">Ден</button>
+          <button class="tog-btn" id="mode-week"  onclick="setMode('week')"  title="Седмица (7 дни)">Седмица</button>
+          <button class="tog-btn" id="mode-month" onclick="setMode('month')" title="Календарен месец">Месец</button>
+        </div>
+        <button class="nav-btn" id="prev-btn" onclick="shiftRange(-1)">&#8592;</button>
         <input type="date" id="date-picker" onchange="pickDate(this.value)">
+        <input type="date" id="date-picker-end" onchange="pickEndDate(this.value)" style="display:none;" title="Край на периода">
         <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
-        <button class="nav-btn" id="next-btn" onclick="shiftDay(1)" disabled>&#8594;</button>
+        <button class="nav-btn" id="next-btn" onclick="shiftRange(1)" disabled>&#8594;</button>
         <span id="day-label"></span>
         <a class="nav-btn" id="records-btn" href="records.html" style="padding:4px 7px;display:inline-flex;align-items:center;text-decoration:none">🏆</a>
         <div class="rec-dropdown-wrap" style="position:relative">
@@ -558,6 +564,9 @@ const TARIFF = {
 // ══════════════════════════════════════════════════════════════════════════════
 let allDates   = [];
 let priceCache = {};
+let mode       = 'day';   // 'day' | 'week' | 'month' | 'custom'
+let customEnd  = null;    // YYYY-MM-DD, only used when mode === 'custom'
+let _dayEndStr = null;
 const chartMode = 'instant';
 let reMode            = false;
 let eurMode           = false;
@@ -596,6 +605,11 @@ function toggleTariffDetails() {
 const _initHash = readHash();
 let currentDay = (_initHash.day && _initHash.day !== todayStr()) ? _initHash.day : null;
 _pendingSnapTs = _initHash.snap || null;
+if (_initHash.mode && ['week','month','custom'].includes(_initHash.mode)) {
+  mode = _initHash.mode;
+  if (mode === 'custom' && _initHash.end) customEnd = _initHash.end;
+  if (mode === 'week' && !currentDay) currentDay = addDaysStr(todayStr(), -6);
+}
 if (_initHash.flags) {
   const f = _initHash.flags.split(',');
   reMode            = f.includes('re');
@@ -707,6 +721,41 @@ async function loadPrices(dateStr) {
   }
   catch(e) { return null; }
 }
+// Merge price data across every year-month touched by [start, end] — used
+// for week/month/custom ranges that can span a month boundary.
+async function loadPricesForRange(start, end) {
+  const yms = new Set();
+  for (let d = start; d <= end; d = addDaysStr(d, 1)) yms.add(d.slice(0, 7));
+  if (yms.size === 1) return loadPrices(start);
+  let us = [], pr = [];
+  for (const ym of yms) {
+    try {
+      const d = await getJSON(`${BASE}/prices-${ym}.json`);
+      if (d && d.unix_seconds) { us.push(...d.unix_seconds); pr.push(...d.price); }
+    } catch (_) {}
+  }
+  const paired = us.map((t, i) => [t, pr[i]]).sort((a, b) => a[0] - b[0]);
+  return { unix_seconds: paired.map(p => p[0]), price: paired.map(p => p[1]) };
+}
+function rangeAvgPrice(pd, start, end) {
+  const vals = getDayPrices(pd, start, end).map(p => p.price).filter(v => isFinite(v));
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : NaN;
+}
+// Fetch and concatenate every day's JSONL in [start, end] (today.jsonl alias
+// for the current day, same as the original single-day fetch). Missing/future
+// days are skipped rather than failing the whole range.
+async function fetchRangeRecords(start, end) {
+  const today = todayStr();
+  let recs = [];
+  for (let d = start; d <= end; d = addDaysStr(d, 1)) {
+    if (d > today) continue;
+    try {
+      const r = await getJSONL(d === today ? `${BASE}/today.jsonl` : `${BASE}/${d}.jsonl`);
+      recs.push(...r);
+    } catch (_) {}
+  }
+  return recs;
+}
 function getPriceAt(pd, ms) {
   if (!pd) return NaN;
   const { unix_seconds: us, price: pr } = pd;
@@ -716,15 +765,22 @@ function getPriceAt(pd, ms) {
   while (lo <= hi) { const m = (lo+hi)>>1; if (us[m] <= s) { idx=m; lo=m+1; } else hi=m-1; }
   return idx >= 0 ? pr[idx] : NaN;
 }
-function getDayPrices(pd, dateStr) {
+// endDateStr optional: when given (and different from dateStr) the window covers
+// the whole [dateStr, endDateStr] Sofia-local range instead of just one day —
+// used by range/week/month mode so all the existing per-day aggregation
+// functions keep working unchanged for single-day callers (endDateStr omitted).
+function getDayPrices(pd, dateStr, endDateStr) {
   if (!pd) return [];
   const { unix_seconds: us, price: pr } = pd;
   if (!us) return [];
+  const eDateStr = endDateStr || dateStr;
   // DST-aware Sofia midnight: sample noon UTC, measure Sofia offset, shift UTC midnight
-  const noon = new Date(dateStr + 'T12:00:00Z');
-  const sofiaH = parseInt(noon.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
-  const s0 = (new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH - 12) * 3600000) / 1000;
-  const s1 = s0 + 86400;
+  const noon0 = new Date(dateStr + 'T12:00:00Z');
+  const sofiaH0 = parseInt(noon0.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const s0 = (new Date(dateStr + 'T00:00:00Z').getTime() - (sofiaH0 - 12) * 3600000) / 1000;
+  const noon1 = new Date(eDateStr + 'T12:00:00Z');
+  const sofiaH1 = parseInt(noon1.toLocaleString('sv-SE', { timeZone: 'Europe/Sofia' }).slice(11, 13));
+  const s1 = (new Date(eDateStr + 'T00:00:00Z').getTime() - (sofiaH1 - 12) * 3600000) / 1000 + 86400;
   const pts = [];
   for (let i = 0; i < us.length; i++) if (us[i] >= s0 && us[i] < s1) pts.push({ ts: us[i]*1000, price: pr[i] });
   return pts;
@@ -796,11 +852,15 @@ function readHash() {
     snap:   p.get('snap'),
     flags:  p.get('flags'),  // e.g. 're,eur,tot,col'
     hidden: p.get('hidden'), // e.g. 'АЕЦ,ВЕЦ'
+    mode:   p.get('mode'),   // 'week' | 'month' | 'custom' (absent = 'day', back-compat)
+    end:    p.get('end'),    // YYYY-MM-DD, only meaningful with mode=custom
   };
 }
 function writeHash(day, snapTs) {
   const p = new URLSearchParams();
   if (day) p.set('day', day);
+  if (mode && mode !== 'day') p.set('mode', mode);
+  if (mode === 'custom' && customEnd) p.set('end', customEnd);
   if (snapTs) p.set('snap', snapTs);
   const flags = [reMode && 're', eurMode && 'eur', colMode && 'col'].filter(Boolean);
   if (flags.length) p.set('flags', flags.join(','));
@@ -809,15 +869,79 @@ function writeHash(day, snapTs) {
   history.replaceState(null, '', h);
 }
 window.addEventListener('hashchange', () => {
-  const { day, snap } = readHash();
+  const { day, snap, mode: m, end } = readHash();
   currentDay = (day && day !== todayStr()) ? day : null;
   _pendingSnapTs = snap || null;
+  mode = (m && ['week','month','custom'].includes(m)) ? m : 'day';
+  customEnd = (mode === 'custom' && end) ? end : null;
   refresh();
 });
 
+// ── date-only helpers (UTC-anchored so they're immune to local/Sofia DST) ──
+function addDaysStr(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function monthStartStr(dateStr) { return dateStr.slice(0, 7) + '-01'; }
+function monthEndStr(dateStr) {
+  const d = new Date(dateStr.slice(0, 7) + '-01T00:00:00Z');
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+function shiftMonthStr(dateStr, delta) {
+  const d = new Date(dateStr.slice(0, 7) + '-01T00:00:00Z');
+  d.setUTCMonth(d.getUTCMonth() + delta);
+  return d.toISOString().slice(0, 10);
+}
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+// Resolve the currently-selected date range from (mode, currentDay, customEnd).
+function getRange() {
+  const anchor = currentDay || todayStr();
+  if (mode === 'week')   return { start: anchor, end: addDaysStr(anchor, 6) };
+  if (mode === 'month')  return { start: monthStartStr(anchor), end: monthEndStr(anchor) };
+  if (mode === 'custom') return { start: anchor, end: (customEnd && customEnd >= anchor) ? customEnd : anchor };
+  return { start: anchor, end: anchor }; // day
+}
+
 function pickDate(v) {
   if (!v) return;
-  currentDay = v === todayStr() ? null : v;
+  if (mode === 'month') { currentDay = monthStartStr(v); }
+  else { currentDay = v === todayStr() ? null : v; }
+  if (mode === 'custom' && customEnd && customEnd < (currentDay || todayStr())) customEnd = null;
+  if (mode === 'custom' && !customEnd) mode = 'day';
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
+  refresh();
+}
+function pickEndDate(v) {
+  if (!v || v === (currentDay || todayStr())) {
+    customEnd = null;
+    if (mode === 'custom') mode = 'day';
+  } else {
+    customEnd = v;
+    mode = 'custom';
+  }
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
+  refresh();
+}
+function setMode(newMode) {
+  if (newMode === mode) return;
+  const today = todayStr();
+  if (newMode === 'week') {
+    let anchor = currentDay || today;
+    if (anchor === today) anchor = addDaysStr(today, -6);
+    currentDay = anchor;
+  } else if (newMode === 'month') {
+    currentDay = monthStartStr(currentDay || today);
+  } else if (newMode === 'day') {
+    customEnd = null;
+  }
+  mode = newMode;
   _pendingSnapTs = null;
   writeHash(currentDay, null);
   refresh();
@@ -832,22 +956,64 @@ function shiftDay(d) {
   writeHash(currentDay, null);
   refresh();
 }
-function goToday() { currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
+function shiftRange(dir) {
+  if (mode === 'day') { shiftDay(dir); return; }
+  const { start, end } = getRange();
+  const lo = allDates.length ? allDates[0] : start;
+  const hi = todayStr();
+  if (mode === 'week') {
+    const ns = addDaysStr(start, dir * 7);
+    if (dir > 0 && ns > hi) return;
+    if (dir < 0 && ns < lo) return;
+    currentDay = ns;
+  } else if (mode === 'month') {
+    const ns = shiftMonthStr(start, dir);
+    if (dir > 0 && ns > hi) return;
+    if (dir < 0 && ns < monthStartStr(lo)) return;
+    currentDay = ns;
+  } else { // custom
+    const span = daysBetween(start, end) + 1;
+    const ns = addDaysStr(start, dir * span);
+    const ne = addDaysStr(end, dir * span);
+    if (dir > 0 && ne > hi) return;
+    if (dir < 0 && ns < lo) return;
+    currentDay = ns;
+    customEnd  = ne;
+  }
+  _pendingSnapTs = null;
+  writeHash(currentDay, null);
+  refresh();
+}
+function goToday() { mode = 'day'; customEnd = null; currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
 
 function updateNav() {
-  const today = todayStr(), base = currentDay || today;
-  const idx   = allDates.indexOf(base);
-  document.getElementById('prev-btn').disabled  = idx <= 0;
-  document.getElementById('next-btn').disabled  = idx >= allDates.length-1 || currentDay === null;
-  document.getElementById('today-btn').classList.toggle('active', currentDay === null);
-  document.getElementById('day-label').textContent = base;
+  const today = todayStr();
+  const { start, end } = getRange();
+  const lo = allDates.length ? allDates[0] : start;
+  document.getElementById('prev-btn').disabled  = start <= lo;
+  document.getElementById('next-btn').disabled  = end >= today;
+  document.getElementById('today-btn').classList.toggle('active', mode === 'day' && currentDay === null);
+  document.getElementById('day-label').textContent = (start === end) ? start : `${start} → ${end}`;
 
   const picker = document.getElementById('date-picker');
-  if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1]; }
-  picker.value = base;
+  if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1] > today ? allDates[allDates.length-1] : today; }
+  picker.value = start;
+
+  const endPicker = document.getElementById('date-picker-end');
+  if (endPicker) {
+    endPicker.style.display = (mode === 'day' || mode === 'custom') ? '' : 'none';
+    endPicker.min = start;
+    endPicker.max = today;
+    endPicker.value = mode === 'custom' ? end : '';
+  }
+
+  const mDay = document.getElementById('mode-day'), mWeek = document.getElementById('mode-week'), mMonth = document.getElementById('mode-month');
+  if (mDay)   mDay.classList.toggle('active',   mode === 'day' || mode === 'custom');
+  if (mWeek)  mWeek.classList.toggle('active',  mode === 'week');
+  if (mMonth) mMonth.classList.toggle('active', mode === 'month');
 
   const banner = document.getElementById('past-banner');
-  banner.classList.toggle('show', currentDay !== null);
+  banner.classList.toggle('show', !(mode === 'day' && currentDay === null));
 }
 
 
@@ -856,8 +1022,8 @@ function setReMode(on) {
   document.getElementById('tog-re').classList.toggle('active', on);
   document.getElementById('re-stats-bar').classList.toggle('show', on);
   if (window._lastBinned) {
-    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
+    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
   }
   writeHash(currentDay, null);
 }
@@ -865,16 +1031,16 @@ function setEurMode(on) {
   eurMode = on;
   document.getElementById('tog-eur').classList.toggle('active', on);
   if (window._lastBinned) {
-    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
-    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr);
-    updateDayBalance(window._lastBinned, window._lastPriceData, window._lastDateStr);
+    drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
+    updateTotalStats(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
+    updateDayBalance(window._lastBinned, window._lastPriceData, window._lastDateStr, null, window._lastEndStr);
   }
   writeHash(currentDay, null);
 }
 function setColMode(on) {
   colMode = on;
   document.getElementById('tog-col').classList.toggle('active', on);
-  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
   writeHash(currentDay, null);
 }
 
@@ -886,7 +1052,7 @@ function setPieMwhMode(on) {
 function shiftDayStart(delta) {
   dayStartHour = (dayStartHour + delta + 24) % 24;
   updateDayStartLabel();
-  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr);
+  if (window._lastBinned) drawTimeline(window._lastBinned, window._lastPriceData, window._lastDateStr, window._lastEndStr);
 }
 function updateDayStartLabel() {
   const lbl = document.getElementById('day-start-label');
@@ -915,15 +1081,15 @@ function rotatePts(pts, dateStr) {
   const merged = [...after, ...before].sort((a, b) => a.ts - b.ts);
   return merged.filter((p, i) => i === 0 || p.ts !== merged[i - 1].ts);
 }
-function _buildPriceByBin(pd, dateStr) {
+function _buildPriceByBin(pd, dateStr, endDateStr) {
   const m = {};
-  for (const p of getDayPrices(pd, dateStr))
+  for (const p of getDayPrices(pd, dateStr, endDateStr))
     m[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
   return m;
 }
-function updateTotalStats(binned, pd, dateStr) {
+function updateTotalStats(binned, pd, dateStr, endDateStr) {
   if (!totalStatsVisible || !binned || !binned.length) return;
-  const priceByBin = _buildPriceByBin(pd, dateStr);
+  const priceByBin = _buildPriceByBin(pd, dateStr, endDateStr);
   const totals = {}, mwhTotals = {}, eurTotals = {};
   for (const s of GEN_SERIES) { totals[s.key] = 0; mwhTotals[s.key] = 0; eurTotals[s.key] = 0; }
   totals['_batt'] = 0; mwhTotals['_batt'] = 0; eurTotals['_batt'] = 0;
@@ -1053,8 +1219,8 @@ function updateTotalStats(binned, pd, dateStr) {
   }
   document.getElementById('total-stats-bar').innerHTML = html;
 }
-function drawColChart(binned, pd, dateStr) {
-  const priceByBin = eurMode ? _buildPriceByBin(pd, dateStr) : {};
+function drawColChart(binned, pd, dateStr, endDateStr) {
+  const priceByBin = eurMode ? _buildPriceByBin(pd, dateStr, endDateStr) : {};
   const totals = {};
   for (const s of GEN_SERIES) totals[s.key] = 0;
   totals['_batt'] = 0;
@@ -1131,7 +1297,7 @@ function battState(mw) {
   return mw < 0 ? 'charging' : 'discharging';
 }
 
-function updateStatusCards(latest, pd) {
+function updateStatusCards(latest, pd, avgPriceOverride) {
   if (!latest) return;
   const load = latest['load_mw'] || latest['Товар на РБ'] || 0;
   const gen  = latest['gen_total_mw'] || 0;
@@ -1139,7 +1305,7 @@ function updateStatusCards(latest, pd) {
   document.getElementById('s-load').textContent = fmt0(load);
   document.getElementById('s-gen').textContent  = fmt0(gen);
 
-  const price = getPriceAt(pd, toUtcMs(latest));
+  const price = avgPriceOverride !== undefined ? avgPriceOverride : getPriceAt(pd, toUtcMs(latest));
   document.getElementById('s-ibex-price').textContent = isFinite(price) ? fmt1(price) : '—';
   const isImp = nImp > 0;
   // At negative price: importing earns money (green), exporting costs money (red)
@@ -1240,8 +1406,8 @@ function updateGenTable(latest) {
   }
 }
 
-function updateDayBalance(binned, pd, dateStr, snapMs = null) {
-  const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr);
+function updateDayBalance(binned, pd, dateStr, snapMs = null, endDateStr = null) {
+  const W = 15*60*1000, dayPrices = getDayPrices(pd, dateStr, endDateStr);
   const pByBin = {};
   for (const p of dayPrices) pByBin[Math.floor(p.ts/W)*W] = p.price;
 
@@ -1361,11 +1527,11 @@ function updateDayBalance(binned, pd, dateStr, snapMs = null) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  TARIFF CALCULATOR PANEL
 // ══════════════════════════════════════════════════════════════════════════════
-function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null) {
+function drawTariffPanel(pd, binned, dateStr, snapMs = null, loadProfile = null, endDateStr = null) {
   const el = document.getElementById('tariff-body');
   if (!el) return;
   const T = TARIFF;
-  const dayPrices = getDayPrices(pd, dateStr);
+  const dayPrices = getDayPrices(pd, dateStr, endDateStr);
   if (!dayPrices.length) {
     el.innerHTML = '<div style="color:#8a9bb5;font-size:0.78rem;padding:6px 0;">Няма борсови данни за избрания ден.</div>';
     return;
@@ -1762,15 +1928,18 @@ const LO = {
   dragmode: false,
 };
 
-function drawTimeline(binned, pd, dateStr) {
-  window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr;
-  if (colMode) { drawColChart(binned, pd, dateStr); return; }
+function drawTimeline(binned, pd, dateStr, endDateStr) {
+  window._lastBinned = binned; window._lastPriceData = pd; window._lastDateStr = dateStr; window._lastEndStr = endDateStr;
+  if (colMode) { drawColChart(binned, pd, dateStr, endDateStr); return; }
 
-  const pts = rotatePts(binned, dateStr);
+  // "day start" rotation only makes sense within a single day — a multi-day
+  // range just shows the raw chronological series.
+  const isMultiDay = endDateStr && endDateStr !== dateStr;
+  const pts = isMultiDay ? binned : rotatePts(binned, dateStr);
   const xs  = pts.map(p => toSofiaStr(p.ts));
 
   // Build price lookup for EUR mode
-  const dayPrices = getDayPrices(pd, dateStr);
+  const dayPrices = getDayPrices(pd, dateStr, endDateStr);
   const priceByBin = {};
   for (const p of dayPrices)
     priceByBin[Math.floor(p.ts/(15*60*1000))*(15*60*1000)] = p.price;
@@ -1817,7 +1986,7 @@ function drawTimeline(binned, pd, dateStr) {
     hovertemplate: htFmt('Помпи'),
   } : null;
 
-  const rotatedPrices = rotatePts(dayPrices, dateStr);
+  const rotatedPrices = isMultiDay ? dayPrices : rotatePts(dayPrices, dateStr);
   const priceXs = rotatedPrices.map(p=>toSofiaStr(p.ts));
   const priceTrace = (!eurMode && rotatedPrices.length) ? {
     x: priceXs, y: rotatedPrices.map(p=>p.price),
@@ -1944,10 +2113,18 @@ function toggleFullscreen(panelId, chartId) {
 
 function updateTimestamp(latest) {
   const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
+  dot.style.display = '';
   if (!latest) { el.textContent = 'Няма данни'; return; }
   const ms  = toUtcMs(latest), age = Date.now()-ms, mins = Math.round(age/60000);
   el.textContent = mins < 2 ? 'Обновено току-що' : `Обновено преди ${mins} мин.`;
   dot.className  = 'dot'+(age > STALE_MS ? ' stale' : '');
+}
+// Range mode (>2 days) has no single "last updated" moment — show the
+// covered span instead, and hide the live/stale dot (not applicable).
+function updateTimestampRange(start, end, n) {
+  const el = document.getElementById('ts-label'), dot = document.getElementById('dot');
+  dot.style.display = 'none';
+  el.textContent = `${start} → ${end} · ${n} записа (средни стойности)`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1988,8 +2165,8 @@ function onSnapSlider(val) {
   drawPie(snap);
   const snapMs = toUtcMs(snap);
   const slicedBinned = bin15min(_dayRecords.slice(0, idx + 1));
-  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs);
-  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile);
+  updateDayBalance(slicedBinned, _dayPriceData, _dayDateStr, snapMs, _dayEndStr);
+  drawTariffPanel(_dayPriceData, slicedBinned, _dayDateStr, snapMs, _loadProfile, _dayEndStr);
   const ts = snap['timestamp_utc'] || snap['timestamp'];
   writeHash(currentDay, ts);
 }
@@ -2004,25 +2181,28 @@ async function refresh() {
     allDates = idx.dates || [];
     updateNav();
 
-    const dateStr = currentDay || todayStr();
-    const isToday = currentDay === null;
-    const records = await getJSONL(isToday ? `${BASE}/today.jsonl` : `${BASE}/${dateStr}.jsonl`);
+    const { start, end } = getRange();
+    const span = daysBetween(start, end) + 1;
+    // Per spec: only ranges strictly longer than 2 days switch to averages
+    // and drop momentary/snapshot UI. 1-2 day ranges behave exactly as before.
+    const isRangeAvg = span > 2;
 
-    // Also load previous day to pick up 00:00–01:00 Sofia records that landed there
-    // (happens when date_bg was computed with UTC+2 but Sofia is UTC+3 in summer)
-    const prevDate = new Date(dateStr + 'T12:00:00Z');
-    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-    const prevStr  = prevDate.toISOString().slice(0, 10);
+    const records = await fetchRangeRecords(start, end);
+
+    // Also load the day before `start` to pick up 00:00–01:00 Sofia records that
+    // landed there (happens when date_bg was computed with UTC+2 but Sofia is
+    // UTC+3 in summer) — same stitching the single-day mode always did.
+    const prevStr = addDaysStr(start, -1);
     let prevRecs = [];
     try {
       prevRecs = (await getJSONL(`${BASE}/${prevStr}.jsonl`))
-        .filter(r => { const ms = toUtcMs(r); return isFinite(ms) && toSofiaStr(ms).slice(0, 10) === dateStr; });
+        .filter(r => { const ms = toUtcMs(r); return isFinite(ms) && toSofiaStr(ms).slice(0, 10) === start; });
     } catch(_) {}
-    const allRecords = prevRecs.length ? [...prevRecs, ...records].sort((a,b)=>toUtcMs(a)-toUtcMs(b)) : records;
+    const allRecords = [...prevRecs, ...records].sort((a,b)=>toUtcMs(a)-toUtcMs(b));
 
     const latest  = allRecords.length ? allRecords[allRecords.length-1] : null;
     const binned  = bin15min(allRecords);
-    const pd      = await loadPrices(dateStr);
+    const pd      = await loadPricesForRange(start, end);
 
     // Load profile — fetch once, reuse until next day
     if (!_loadProfile) {
@@ -2034,38 +2214,65 @@ async function refresh() {
 
     _dayRecords   = allRecords;
     _dayPriceData = pd;
-    _dayDateStr   = dateStr;
+    _dayDateStr   = start;
+    _dayEndStr    = end;
 
-    updateScrubber(allRecords);
+    const scrubberEl   = document.getElementById('snap-scrubber');
+    const recAlertsEl  = document.getElementById('rec-alerts');
+    const dayStartCtrl = document.getElementById('day-start-ctrl');
 
     let displaySnap   = latest;
     let displayBinned = binned;
 
-    // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
-    if (_pendingSnapTs && allRecords.length) {
-      const idx = allRecords.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
-      if (idx >= 0) {
-        document.getElementById('snap-slider').value = idx;
-        displaySnap   = allRecords[idx];
-        displayBinned = bin15min(allRecords.slice(0, idx + 1));
-        updateSnapLabel(displaySnap);
-        _pendingSnapTs = null;
-      }
-    }
-    updateTimestamp(displaySnap);
-    updateStatusCards(displaySnap, pd);
-    updateFlowsTable(displaySnap, pd);
-    updateGenTable(displaySnap);
-    updateDayBalance(displayBinned, pd, dateStr, null);
+    if (!isRangeAvg) {
+      // ── 1-2 day mode: identical to the original single-day snapshot UI ──
+      if (dayStartCtrl) dayStartCtrl.style.display = '';
+      updateScrubber(allRecords);
 
-    drawPie(displaySnap);
+      // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
+      if (_pendingSnapTs && allRecords.length) {
+        const idx = allRecords.findIndex(r => (r['timestamp_utc'] || r['timestamp']) === _pendingSnapTs);
+        if (idx >= 0) {
+          document.getElementById('snap-slider').value = idx;
+          displaySnap   = allRecords[idx];
+          displayBinned = bin15min(allRecords.slice(0, idx + 1));
+          updateSnapLabel(displaySnap);
+          _pendingSnapTs = null;
+        }
+      }
+      updateTimestamp(displaySnap);
+      updateStatusCards(displaySnap, pd);
+      updateFlowsTable(displaySnap, pd);
+      updateGenTable(displaySnap);
+      drawPie(displaySnap);
+      await loadRecords();
+      updateRecordAlerts(allRecords, binned, start);
+    } else {
+      // ── >2 day range: averages across the whole period, momentum UI dropped ──
+      if (scrubberEl) scrubberEl.style.display = 'none';
+      if (recAlertsEl) recAlertsEl.style.display = 'none';
+      if (dayStartCtrl) dayStartCtrl.style.display = 'none';
+
+      const avgRec = computeDayAvg(binned);
+      // Give the synthetic average record a timestamp so battDis()/toUtcMs()
+      // pick the correct (new-format) branch instead of the legacy floor.
+      avgRec.timestamp_utc = new Date(binned.length ? binned[binned.length-1].ts : Date.now()).toISOString();
+      displaySnap = avgRec;
+
+      updateTimestampRange(start, end, allRecords.length);
+      const avgPrice = rangeAvgPrice(pd, start, end);
+      updateStatusCards(avgRec, pd, avgPrice);
+      updateFlowsTable(avgRec, pd);
+      updateGenTable(avgRec);
+      drawPie(avgRec);
+    }
+
+    updateDayBalance(displayBinned, pd, start, null, end);
     updateDayStartLabel();
-    drawTimeline(displayBinned, pd, dateStr);
+    drawTimeline(displayBinned, pd, start, end);
     drawFlowsTimeline(displayBinned, pd);
-    updateTotalStats(displayBinned, pd, dateStr);
-    drawTariffPanel(pd, displayBinned, dateStr, null, _loadProfile);
-    await loadRecords();
-    updateRecordAlerts(allRecords, binned, dateStr);
+    updateTotalStats(displayBinned, pd, start, end);
+    drawTariffPanel(pd, displayBinned, start, null, _loadProfile, end);
 
   } catch(e) {
     console.error(e);
