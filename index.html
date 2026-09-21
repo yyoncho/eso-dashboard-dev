@@ -245,7 +245,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
         <span id="lang-flags" style="margin-left:8px;"></span>
       </div>
       <div class="day-nav">
-        <div class="toggle-group" id="mode-toggle" style="margin-right:2px;">
+        <button class="nav-btn" id="mode-gear" onclick="toggleModeControls()" title="Избор на период (ден/седмица/месец)" style="padding:4px 7px;">&#9881;</button>
+        <div class="toggle-group" id="mode-toggle" style="margin-right:2px;display:none;">
           <button class="tog-btn" id="mode-day"   onclick="setMode('day')"  title="Единичен ден">Ден</button>
           <button class="tog-btn" id="mode-week"  onclick="setMode('week')"  title="Седмица (7 дни)">Седмица</button>
           <button class="tog-btn" id="mode-month" onclick="setMode('month')" title="Календарен месец">Месец</button>
@@ -566,6 +567,7 @@ let allDates   = [];
 let priceCache = {};
 let mode       = 'day';   // 'day' | 'week' | 'month' | 'custom'
 let customEnd  = null;    // YYYY-MM-DD, only used when mode === 'custom'
+let modeControlsOpen = false;  // manual toggle for the (collapsed-by-default) period selector
 let _dayEndStr = null;
 const chartMode = 'instant';
 let reMode            = false;
@@ -929,6 +931,10 @@ function pickEndDate(v) {
   writeHash(currentDay, null);
   refresh();
 }
+function toggleModeControls() {
+  modeControlsOpen = !modeControlsOpen;
+  updateNav();
+}
 function setMode(newMode) {
   if (newMode === mode) return;
   const today = todayStr();
@@ -999,9 +1005,19 @@ function updateNav() {
   if (allDates.length) { picker.min = allDates[0]; picker.max = allDates[allDates.length-1] > today ? allDates[allDates.length-1] : today; }
   picker.value = start;
 
+  // Period-selector controls (mode buttons + custom end-date picker) stay
+  // collapsed behind the gear icon until the user opens it, or a non-day
+  // mode is active (then they stay visible so the current period is clear
+  // and easy to change back).
+  const showControls = modeControlsOpen || mode !== 'day';
+  const modeToggle = document.getElementById('mode-toggle');
+  if (modeToggle) modeToggle.style.display = showControls ? '' : 'none';
+  const gear = document.getElementById('mode-gear');
+  if (gear) gear.classList.toggle('active', showControls);
+
   const endPicker = document.getElementById('date-picker-end');
   if (endPicker) {
-    endPicker.style.display = (mode === 'day' || mode === 'custom') ? '' : 'none';
+    endPicker.style.display = (showControls && (mode === 'day' || mode === 'custom')) ? '' : 'none';
     endPicker.min = start;
     endPicker.max = today;
     endPicker.value = mode === 'custom' ? end : '';
