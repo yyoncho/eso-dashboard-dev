@@ -47,7 +47,7 @@ header {
 .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
 .nav-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; font-weight: 700; }
 .nav-btn:disabled { opacity: 0.3; cursor: default; }
-#day-label { font-size: 0.82rem; color: rgba(255,255,255,0.9); font-weight: 600; }
+#day-label { font-size: 0.82rem; color: rgba(255,255,255,0.9); font-weight: 600; white-space: nowrap; }
 
 input[type="date"]#date-picker {
   padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4);
@@ -253,11 +253,11 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <button class="tog-btn" id="tog-totals" onclick="toggleTotalsMode()" title="Тотали/средни вместо моментна снимка, без рекорди">Тотали</button>
         </div>
         <button class="nav-btn" id="prev-btn" onclick="shiftRange(-1)">&#8592;</button>
+        <span id="day-label"></span>
+        <button class="nav-btn" id="next-btn" onclick="shiftRange(1)" disabled>&#8594;</button>
         <input type="date" id="date-picker" onchange="pickDate(this.value)">
         <input type="date" id="date-picker-end" onchange="pickEndDate(this.value)" style="display:none;" title="Край на периода">
         <button class="nav-btn active" id="today-btn" onclick="goToday()">Днес</button>
-        <button class="nav-btn" id="next-btn" onclick="shiftRange(1)" disabled>&#8594;</button>
-        <span id="day-label"></span>
         <a class="nav-btn" id="records-btn" href="records.html" style="padding:4px 7px;display:inline-flex;align-items:center;text-decoration:none">🏆</a>
         <div class="rec-dropdown-wrap" style="position:relative">
           <button class="nav-btn" id="npp-btn" onclick="toggleNpp(event)" style="padding:4px 7px">▾</button>
@@ -2327,6 +2327,13 @@ async function refresh() {
     const scrubberEl   = document.getElementById('snap-scrubber');
     const recAlertsEl  = document.getElementById('rec-alerts');
     const dayStartCtrl = document.getElementById('day-start-ctrl');
+    // These three panels are all explicitly labelled "— живо" (live) and show
+    // an instantaneous snapshot — meaningless once we're averaging over a
+    // period, so they're dropped entirely in that mode (both the >2-day
+    // range case and the manual Totals toggle, since both set isRangeAvg).
+    const genLivePanel   = document.getElementById('gen-live');
+    const flowsLivePanel = document.getElementById('flows-live');
+    const genTablePanel  = document.getElementById('gen-table-panel');
 
     let displaySnap   = latest;
     let displayBinned = binned;
@@ -2334,6 +2341,9 @@ async function refresh() {
     if (!isRangeAvg) {
       // ── 1-2 day mode: identical to the original single-day snapshot UI ──
       if (dayStartCtrl) dayStartCtrl.style.display = '';
+      if (genLivePanel)   genLivePanel.style.display = '';
+      if (flowsLivePanel) flowsLivePanel.style.display = '';
+      if (genTablePanel)  genTablePanel.style.display = '';
       updateScrubber(allRecords);
 
       // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
@@ -2355,10 +2365,14 @@ async function refresh() {
       await loadRecords();
       updateRecordAlerts(allRecords, binned, start);
     } else {
-      // ── >2 day range: averages across the whole period, momentum UI dropped ──
+      // ── >2 day range or manual Totals toggle: averages across the whole
+      // period, momentum UI and the "live" panels dropped ──
       if (scrubberEl) scrubberEl.style.display = 'none';
       if (recAlertsEl) recAlertsEl.style.display = 'none';
       if (dayStartCtrl) dayStartCtrl.style.display = 'none';
+      if (genLivePanel)   genLivePanel.style.display = 'none';
+      if (flowsLivePanel) flowsLivePanel.style.display = 'none';
+      if (genTablePanel)  genTablePanel.style.display = 'none';
 
       const avgRec = computeDayAvg(binned);
       // Give the synthetic average record a timestamp so battDis()/toUtcMs()
@@ -2369,9 +2383,6 @@ async function refresh() {
       updateTimestampRange(start, end, allRecords.length);
       const avgPrice = rangeAvgPrice(pd, start, end);
       updateStatusCards(avgRec, pd, avgPrice);
-      updateFlowsTable(avgRec, pd);
-      updateGenTable(avgRec);
-      drawPie(avgRec);
     }
 
     updateDayBalance(displayBinned, pd, start, null, end);
