@@ -154,6 +154,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 }
 .tog-btn.active { background: #ffd700; border-color: #ffd700; color: #003070; }
 .tog-btn:hover:not(.active) { background: rgba(255,255,255,0.2); color: #fff; }
+.tog-btn:disabled { opacity: 0.3; cursor: default; background: transparent !important; color: rgba(255,255,255,0.7) !important; }
 
 /* ── flows table ── */
 .flows-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
@@ -626,6 +627,9 @@ if (_initHash.flags) {
   colMode           = f.includes('col');
   totalsMode        = f.includes('tot');
 }
+// Day + Totals is just Day — an old/hand-typed link combining them collapses
+// to plain Day rather than a state the UI itself can never produce.
+if (mode === 'day') totalsMode = false;
 if (_initHash.hidden) {
   for (const k of _initHash.hidden.split('\t')) if (k) hiddenGenKeys.add(k);
 }
@@ -927,6 +931,7 @@ window.addEventListener('hashchange', () => {
   _pendingSnapTs = snap || null;
   mode = (m && ['week','month','custom'].includes(m)) ? m : 'day';
   customEnd = (mode === 'custom' && end) ? end : null;
+  if (mode === 'day') totalsMode = false;  // Day + Totals is just Day
   refresh();
 });
 
@@ -965,7 +970,7 @@ function pickDate(v) {
   if (mode === 'month') { currentDay = monthStartStr(v); }
   else { currentDay = v === todayStr() ? null : v; }
   if (mode === 'custom' && customEnd && customEnd < (currentDay || todayStr())) customEnd = null;
-  if (mode === 'custom' && !customEnd) mode = 'day';
+  if (mode === 'custom' && !customEnd) { mode = 'day'; totalsMode = false; }
   _pendingSnapTs = null;
   writeHash(currentDay, null);
   refresh();
@@ -973,7 +978,7 @@ function pickDate(v) {
 function pickEndDate(v) {
   if (!v || v === (currentDay || todayStr())) {
     customEnd = null;
-    if (mode === 'custom') mode = 'day';
+    if (mode === 'custom') { mode = 'day'; totalsMode = false; }
   } else {
     customEnd = v;
     mode = 'custom';
@@ -987,6 +992,11 @@ function toggleModeControls() {
   updateNav();
 }
 function toggleTotalsMode() {
+  // Day + Totals is just Day (a single day has nothing to average/total
+  // beyond what the normal day view already shows) — the button is
+  // disabled while mode === 'day', but guard here too in case it's
+  // triggered some other way.
+  if (mode === 'day') return;
   totalsMode = !totalsMode;
   writeHash(currentDay, null);
   refresh();
@@ -1002,6 +1012,7 @@ function setMode(newMode) {
     currentDay = monthStartStr(currentDay || today);
   } else if (newMode === 'day') {
     customEnd = null;
+    totalsMode = false;  // Day + Totals is just Day — don't allow the combo
   }
   mode = newMode;
   _pendingSnapTs = null;
@@ -1046,7 +1057,7 @@ function shiftRange(dir) {
   writeHash(currentDay, null);
   refresh();
 }
-function goToday() { mode = 'day'; customEnd = null; currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
+function goToday() { mode = 'day'; customEnd = null; totalsMode = false; currentDay = null; _pendingSnapTs = null; writeHash(null, null); refresh(); }
 
 const BG_MONTHS = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
 function isoWeekNumber(dateStr) {
@@ -1089,7 +1100,13 @@ function updateNav() {
   if (gear) gear.classList.toggle('active', showControls);
 
   const totalsBtn = document.getElementById('tog-totals');
-  if (totalsBtn) totalsBtn.classList.toggle('active', totalsMode);
+  if (totalsBtn) {
+    totalsBtn.classList.toggle('active', totalsMode);
+    totalsBtn.disabled = (mode === 'day');
+    totalsBtn.title = mode === 'day'
+      ? 'Тотали не е приложимо за единичен ден'
+      : 'Тотали/средни вместо моментна снимка, без рекорди';
+  }
 
   const endPicker = document.getElementById('date-picker-end');
   if (endPicker) {
