@@ -172,6 +172,8 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
 
 /* ── balance ── */
 .balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.balance-grid.wide { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.main-cols.single-col { grid-template-columns: 1fr; }
 .balance-item { background: #f0f6ff; border: 1px solid #c5d8ee; border-radius: 4px; padding: 8px 10px; }
 .balance-item.expense { background: #fff5f5; border-color: #f5c5c5; }
 .balance-item.revenue { background: #f0fff5; border-color: #a5d5b5; }
@@ -296,7 +298,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   <div id="rec-alerts" style="display:none;background:#fffbea;border:1px solid #f0d040;border-radius:8px;padding:7px 14px;margin-bottom:12px;overflow-x:auto;white-space:nowrap;"></div>
 
   <!-- status cards -->
-  <div class="stat-grid">
+  <div class="stat-grid" id="top-stat-grid">
     <div class="stat-card">
       <div class="stat-label">Товар на РБ</div>
       <div class="stat-val" id="s-load">—</div>
@@ -321,10 +323,10 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
   </div>
 
   <!-- two-column -->
-  <div class="main-cols">
+  <div class="main-cols" id="main-cols">
 
     <!-- LEFT: pie + flows -->
-    <div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;flex-direction:column;gap:12px;" id="main-cols-left">
 
       <div class="panel" id="gen-live">
         <div class="panel-header">
@@ -363,13 +365,13 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
     </div><!-- /left -->
 
     <!-- RIGHT: balance + gen table -->
-    <div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;flex-direction:column;gap:12px;" id="main-cols-right">
 
       <div class="panel" id="balance">
         <div class="panel-header"><a href="#balance" class="anchor-link" id="balance-title">Дневен баланс</a> <button class="info-btn" onclick="document.getElementById('balance-info').classList.toggle('open')" title="Информация">?</button></div>
         <div id="balance-info" class="info-dropdown">Стойностите са изчислени по IBEX дневна цена (борсова цена Day-Ahead). Те са само илюстративни — не отразяват реални договорни цени, такси за достъп до мрежата или крайни финансови стойности. Печалбата от арбитраж на ССЕЕ (Δ) е изчислена като разлика между приход от разреждане и разход за зареждане по борсова цена — реалният финансов резултат зависи от договорните условия на оператора.</div>
         <div class="panel-body">
-          <div class="balance-grid">
+          <div class="balance-grid" id="balance-grid">
             <div class="balance-item expense">
               <div class="balance-label">Внос</div>
               <div class="balance-val expense" id="b-import-eur">—</div>
@@ -387,7 +389,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
             </div>
           </div>
           <div class="price-box">
-            <div><div class="price-label">IBEX DA (текуща)</div>
+            <div id="p-current-box"><div class="price-label">IBEX DA (текуща)</div>
               <span class="price-val" id="p-current">—</span> <span class="price-unit">EUR/MWh</span></div>
             <div><div class="price-label" id="p-avg-label">Средна за деня</div>
               <span class="price-val" id="p-avg">—</span> <span class="price-unit">EUR/MWh</span></div>
@@ -1102,8 +1104,11 @@ function updateNav() {
   if (mWeek)  mWeek.classList.toggle('active',  mode === 'week');
   if (mMonth) mMonth.classList.toggle('active', mode === 'month');
 
+  // Hidden in range-average/Totals mode too — "historical, not live" framing
+  // is redundant once the page is already showing a period average.
+  const isRangeAvgNav = (daysBetween(start, end) + 1 > 2) || totalsMode;
   const banner = document.getElementById('past-banner');
-  banner.classList.toggle('show', !(mode === 'day' && currentDay === null));
+  banner.classList.toggle('show', !(mode === 'day' && currentDay === null) && !isRangeAvgNav);
 }
 
 
@@ -2334,6 +2339,19 @@ async function refresh() {
     const genLivePanel   = document.getElementById('gen-live');
     const flowsLivePanel = document.getElementById('flows-live');
     const genTablePanel  = document.getElementById('gen-table-panel');
+    // Top instantaneous status cards (Товар/Производство/IBEX/Внос-Износ +
+    // per-source MW cards) — a momentary reading, redundant with the GWh
+    // totals bar under the profile chart. And the "current price" figure
+    // inside the balance panel — also momentary — dropped the same way,
+    // while the period average/min/max next to it stay.
+    const topStatGrid  = document.getElementById('top-stat-grid');
+    const pCurrentBox  = document.getElementById('p-current-box');
+    // Left column (pie + flows-live) is entirely empty once those panels are
+    // dropped in range-average mode — collapse it and let the balance panel
+    // span the full width instead of leaving a blank column beside it.
+    const mainCols     = document.getElementById('main-cols');
+    const mainColsLeft = document.getElementById('main-cols-left');
+    const balanceGrid  = document.getElementById('balance-grid');
 
     let displaySnap   = latest;
     let displayBinned = binned;
@@ -2344,6 +2362,11 @@ async function refresh() {
       if (genLivePanel)   genLivePanel.style.display = '';
       if (flowsLivePanel) flowsLivePanel.style.display = '';
       if (genTablePanel)  genTablePanel.style.display = '';
+      if (topStatGrid)    topStatGrid.style.display = '';
+      if (pCurrentBox)    pCurrentBox.style.display = '';
+      if (mainCols)     mainCols.classList.remove('single-col');
+      if (mainColsLeft) mainColsLeft.style.display = '';
+      if (balanceGrid)  balanceGrid.classList.remove('wide');
       updateScrubber(allRecords);
 
       // Restore snap from URL hash if present — must run AFTER updateScrubber (which resets slider)
@@ -2373,6 +2396,11 @@ async function refresh() {
       if (genLivePanel)   genLivePanel.style.display = 'none';
       if (flowsLivePanel) flowsLivePanel.style.display = 'none';
       if (genTablePanel)  genTablePanel.style.display = 'none';
+      if (topStatGrid)    topStatGrid.style.display = 'none';
+      if (pCurrentBox)    pCurrentBox.style.display = 'none';
+      if (mainCols)     mainCols.classList.add('single-col');
+      if (mainColsLeft) mainColsLeft.style.display = 'none';
+      if (balanceGrid)  balanceGrid.classList.add('wide');
 
       const avgRec = computeDayAvg(binned);
       // Give the synthetic average record a timestamp so battDis()/toUtcMs()
@@ -2381,8 +2409,6 @@ async function refresh() {
       displaySnap = avgRec;
 
       updateTimestampRange(start, end, allRecords.length);
-      const avgPrice = rangeAvgPrice(pd, start, end);
-      updateStatusCards(avgRec, pd, avgPrice);
     }
 
     updateDayBalance(displayBinned, pd, start, null, end);
