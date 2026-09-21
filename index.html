@@ -250,6 +250,7 @@ input[type="date"]#date-picker:focus { outline: 2px solid #ffd700; }
           <button class="tog-btn" id="mode-day"   onclick="setMode('day')"  title="Единичен ден">Ден</button>
           <button class="tog-btn" id="mode-week"  onclick="setMode('week')"  title="Седмица (7 дни)">Седмица</button>
           <button class="tog-btn" id="mode-month" onclick="setMode('month')" title="Календарен месец">Месец</button>
+          <button class="tog-btn" id="tog-totals" onclick="toggleTotalsMode()" title="Тотали/средни вместо моментна снимка, без рекорди">Тотали</button>
         </div>
         <button class="nav-btn" id="prev-btn" onclick="shiftRange(-1)">&#8592;</button>
         <input type="date" id="date-picker" onchange="pickDate(this.value)">
@@ -568,6 +569,10 @@ let priceCache = {};
 let mode       = 'day';   // 'day' | 'week' | 'month' | 'custom'
 let customEnd  = null;    // YYYY-MM-DD, only used when mode === 'custom'
 let modeControlsOpen = false;  // manual toggle for the (collapsed-by-default) period selector
+// Manual override: show totals/averages and drop momentum UI regardless of
+// range length (the >2-day range threshold does this automatically; this
+// lets the user force the same view on a single day or short range too).
+let totalsMode = false;
 let _dayEndStr = null;
 const chartMode = 'instant';
 let reMode            = false;
@@ -617,6 +622,7 @@ if (_initHash.flags) {
   reMode            = f.includes('re');
   eurMode           = f.includes('eur');
   colMode           = f.includes('col');
+  totalsMode        = f.includes('tot');
 }
 if (_initHash.hidden) {
   for (const k of _initHash.hidden.split('\t')) if (k) hiddenGenKeys.add(k);
@@ -907,7 +913,7 @@ function writeHash(day, snapTs) {
   if (mode && mode !== 'day') p.set('mode', mode);
   if (mode === 'custom' && customEnd) p.set('end', customEnd);
   if (snapTs) p.set('snap', snapTs);
-  const flags = [reMode && 're', eurMode && 'eur', colMode && 'col'].filter(Boolean);
+  const flags = [reMode && 're', eurMode && 'eur', colMode && 'col', totalsMode && 'tot'].filter(Boolean);
   if (flags.length) p.set('flags', flags.join(','));
   if (hiddenGenKeys.size) p.set('hidden', [...hiddenGenKeys].join('\t'));
   const h = p.toString() ? '#' + p.toString() : '#';
@@ -977,6 +983,11 @@ function pickEndDate(v) {
 function toggleModeControls() {
   modeControlsOpen = !modeControlsOpen;
   updateNav();
+}
+function toggleTotalsMode() {
+  totalsMode = !totalsMode;
+  writeHash(currentDay, null);
+  refresh();
 }
 function setMode(newMode) {
   if (newMode === mode) return;
@@ -1069,11 +1080,14 @@ function updateNav() {
   // collapsed behind the gear icon until the user opens it, or a non-day
   // mode is active (then they stay visible so the current period is clear
   // and easy to change back).
-  const showControls = modeControlsOpen || mode !== 'day';
+  const showControls = modeControlsOpen || mode !== 'day' || totalsMode;
   const modeToggle = document.getElementById('mode-toggle');
   if (modeToggle) modeToggle.style.display = showControls ? '' : 'none';
   const gear = document.getElementById('mode-gear');
   if (gear) gear.classList.toggle('active', showControls);
+
+  const totalsBtn = document.getElementById('tog-totals');
+  if (totalsBtn) totalsBtn.classList.toggle('active', totalsMode);
 
   const endPicker = document.getElementById('date-picker-end');
   if (endPicker) {
@@ -2271,7 +2285,7 @@ async function refresh() {
     const span = daysBetween(start, end) + 1;
     // Per spec: only ranges strictly longer than 2 days switch to averages
     // and drop momentary/snapshot UI. 1-2 day ranges behave exactly as before.
-    const isRangeAvg = span > 2;
+    const isRangeAvg = span > 2 || totalsMode;
 
     const balanceTitle = document.getElementById('balance-title');
     if (balanceTitle) balanceTitle.textContent = isRangeAvg ? 'Баланс за периода' : 'Дневен баланс';
